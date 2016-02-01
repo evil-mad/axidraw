@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <_name>AxiDraw Control</_name>
+  <id>command.evilmadscientist.axidraw.rev100</id>
+  <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
+  <dependency type="executable" location="extensions">axidraw.py</dependency>
+  <dependency type="executable" location="extensions">inkex.py</dependency>
+  <param name="tab" type="notebook">
+  
+    <page name="splash" _gui-text="Plot">
+      <_param name="splashpage" type="description" xml:space="preserve">
+Welcome to the AxiDraw interface!
+
+Press 'Apply' to begin plotting.
+
+Or, look in the other tabs for
+ configuration and other options.
+
+Need help? Visit http://axidraw.com/
+
+</_param>
+    </page>
+
+    <page name='setup' _gui-text='Setup'>
+
+      <_param name="instructions_setup" type="description" xml:space="preserve">
+AxiDraw: Basic Setup
+</_param>
+      <param name="penUpPosition" type="int" min="0" max="100"
+	     _gui-text="Pen position: UP, 0-100%:">70</param>
+      <param name="penDownPosition" type="int" min="0" max="100"
+	     _gui-text="Pen position: DOWN, 0-100%:">30</param>
+	     
+      <_param name="instructions_setup2" type="description"
+	      xml:space="preserve">
+. . . . . . . . . . . . .
+</_param>
+      <param name="setupType" type="optiongroup" appearance=""
+	     _gui-text="Action on 'Apply':">
+	<_option value="align-mode"  >Raise pen, turn off motors</_option>	
+	<_option value="toggle-pen"  >Toggle pen between UP and DOWN</_option>
+      </param>
+      <_param name="instructions_setup3" type="description"
+	      xml:space="preserve">
+- Raise pen and turn off stepper motors to manually
+  move carriage to the START position (upper left).
+
+- Raise and lower pen to check the vertical positions
+  of the pen for writing and drawing.
+
+</_param>
+    </page>
+
+    <page name='timing' _gui-text='Timing'>
+      <param name="penDownSpeed" type="int" min="1" max="250"
+	   _gui-text="          Painting speed when pen is down (%):">75</param>	
+      <param name="penUpSpeed" type="int" min="1" max="250"
+	   _gui-text="          Moving speed when pen is up (%):">75</param>
+
+      <_param name="instructions_timing1" type="description"
+	      xml:space="preserve">
+. . . . . . . . . . . . .
+</_param>
+	   
+      <param name="ServoUpSpeed" type="int" min="1" max="1600"
+	   _gui-text="          pen raising speed (%/s):">200</param>
+      <param name="penUpDelay" type="int" min="1" max="5000"
+	   _gui-text="          Delay after raising pen (ms):">200</param>
+      <param name="ServoDownSpeed" type="int" min="1" max="1600"
+	   _gui-text="          Pen lowering speed (%/s):">100</param>
+      <param name="penDownDelay" type="int" min="1" max="5000"
+	   _gui-text="          Delay after lowering pen (ms):">400</param>
+      <_param name="instructions_timing2" type="description">
+(Press 'Apply' to save settings.)
+</_param>
+    </page>
+
+    <page name='options' _gui-text='Options'>
+
+      <_param name="instructions_options1" type="description"
+	      xml:space="preserve">
+. . . . . . . . . . . . .
+</_param>
+
+      <param name="smoothness" type="float" min="0" 
+           _gui-text="          Curve smoothing (lower for more):">.2</param>
+           
+      <param name="resolution" type="optiongroup" appearance="minimal"
+	     _gui-text="          Motor Resolution:">
+	<_option value="2">Normal, ~1000 DPI</_option>
+	<_option value="1">Super, ~2000 DPI</_option>
+	<_option value="3">Low, ~500 DPI</_option> 
+      </param>
+      <_param name="instructions_options2" type="description"
+	      xml:space="preserve">
+. . . . . . . . . . . . .
+</_param>
+
+       <param name="revMotor1" type="boolean"
+           _gui-text="          Reverse motion of Motor 1 (right):">false</param>	
+      <param name="revMotor2" type="boolean"
+           _gui-text="          Reverse motion of Motor 2 (left):">false</param> 
+
+      <_param name="instructions_options3" type="description">      
+(Press 'Apply' to save settings.)
+</_param>
+    </page>
+ 	
+    <page name="manual" _gui-text="Manual">
+      <_param name="instructions_manual" type="description"
+	      xml:space="preserve">
+AxiDraw Manual Control
+
+You can use this frame to send "manual" commands
+to the AxiDraw: Walk the stepper motors, raise
+or lower the pen, enable or disable the motors,
+or check the circuit board (EBB) firmware version.
+</_param>
+
+      <param name="manualType" type="optiongroup" appearance="minimal"
+	     _gui-text="               Command: ">
+	<_option value="none"           >- Select -</_option>
+	<_option value="raise-pen"      >Raise the Pen</_option>
+	<_option value="lower-pen"      >Lower the Pen</_option>
+	<_option value="walk-x-motor" >Walk Carriage (X)</_option>
+	<_option value="walk-y-motor" >Walk Carriage (Y)</_option>
+	<_option value="enable-motors"  >Enable Motors</_option>
+	<_option value="disable-motors" >Disable Motors</_option> 
+	<_option value="version-check"  >Check EBB Version</_option>
+	<_option value="strip-data"     >Strip plotter data from file</_option>
+      </param>
+
+      <param name="WalkDistance" type="float" min="-11" max="11" 
+             _gui-text="Walk distance in inches (positive or negative):">1.00</param>
+  
+             
+      <_param name="instructions_manual2" type="description"
+	      xml:space="preserve">
+	Note: Manual "walk" commands move the motors
+	as requested, _regardless_ of the current
+	position, even if it means running into walls.
+		
+	      Press 'Apply' to execute the command.
+</_param>
+    </page>
+
+    <page name="resume" _gui-text="Resume">
+      <_param name="instructions_resume" type="description"
+	      xml:space="preserve"> 
+	      
+To pause a plot in progress, press the "PRG" 
+button on the EBB circuit board. After pausing,
+you can change settings or perform any
+manual adjustments that are needed.
+
+To resume painting-- or to cancel and return
+home --press 'Apply' with this tab selected.   
+
+Plot progress is stored in the Inkscape file;
+if you need to quit Inkscape and resume later, 
+be sure to save the document first.
+
+You can resume directly where you paused, or
+after using the Return to Home Corner command.
+
+
+Action on 'Apply':</_param>
+    <param name="resumeType" type="optiongroup" appearance="" _gui-text="">
+    	<_option value="ResumeNow" >Resume (From Home or Where Paused)</_option>
+    	<_option value="justGoHome">Return to Home Corner (only)</_option>	
+          </param>	      
+	     
+    </page>		
+
+    <page name="layers" _gui-text="Layers">
+      <_param name="instructions_layer" type="description" xml:space="preserve">
+Normally, we plot paths from all layers.  
+You can also choose to plot a single layer 
+or group of layers, for example to plot only a
+single color of ink.
+
+Pressing 'Apply' from this frame will plot
+only layers whose names begin with the 
+selected number, which can be up to 100.
+
+
+</_param>
+      <param name="layernumber" type="int" min="0" max="100"
+	     _gui-text="   Plot only layers beginning with: ">1</param>
+    </page>			
+
+    <page name="Help" _gui-text="*">
+      <_param name="instructions_general" type="description"
+	      xml:space="preserve">
+AxiDraw Control Inkscape extension 
+Release 1.0.0, dated 2016-01-31
+
+http://axidraw.com/
+
+Issue Tracker
+https://github.com/evil-mad/axidraw/issues
+
+*EBB Firmware 2.3.0 or newer required.
+
+Known issues:
+* "Cancel" function does not work while plotting.
+  (This is due to a known bug in Inkscape.)
+  
+</_param>
+    </page>
+  </param>
+
+  <effect needs-live-preview="false" needs-document="no">
+    <object-type>all</object-type>
+    <effects-menu>
+      <submenu _name="AxiDraw"/>
+    </effects-menu>
+  </effect>
+
+  <script>
+    <command reldir="extensions" interpreter="python">axidraw.py</command>
+  </script>
+
+</inkscape-extension>
+
