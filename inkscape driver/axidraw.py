@@ -77,6 +77,12 @@ class WCB( inkex.Effect ):
 			action="store", type="int",
 			dest="penUpSpeed", default=F_DEFAULT_SPEED,
 			help="Speed (step/sec) while pen is up." )
+		self.OptionParser.add_option( "--rapidSpeed",
+			action="store", type="int",
+			dest="rapidSpeed", default=F_DEFAULT_SPEED,
+			help="Rapid speed (percent) while pen is up." )
+
+
 		self.OptionParser.add_option( "--ServoUpSpeed",
 			action="store", type="int",
 			dest="ServoUpSpeed", default=N_SERVOSPEED,
@@ -1086,13 +1092,18 @@ class WCB( inkex.Effect ):
 		self.xErr = xTemp - float(nDeltaX)  # Keep track of rounding errors, so that they do not accumulate.
 		self.yErr = yTemp - float(nDeltaY)
 
-		if self.bPenIsUp:
-			self.fSpeed = self.BrushUpSpeed
-		else:
-			self.fSpeed = self.BrushDownSpeed
+		plotDistance = plot_utils.distance( nDeltaX, nDeltaY )
 
-		if ( plot_utils.distance( nDeltaX, nDeltaY ) >= 1 ):
+		if (plotDistance >= 1 ):	# if at least one motor step is required for this move....
 			self.nodeCount += 1
+
+			if self.bPenIsUp:
+				self.fSpeed = self.BrushUpSpeed
+				if (plotDistance > (self.RapidThreshold * self.stepsPerInch)):
+					self.fSpeed = self.BrushRapidSpeed
+			else:
+				self.fSpeed = self.BrushDownSpeed
+
 
 			if self.resumeMode:
 				if ( self.nodeCount >= self.nodeTarget ):
@@ -1103,21 +1114,9 @@ class WCB( inkex.Effect ):
 						self.penDown()
 						self.fSpeed = self.BrushDownSpeed
 
-			nTime =  10000.00 / self.fSpeed * plot_utils.distance( nDeltaX, nDeltaY )
+			nTime =  10000.00 / self.fSpeed * plotDistance
+# 			nTime =  10000.00 / self.fSpeed * plot_utils.distance( nDeltaX, nDeltaY )
 			nTime = int( math.ceil(nTime / 10.0))
-
-# 			while ( ( abs( nDeltaX ) > 0 ) or ( abs( nDeltaY ) > 0 ) ):
-# 				maxSegmentDuration = 500.0
-# 				if ( nTime > maxSegmentDuration ):
-# 					xd = int( math.floor( ( maxSegmentDuration * nDeltaX ) / nTime ) )
-# 					yd = int( math.floor( ( maxSegmentDuration * nDeltaY ) / nTime ) )
-# 					td = int( maxSegmentDuration )
-# 				else:
-# 					xd = nDeltaX
-# 					yd = nDeltaY
-# 					td = nTime
-# 					if ( td < 1 ):
-# 					   td = 1		# don't allow zero-time moves.
 
 			xd = nDeltaX
 			yd = nDeltaY
@@ -1141,8 +1140,6 @@ class WCB( inkex.Effect ):
 					yd2 = yd 
 				
 				#TODO: Test that these motor 1 and motor 2 assignments match up to the controls in the inx file.	
-
-# 				inkex.errormsg( 'Move ' + str( xd2 ) + ', ' + str( yd2 ))
 					
 				ebb_motion.doABMove( self.serialPort, xd2, yd2, td )			
 				if (td > 50):
@@ -1170,16 +1167,19 @@ class WCB( inkex.Effect ):
 			self.stepsPerInch = float( axidraw_conf.F_DPI_16X)
 			self.BrushUpSpeed   = self.options.penUpSpeed * axidraw_conf.F_Speed_Scale
 			self.BrushDownSpeed = self.options.penDownSpeed * axidraw_conf.F_Speed_Scale
+			self.BrushRapidSpeed = self.options.rapidSpeed * axidraw_conf.F_Speed_Scale
 		elif ( self.options.resolution == 2 ):
 			ebb_motion.sendEnableMotors(self.serialPort, 2) # 8X microstepping
 			self.stepsPerInch = float( axidraw_conf.F_DPI_16X / 2.0 )  
 			self.BrushUpSpeed   = self.options.penUpSpeed * axidraw_conf.F_Speed_Scale / 2
 			self.BrushDownSpeed = self.options.penDownSpeed * axidraw_conf.F_Speed_Scale / 2
+			self.BrushRapidSpeed = self.options.rapidSpeed * axidraw_conf.F_Speed_Scale /2
 		else:
 			ebb_motion.sendEnableMotors(self.serialPort, 3) # 4X microstepping  
 			self.stepsPerInch = float( axidraw_conf.F_DPI_16X / 4.0 )
 			self.BrushUpSpeed   = self.options.penUpSpeed * axidraw_conf.F_Speed_Scale / 4
 			self.BrushDownSpeed = self.options.penDownSpeed * axidraw_conf.F_Speed_Scale / 4
+			self.BrushRapidSpeed = self.options.rapidSpeed * axidraw_conf.F_Speed_Scale /4
 
 	def penUp( self ):
 		self.virtualPenIsUp = True  # Virtual pen keeps track of state for resuming plotting.
@@ -1250,6 +1250,7 @@ class WCB( inkex.Effect ):
 		if ( self.svgHeight == None ) or ( self.svgWidth == None ):
 			return False
 		else:
+			self.RapidThreshold = float(self.svgHeight) * 0.1 
 			return True
 
 e = WCB()

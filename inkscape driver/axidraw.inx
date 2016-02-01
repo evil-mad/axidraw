@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
   <_name>AxiDraw Control</_name>
-  <id>command.evilmadscientist.axidraw.rev100</id>
+  <id>command.evilmadscientist.axidraw.rev101</id>
   <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
   <dependency type="executable" location="extensions">axidraw.py</dependency>
   <dependency type="executable" location="extensions">inkex.py</dependency>
@@ -52,18 +52,24 @@ AxiDraw: Basic Setup
     </page>
 
     <page name='timing' _gui-text='Timing'>
-      <param name="penDownSpeed" type="int" min="1" max="250"
-	   _gui-text="          Painting speed when pen is down (%):">75</param>	
-      <param name="penUpSpeed" type="int" min="1" max="250"
-	   _gui-text="          Moving speed when pen is up (%):">75</param>
+      <_param name="instructions_timing3" type="description">
+Movement speeds: 
+</_param>
 
+      <param name="penDownSpeed" type="int" min="1" max="250"
+	   _gui-text="         Pen-down writing speed (%):">50</param>	
+      <param name="penUpSpeed" type="int" min="1" max="250"
+	   _gui-text="         Pen-up speed (%):">75</param>
+      <param name="rapidSpeed" type="int" min="1" max="250"
+	   _gui-text="         Rapid pen-up, for large distances (%):">90</param>
+	   
       <_param name="instructions_timing1" type="description"
 	      xml:space="preserve">
 . . . . . . . . . . . . .
 </_param>
 	   
       <param name="ServoUpSpeed" type="int" min="1" max="1600"
-	   _gui-text="          pen raising speed (%/s):">200</param>
+	   _gui-text="          Pen raising speed (%/s):">200</param>
       <param name="penUpDelay" type="int" min="1" max="5000"
 	   _gui-text="          Delay after raising pen (ms):">200</param>
       <param name="ServoDownSpeed" type="int" min="1" max="1600"
