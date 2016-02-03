@@ -83,13 +83,8 @@ Movement speeds:
 
     <page name='options' _gui-text='Options'>
 
-      <_param name="instructions_options1" type="description"
-	      xml:space="preserve">
-. . . . . . . . . . . . .
-</_param>
-
       <param name="smoothness" type="float" min="0" 
-           _gui-text="          Curve smoothing (lower for more):">.2</param>
+           _gui-text="          Curve smoothing (lower for more):">2.0</param>
            
       <param name="resolution" type="optiongroup" appearance="minimal"
 	     _gui-text="          Motor Resolution:">
