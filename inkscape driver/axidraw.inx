@@ -27,7 +27,7 @@ Need help? Visit http://axidraw.com/
 AxiDraw: Basic Setup
 </_param>
       <param name="penUpPosition" type="int" min="0" max="100"
-	     _gui-text="Pen position: UP, 0-100%:">70</param>
+	     _gui-text="Pen position: UP, 0-100%:">50</param>
       <param name="penDownPosition" type="int" min="0" max="100"
 	     _gui-text="Pen position: DOWN, 0-100%:">30</param>
 	     
@@ -57,11 +57,9 @@ Movement speeds:
 </_param>
 
       <param name="penDownSpeed" type="int" min="1" max="250"
-	   _gui-text="         Pen-down writing speed (%):">50</param>	
-      <param name="penUpSpeed" type="int" min="1" max="250"
-	   _gui-text="         Pen-up speed (%):">75</param>
+	   _gui-text="         Writing/Drawing speed (%):">10</param>	
       <param name="rapidSpeed" type="int" min="1" max="250"
-	   _gui-text="         Rapid pen-up, for large distances (%):">90</param>
+	   _gui-text="         Maximum speed, with pen up (%):">90</param>
 	   
       <_param name="instructions_timing1" type="description"
 	      xml:space="preserve">
@@ -83,8 +81,8 @@ Movement speeds:
 
     <page name='options' _gui-text='Options'>
 
-      <param name="smoothness" type="float" min="0" 
-           _gui-text="          Curve smoothing (lower for more):">2.0</param>
+      <param name="smoothness" type="float" min=".1" max="100"
+           _gui-text="          Curve smoothing (default: 10.0):">10.0</param>
            
       <param name="resolution" type="optiongroup" appearance="minimal"
 	     _gui-text="          Motor Resolution:">

@@ -24,6 +24,8 @@
 
 
 from simpletransform import *
+from math import sqrt
+from array import *
 import gettext
 import simplepath
 import serial
@@ -73,10 +75,10 @@ class WCB( inkex.Effect ):
 			action="store", type="int",
 			dest="penDownSpeed", default=F_DEFAULT_SPEED,
 			help="Speed (step/sec) while pen is down." )
-		self.OptionParser.add_option( "--penUpSpeed",
-			action="store", type="int",
-			dest="penUpSpeed", default=F_DEFAULT_SPEED,
-			help="Speed (step/sec) while pen is up." )
+# 		self.OptionParser.add_option( "--penUpSpeed",
+# 			action="store", type="int",
+# 			dest="penUpSpeed", default=F_DEFAULT_SPEED,
+# 			help="Speed (step/sec) while pen is up." )
 		self.OptionParser.add_option( "--rapidSpeed",
 			action="store", type="int",
 			dest="rapidSpeed", default=F_DEFAULT_SPEED,
@@ -145,9 +147,9 @@ class WCB( inkex.Effect ):
 
 		fX = None
 		fY = None 
-		self.fCurrX = axidraw_conf.F_StartPos_X
-		self.fCurrY = axidraw_conf.F_StartPos_Y 
-		self.ptFirst = ( axidraw_conf.F_StartPos_X, axidraw_conf.F_StartPos_Y)
+		self.fCurrX = axidraw_conf.StartPos_X
+		self.fCurrY = axidraw_conf.StartPos_Y 
+		self.ptFirst = ( axidraw_conf.StartPos_X, axidraw_conf.StartPos_Y)
 		self.bStopped = False
 		self.fSpeed = 1
 		self.resumeMode = False
@@ -190,26 +192,24 @@ class WCB( inkex.Effect ):
 		self.svgHeight = 0
 		
 		self.xBoundsMax = axidraw_conf.N_PAGE_WIDTH
-		self.xBoundsMin = axidraw_conf.F_StartPos_X
+		self.xBoundsMin = axidraw_conf.StartPos_X
 		self.yBoundsMax = axidraw_conf.N_PAGE_HEIGHT
-		self.yBoundsMin = axidraw_conf.F_StartPos_Y		
+		self.yBoundsMin = axidraw_conf.StartPos_Y		
 		
 		self.svgTransform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
 		
 		self.stepsPerInch = 0 # must be set to a nonzero value before plotting.
-		self.BrushUpSpeed   = 0.5 * axidraw_conf.F_Speed_Scale #Default speed when brush is up
-		self.BrushDownSpeed = 0.25 * axidraw_conf.F_Speed_Scale #Default speed when brush is down		
-		self.BrushRapidSpeed = 0.75 * axidraw_conf.F_Speed_Scale #Default speed when brush is down	
+# 		self.PenUpSpeed   = 0.5 * axidraw_conf.Speed_Scale #Default speed when pen is up
+		self.PenDownSpeed = 0.25 * axidraw_conf.Speed_Scale #Default speed when pen is down		
+		self.PenRapidSpeed = 0.75 * axidraw_conf.Speed_Scale #Default speed when pen is down	
 
-		self.RapidThreshold = 1 # Default value: 1 inch
-					
 		# So that we only generate a warning once for each
 		# unsupported SVG element, we use a dictionary to track
 		# which elements have received a warning
 		self.warnings = {}
 		self.warnOutOfBounds = False
-			
-		self.preResumeMove = False
+		self.warnDataSize = False
+		self.warnShortMoves = False
  
 	def effect( self ):
 		'''Main entry point: check to see which tab is selected, and act accordingly.'''
@@ -251,22 +251,27 @@ class WCB( inkex.Effect ):
 					unused_button = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
 					self.resumePlotSetup()
 					if self.resumeMode:
-						fX = self.svgPausedPosX_Old + axidraw_conf.F_StartPos_X
-						fY = self.svgPausedPosY_Old + axidraw_conf.F_StartPos_Y
+						fX = self.svgPausedPosX_Old + axidraw_conf.StartPos_X
+						fY = self.svgPausedPosY_Old + axidraw_conf.StartPos_Y
 		 				self.resumeMode = False
-		 				
-		 				self.preResumeMove = True
-						self.plotLineAndTime(fX, fY) #Special pre-resume move
-						self.preResumeMove = False
+	
+						if ( self.virtualPenIsUp ):		#Special pre-resume move
+							self.penUpRapidMove( fX, fY ) #Rapid pen-up movements
+						else:
+							self.plotLineAndTime( fX, fY ) #Draw a segment
+
 						self.resumeMode = True
 						self.nodeCount = 0
 						self.plotToWCB() 
 						
 					elif ( self.options.resumeType == "justGoHome" ):
-						fX = axidraw_conf.F_StartPos_X
-						fY = axidraw_conf.F_StartPos_Y 
-						self.plotLineAndTime(fX, fY)
-		
+						fX = axidraw_conf.StartPos_X
+						fY = axidraw_conf.StartPos_Y 
+						if ( self.virtualPenIsUp ):
+							self.penUpRapidMove( fX, fY ) #Rapid pen-up movements
+						else:
+							self.plotLineAndTime( fX, fY ) #Draw a segment
+							
 						#New values to write to file:
 						self.svgNodeCount = self.svgNodeCount_Old
 						self.svgLastPath = self.svgLastPath_Old 
@@ -349,9 +354,9 @@ class WCB( inkex.Effect ):
 				self.ServoSetup()
 				self.penUp() 
 				self.EnableMotors() #Set plotting resolution  
-				self.fSpeed = self.options.penUpSpeed
-				self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.F_StartPos_X
-				self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.F_StartPos_Y
+				self.fSpeed = self.options.penDownSpeed
+				self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPos_X
+				self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPos_Y
 				 
 
 	def CheckSVGforWCBData( self ):
@@ -457,36 +462,27 @@ class WCB( inkex.Effect ):
 				nDeltaX = self.options.WalkDistance
 			else:
 				return
+			
+			self.fSpeed = self.options.penDownSpeed
 				
-			#Query pen position: 1 up, 0 down (followed by OK)
-			strVersion = ebb_serial.query( self.serialPort, 'QP\r' )
-			if strVersion[0] == '0':
-				self.fSpeed = self.options.penDownSpeed
-			if strVersion[0] == '1':
-				self.fSpeed = self.options.penUpSpeed
+# 			#Query pen position: 1 up, 0 down (followed by OK)
+# 			strVersion = ebb_serial.query( self.serialPort, 'QP\r' )
+# 			if strVersion[0] == '0':
+# 				self.fSpeed = self.options.penDownSpeed
+# 			if strVersion[0] == '1':
+# 				self.fSpeed = self.options.penUpSpeed
 				
  			self.EnableMotors() #Set plotting resolution 
-			self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.F_StartPos_X
-			self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.F_StartPos_Y
+			self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPos_X
+			self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPos_Y
 			self.ignoreLimits = True
 			fX = self.fCurrX + nDeltaX   #Note: Walking motors is STRICTLY RELATIVE TO INITIAL POSITION.
 			fY = self.fCurrY + nDeltaY
-			self.plotLineAndTime(fX, fY ) 
-
-	def MoveDeltaXY(self,xDist,yDist):  
-		fX = fX + xDist   #Todo: Add limit checking?
-		fY = fY + yDist 
-		self.plotLineAndTime(fX, fY )  
-		
-	def MoveToXY(self,xPos,yPos):  
-		fX = xPos   #Todo: Add limit checking?
-		fY = yPos 
-		self.plotLineAndTime(fX, fY )  
-
-	def moveHome(self):
-		self.xBoundsMin = axidraw_conf.F_StartPos_X
-		self.yBoundsMin = axidraw_conf.F_StartPos_Y
-		self.MoveToXY(axidraw_conf.F_StartPos_X, axidraw_conf.F_StartPos_Y)
+			
+			if ( self.virtualPenIsUp ):
+				self.penUpRapidMove( fX, fY ) #Rapid pen-up movements
+			else:
+				self.plotLineAndTime( fX, fY ) #Draw a segment
 
 	def plotToWCB( self ):
 		'''Perform the actual plotting, if selected in the interface:'''
@@ -532,12 +528,19 @@ class WCB( inkex.Effect ):
  
 			# return to home after end of normal plot
 			if ( ( not self.bStopped ) and ( self.ptFirst ) ):
-				self.xBoundsMin = axidraw_conf.F_StartPos_X
-				self.yBoundsMin = axidraw_conf.F_StartPos_Y
+				self.xBoundsMin = axidraw_conf.StartPos_X
+				self.yBoundsMin = axidraw_conf.StartPos_Y
 				fX = self.ptFirst[0]
 				fY = self.ptFirst[1] 
  				self.nodeCount = self.nodeTarget    
-				self.plotLineAndTime(fX, fY )
+# 				self.plotLineAndTime(fX, fY )
+				
+				if ( self.virtualPenIsUp ):
+					self.penUpRapidMove( fX, fY ) #Rapid pen-up movements
+				else:
+					self.plotLineAndTime( fX, fY ) #Draw a segment
+				
+				
 			if ( not self.bStopped ): 
 				if (self.options.tab == '"splash"') or (self.options.tab == '"layers"') or (self.options.tab == '"resume"'):
 					self.svgLayer = 0
@@ -551,9 +554,11 @@ class WCB( inkex.Effect ):
 					#Clear saved position data from the SVG file,
 					#  IF we have completed a normal plot from the splash, layer, or resume tabs.
 			if (self.warnOutOfBounds):
-				inkex.errormsg( gettext.gettext( 'Warning: AxiDraw movement was limited by its physical range of motion.' ) )
-			
-
+				inkex.errormsg( gettext.gettext( 'Warning: Off-page elements found. AxiDraw movement was limited by its physical range of motion.' ) )
+			if (self.warnDataSize):
+				inkex.errormsg( 'Internal array data length error. Please contact technical support.' )
+			if (self.warnShortMoves):				
+				inkex.errormsg( 'Warning: Short moves detected.' )
 
 		finally:
 			# We may have had an exception and lost the serial port...
@@ -1020,13 +1025,6 @@ class WCB( inkex.Effect ):
 			return
 
 		if self.plotCurrentLayer:
-
-			# reset page bounds for plotting:
-			self.xBoundsMax = axidraw_conf.N_PAGE_WIDTH
-			self.xBoundsMin = 0
-			self.yBoundsMax = axidraw_conf.N_PAGE_HEIGHT
-			self.yBoundsMin = 0
-	
 			p = cubicsuperpath.parsePath( d )
 	
 			# ...and apply the transformation to each point
@@ -1036,14 +1034,12 @@ class WCB( inkex.Effect ):
 			# where the start-point is the last point in the previous segment.
 			for sp in p:
 			
-				plot_utils.subdivideCubicPath( sp, self.options.smoothness / 1000.0 )
+				plot_utils.subdivideCubicPath( sp, 0.02 / self.options.smoothness )
 				nIndex = 0
-	
+
 				for csp in sp:
-	
 					if self.bStopped:
 						return
-	
 					if self.plotCurrentLayer:
 						if nIndex == 0:
 							self.penUp()
@@ -1051,41 +1047,35 @@ class WCB( inkex.Effect ):
 						elif nIndex == 1:
 							self.penDown()
 							self.virtualPenIsUp = False
-	
 					nIndex += 1
+
+					fX = float( csp[1][0] ) # Set move destination
+					fY = float( csp[1][1] )
+
+					if ( self.virtualPenIsUp ):
+						self.penUpRapidMove( fX, fY ) #Rapid pen-up movements
+					else:
+						self.plotLineAndTime( fX, fY ) #Draw a segment
 	
-					fX = float( csp[1][0] )    # Set move destination
-					fY = float( csp[1][1] )  
-					
-					self.plotLineAndTime(fX, fY )   #Draw a segment
-						
 			if ( not self.bStopped ):	#an "index" for resuming plots quickly-- record last complete path
 				self.svgLastPath = self.pathcount #The number of the last path completed
 				self.svgLastPathNC = self.nodeCount #the node count after the last path was completed.			
-			
+
 
 	def plotLineAndTime( self, xDest, yDest ):
 		'''
 		Send commands out the com port as a line segment (dx, dy) and a time (ms) the segment
-		should take to implement.  
-		Important note: Everything up to this point uses *pixel* scale. 
-		Here, we convert from floating-point pixel scale to actual motor steps, w/ present DPI.
+		should take to draw. Draws a single line segment with constant velocity.
+		Important note: Everything up to this point uses *inch* scale. 
+		Here, we convert to actual motor steps, w/ set DPI.
 		'''
-		
+
 		if (self.ignoreLimits == False):
-			if (xDest > self.xBoundsMax):	#Check machine size limit; truncate at edges
-				xDest = self.xBoundsMax
+			xDest, xBounded = plot_utils.checkLimits( xDest, self.xBoundsMin, self.xBoundsMax )
+			yDest, yBounded = plot_utils.checkLimits( yDest, self.yBoundsMin, self.yBoundsMax )
+			if (xBounded or yBounded):
 				self.warnOutOfBounds = True
-			if (xDest < self.xBoundsMin):	#Check machine size limit; truncate at edges
-				xDest = self.xBoundsMin	
-				self.warnOutOfBounds = True		
-			if (yDest > self.yBoundsMax):	#Check machine size limit; truncate at edges
-				yDest = self.yBoundsMax
-				self.warnOutOfBounds = True
-			if (yDest < self.yBoundsMin):	#Check machine size limit; truncate at edges
-				yDest = self.yBoundsMin
-				self.warnOutOfBounds = True
-			
+
 		if self.bStopped:
 			return
 		if ( self.fCurrX is None ):
@@ -1103,43 +1093,38 @@ class WCB( inkex.Effect ):
 
 		plotDistance = plot_utils.distance( motorSteps1, motorSteps2 )
 
-		if (plotDistance >= 1.0): #if moving at least one motor step....
-		
-			#Set the speed at which we will plot this segment:
-			
-			if self.bPenIsUp:
-				self.fSpeed = self.BrushUpSpeed
-				if (plotDistance > (self.RapidThreshold * self.stepsPerInch)):
-					self.fSpeed = self.BrushRapidSpeed
-			else:
-				self.fSpeed = self.BrushDownSpeed
+		if (plotDistance < 1.0): #if not moving at least one motor step...
+			return
 
-			if self.resumeMode:		#Handle a "corner case" -- just in case.
-				if ( self.nodeCount >= self.nodeTarget ):
-					if ( not self.virtualPenIsUp ):
-						self.fSpeed = self.BrushDownSpeed
+		#Set the speed at which we will plot this segment
 
-# 			inkex.errormsg( 'plotDistance: ' + str( plotDistance ) )
-# 			inkex.errormsg( 'self.fSpeed: ' + str( self.fSpeed ) )
+# 		if self.bPenIsUp:
+# 			self.fSpeed = self.PenUpSpeed
+# 		else:
+# 			self.fSpeed = self.PenDownSpeed
 
-			nTime = int( math.ceil(1000.0 * plotDistance / self.fSpeed))	
-			if ( nTime < 1 ):
-				nTime = 1		# don't allow zero-time moves.
+		self.fSpeed = self.PenDownSpeed
 
-			if (abs((float(motorSteps1) / float(nTime))) < 0.002):	
-				motorSteps1 = 0	#don't allow too-slow movements of this axis
-			if (abs((float(motorSteps2) / float(nTime))) < 0.002):	
-				motorSteps2 = 0	#don't allow too-slow movements of this axis
-		else:
-			motorSteps1 = 0
-			motorSteps2 = 0
-			plotDistance = 0
+
+		if self.resumeMode:		#Handle a "corner case" -- just in case.
+			if ( self.nodeCount >= self.nodeTarget ):
+				if ( not self.virtualPenIsUp ):
+					self.fSpeed = self.PenDownSpeed
+
+# 		inkex.errormsg( 'plotDistance: ' + str( plotDistance ) )
+# 		inkex.errormsg( 'self.fSpeed: ' + str( self.fSpeed ) )
+
+		nTime = int( math.ceil(1000.0 * plotDistance / self.fSpeed))	 #in milliseconds
+		if ( nTime < 1 ):
+			nTime = 1		# don't allow zero-time moves.
+
+		if (abs((float(motorSteps1) / float(nTime))) < 0.002):	
+			motorSteps1 = 0	#don't allow too-slow movements of this axis
+		if (abs((float(motorSteps2) / float(nTime))) < 0.002):	
+			motorSteps2 = 0	#don't allow too-slow movements of this axis
 
 		xSteps = (motorSteps1 + motorSteps2)/2.0	# will force result to be a float.
 		ySteps = (motorSteps1 - motorSteps2)/2.0	# will force result to be a float.
-
-# 		inkex.errormsg( 'motorSteps1, motorSteps2: ' + str( motorSteps1 ) + ', ' + str( motorSteps2 ))
-# 		inkex.errormsg( 'xSteps, ySteps: ' + str( xSteps ) + ', ' + str( ySteps ))
 
 		if ((motorSteps1 != 0) or (motorSteps2 != 0)): # if at least one motor step is required for this move....
 			self.nodeCount += 1
@@ -1168,42 +1153,262 @@ class WCB( inkex.Effect ):
 				self.fCurrX += xSteps / self.stepsPerInch   # Update current position
 				self.fCurrY += ySteps / self.stepsPerInch		
 
-				self.svgLastKnownPosX = self.fCurrX - axidraw_conf.F_StartPos_X
-				self.svgLastKnownPosY = self.fCurrY - axidraw_conf.F_StartPos_Y	
-		
-# 				inkex.errormsg( 'Error X, Y: ' + str( xDest - self.fCurrX ) + ', ' + str( yDest - self.fCurrY ))
-
-
+				self.svgLastKnownPosX = self.fCurrX - axidraw_conf.StartPos_X
+				self.svgLastKnownPosY = self.fCurrY - axidraw_conf.StartPos_Y	
 
 			strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
 			if strButton[0] == '1': #button pressed
 				self.svgNodeCount = self.nodeCount;
-				self.svgPausedPosX = self.fCurrX - axidraw_conf.F_StartPos_X	#self.svgLastKnownPosX
-				self.svgPausedPosY = self.fCurrY - axidraw_conf.F_StartPos_Y	#self.svgLastKnownPosY
+				self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPos_X	#self.svgLastKnownPosX
+				self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPos_Y	#self.svgLastKnownPosY
+				self.penUp()
 				inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
 				inkex.errormsg( 'Use the "resume" feature to continue.' )
 				self.bStopped = True
 				return
 
+	def penUpRapidMove( self, xDest, yDest ):
+		'''
+		Like plotLineAndTime, but for use with a single straight line, with pen up.
+		Implement basic "trapezoid" acceleration and deceleration
+		'''
+
+		if (self.ignoreLimits == False):
+			xDest, xBounded = plot_utils.checkLimits( xDest, self.xBoundsMin, self.xBoundsMax )
+			yDest, yBounded = plot_utils.checkLimits( yDest, self.yBoundsMin, self.yBoundsMax )
+			if (xBounded or yBounded):
+				self.warnOutOfBounds = True
+
+		if self.bStopped:
+			return
+		if ( self.fCurrX is None ):
+			return
+		
+# 		Distances to move:
+		xMovementIdeal = self.stepsPerInch * ( xDest - self.fCurrX )	
+		yMovementIdeal = self.stepsPerInch * ( yDest - self.fCurrY )
+
+# 		Look at distance to move along 45-degree axes, for native motor steps:
+		motorSteps1 = int (round(xMovementIdeal + yMovementIdeal)) # Number of native motor steps required, Axis 1
+		motorSteps2 = int (round(xMovementIdeal - yMovementIdeal)) # Number of native motor steps required, Axis 2
+
+		plotDistance = plot_utils.distance( motorSteps1, motorSteps2 )
+		
+		if (plotDistance < 1.0): #if total movement is less than one step, skip this movement.
+			return
+
+		speedLimit = self.PenRapidSpeed
+		accelRate = self.PenRapidSpeed/axidraw_conf.ACCEL_TIME 	# acceleration/deceleration rate: Maximum speed/time to reach that speed
+
+		timeSlice = 0.050 	#(seconds): Slice travel into slices of time that are at least 0.050 seconds (50 ms) long
+
+		# Choose top speed by _estimating_ what it would be if we had continuous acceleration
+		#	
+		# Total travel distance is _plotDistance_
+		# Question: How fast can we get in half of this distance?
+		#     Set (plotDistance/2) equal to (1/2) * a * (tAccel)^2 , and solve for t_accel:
+		#     Then, t_accel = sqrt( plotDistance / a)
+		
+		tAccel = sqrt( plotDistance / accelRate)   #time interval for acceleration or deceleration
+		
+		if ( tAccel <= (3 * timeSlice )):
+			self.plotLineAndTime( xDest, yDest )	# Short move (less than three timeSlices): Use constant-velocity routine.
+			return
+
+		self.nodeCount += 1		# This whole rapid move counts as ONE node, for our purposes.
+		if self.resumeMode:
+			if ( self.nodeCount >= self.nodeTarget ):
+				self.resumeMode = False
+				if ( not self.virtualPenIsUp ):
+					self.penDown()	
+
+		# Declare arrays, all integers. 
+		# These are _normally_ 4-byte integers, but could (theoretically) be 2-byte integers on some systems.
+		#   if so, this could cause errors in rare cases (very large/long moves, etc.). 
+		# Set up an alert system, just in case!
+
+		durationArray = array('I') # unsigned integer for duration -- up to 65 seconds for a move if only 2 bytes.
+		distArray = array('f')	#float
+		destArray1 = array('i')	#signed integer
+		destArray2 = array('i')	#signed integer
+
+		if (destArray2.itemsize < 4):
+			self.warnDataSize = True
+			
+
+		velocity = 0.0
+		timeElapsed = 0.0		
+		position = 0.0
+
+		# Speed _after_ acceleration interval:			
+		speedMax = accelRate * tAccel		
+		if ( speedMax > speedLimit ):
+			speedMax = speedLimit	# This move is longer than 2*tAccel; We will reach _full cruising speed_!
+			
+			intervals = int(math.floor(tAccel / timeSlice))	# Number of intervals each, during acceleration OR deceleration 
+			timePerInterval = tAccel / intervals			
+			#Add a center "cruising" speed interval if there is time for it only.
+			
+			velocityStepSize = speedMax/(intervals + 1.0)	
+			# For six time intervals of acceleration, first interval is at velocity (max/7)
+			# 6th (last) time interval is at 6*max/7
+			# after this interval, we are at full speed.
+			
+			for index in range(0, intervals):		#Calculate acceleration phase
+				velocity += velocityStepSize
+				timeElapsed += timePerInterval
+				position += velocity * timePerInterval
+				durationArray.append(int(round(timeElapsed * 1000.0)))
+				distArray.append(position)		#Estimated distance along direction of travel
+
+# 			inkex.errormsg( 'FullSpeed. plotDistance: ' + str( plotDistance ) )				
+# 			inkex.errormsg( 'FullSpeed. position: ' + str( position ) )
+# 			inkex.errormsg( 'FullSpeed. plotDistance - (2 * position): ' + str( plotDistance - (2 * position) ) )
+
+			cruisingDistance = plotDistance - (2 * position)	
+			
+			if (cruisingDistance > (timePerInterval * speedMax)):
+				# There is enough time for (at least) one interval at full cruising speed.
+				velocity = speedMax
+				cruisingTime = cruisingDistance / velocity
+				timeElapsed += cruisingTime
+				durationArray.append(int(round(timeElapsed * 1000.0)))
+				position += velocity * cruisingTime
+				distArray.append(position)		#Estimated distance along direction of travel				
+# 				inkex.errormsg( 'FullSpeed duration: ' + str( cruisingTime ) )				
+# 				inkex.errormsg( 'FullSpeed distance: ' + str( velocity * cruisingTime ) )				
+
+			for index in range(0, intervals):		#Calculate deceleration phase
+				velocity -= velocityStepSize
+				timeElapsed += timePerInterval
+				position += velocity * timePerInterval
+				durationArray.append(int(round(timeElapsed * 1000.0)))
+				distArray.append(position)		#Estimated distance along direction of travel
+				
+# 			inkex.errormsg( 'FullSpeed. End Position: ' + str( position ) )
+#			scaleFactor = plotDistance / position	
+# 			inkex.errormsg( 'FullSpeed. Scale Factor: ' + str( scaleFactor ) )
+			
+		else:
+			# We will _not_ reach full cruising speed.
+			intervals = int(math.floor( 2 *	tAccel / timeSlice))	#TOTAL number of intervals, including acceleration and deceleration
+			if (intervals % 2 == 0):  # Even number of intervals:
+				intervals += 1	# Guarantee an odd number of intervals -- possibly a little shorter.
+				
+			timePerInterval = (2 * tAccel) / intervals
+
+			accelIntervals = int(math.ceil(intervals / 2.0))
+			velocityStepSize = speedMax / accelIntervals	
+
+			for index in range(0, accelIntervals):		#Calculate acceleration phase
+				velocity += velocityStepSize
+				timeElapsed += timePerInterval
+				position += velocity * timePerInterval
+				durationArray.append(int(round(timeElapsed * 1000.0)))
+				distArray.append(position)		#Estimated distance along direction of travel
+				
+			for index in range(0, intervals - accelIntervals):		#Calculate deceleration phase
+				velocity -= velocityStepSize
+				timeElapsed += timePerInterval
+				position += velocity * timePerInterval
+				durationArray.append(int(round(timeElapsed * 1000.0)))
+				distArray.append(position)		#Estimated distance along direction of travel
+
+# 			inkex.errormsg( 'PartialSpeed. plotDistance: ' + str( plotDistance ) )				
+# 			inkex.errormsg( 'PartialSpeed. End Position: ' + str( position ) )
+# 			scaleFactor = plotDistance / position	
+# 			inkex.errormsg( 'PartialSpeed. Scale Factor: ' + str( scaleFactor ) )
+
+# 		inkex.errormsg( 'motorSteps1, motorSteps2 : ' + str( motorSteps1 ) + ', ' + str( motorSteps2 ) )
+
+
+		for index in range (0, len(distArray) ):
+			fractionalDistance = distArray[index] / position # Fractional position along the intended path
+			destArray1.append ( int(round( fractionalDistance * motorSteps1)))
+			destArray2.append ( int(round( fractionalDistance * motorSteps2)))
+# 			inkex.errormsg( 'timeElapsed : ' + str( durationArray[index] )  )
+# 			inkex.errormsg( '(x,y): ' + str( destArray1[index] ) + ', ' + str( destArray2[index] ) )
+# 			inkex.errormsg( 'self.fSpeed: ' + str( self.fSpeed ) )
+
+		prevMotor1 = 0
+		prevMotor2 = 0
+		prevTime = 0
+		
+		for index in range (0, len(destArray1) ):
+			moveSteps1 = destArray1[index] - prevMotor1
+			moveSteps2 = destArray2[index] - prevMotor2
+			moveTime = durationArray[index] - prevTime
+			prevTime = durationArray[index]
+
+			
+			if ( moveTime < 1 ):
+				moveTime = 1		# don't allow zero-time moves.
+	
+			if (abs((float(moveSteps1) / float(moveTime))) < 0.002):	
+				moveSteps1 = 0		#don't allow too-slow movements of this axis
+			if (abs((float(moveSteps2) / float(moveTime))) < 0.002):	
+				moveSteps2 = 0		#don't allow too-slow movements of this axis
+	
+			prevMotor1 += moveSteps1
+			prevMotor2 += moveSteps2
+
+			xSteps = (moveSteps1 + moveSteps2)/2.0	# Result will be a float.
+			ySteps = (moveSteps1 - moveSteps2)/2.0	
+
+			if ((moveSteps1 != 0) or (moveSteps2 != 0)): # if at least one motor step is required for this move....
+	
+				if (not self.resumeMode) and (not self.bStopped):
+					if ( self.options.revMotor1 ):
+						moveSteps1Copy = -moveSteps1
+					else:
+						moveSteps1Copy = moveSteps1
+					if ( self.options.revMotor2):
+						moveSteps2Copy = -moveSteps2
+					else:
+						moveSteps2Copy = moveSteps2 
+					
+					ebb_motion.doXYMove( self.serialPort, moveSteps2Copy, moveSteps1Copy, moveTime )			
+					if (moveTime > 15):
+						if self.options.tab != '"manual"':
+							time.sleep(float(moveTime - 10)/1000.0)  #pause before issuing next command
+					else:
+						self.warnShortMoves = True
+
+					self.fCurrX += xSteps / self.stepsPerInch   # Update current position
+					self.fCurrY += ySteps / self.stepsPerInch		
+	
+					self.svgLastKnownPosX = self.fCurrX - axidraw_conf.StartPos_X
+					self.svgLastKnownPosY = self.fCurrY - axidraw_conf.StartPos_Y	
+
+		strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
+		if strButton[0] == '1': #button pressed
+			self.svgNodeCount = self.nodeCount;
+			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPos_X	#self.svgLastKnownPosX
+			self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPos_Y	#self.svgLastKnownPosY
+			inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
+			inkex.errormsg( 'Use the "resume" feature to continue.' )
+			self.bStopped = True
+			return
+
 	def EnableMotors( self ):
 		if ( self.options.resolution == 1 ):
 			ebb_motion.sendEnableMotors(self.serialPort, 1) # 16X microstepping
-			self.stepsPerInch = float( axidraw_conf.F_DPI_16X)
-			self.BrushUpSpeed   = self.options.penUpSpeed * axidraw_conf.F_Speed_Scale / 100.0
-			self.BrushDownSpeed = self.options.penDownSpeed * axidraw_conf.F_Speed_Scale / 100.0
-			self.BrushRapidSpeed = self.options.rapidSpeed * axidraw_conf.F_Speed_Scale / 100.0
+			self.stepsPerInch = float( axidraw_conf.DPI_16X)
+# 			self.PenUpSpeed   = self.options.penUpSpeed * axidraw_conf.Speed_Scale / 100.0
+			self.PenDownSpeed = self.options.penDownSpeed * axidraw_conf.Speed_Scale / 100.0
+			self.PenRapidSpeed = self.options.rapidSpeed * axidraw_conf.Speed_Scale / 100.0
 		elif ( self.options.resolution == 2 ):
 			ebb_motion.sendEnableMotors(self.serialPort, 2) # 8X microstepping
-			self.stepsPerInch = float( axidraw_conf.F_DPI_16X / 2.0 )  
-			self.BrushUpSpeed   = self.options.penUpSpeed * axidraw_conf.F_Speed_Scale / 200
-			self.BrushDownSpeed = self.options.penDownSpeed * axidraw_conf.F_Speed_Scale / 200
-			self.BrushRapidSpeed = self.options.rapidSpeed * axidraw_conf.F_Speed_Scale /200
+			self.stepsPerInch = float( axidraw_conf.DPI_16X / 2.0 )  
+# 			self.PenUpSpeed   = self.options.penUpSpeed * axidraw_conf.Speed_Scale / 200
+			self.PenDownSpeed = self.options.penDownSpeed * axidraw_conf.Speed_Scale / 200
+			self.PenRapidSpeed = self.options.rapidSpeed * axidraw_conf.Speed_Scale /200
 		else:
 			ebb_motion.sendEnableMotors(self.serialPort, 3) # 4X microstepping  
-			self.stepsPerInch = float( axidraw_conf.F_DPI_16X / 4.0 )
-			self.BrushUpSpeed   = self.options.penUpSpeed * axidraw_conf.F_Speed_Scale / 400
-			self.BrushDownSpeed = self.options.penDownSpeed * axidraw_conf.F_Speed_Scale / 400
-			self.BrushRapidSpeed = self.options.rapidSpeed * axidraw_conf.F_Speed_Scale /400
+			self.stepsPerInch = float( axidraw_conf.DPI_16X / 4.0 )
+# 			self.PenUpSpeed   = self.options.penUpSpeed * axidraw_conf.Speed_Scale / 400
+			self.PenDownSpeed = self.options.penDownSpeed * axidraw_conf.Speed_Scale / 400
+			self.PenRapidSpeed = self.options.rapidSpeed * axidraw_conf.Speed_Scale /400
 
 	def penUp( self ):
 		self.virtualPenIsUp = True  # Virtual pen keeps track of state for resuming plotting.
@@ -1274,7 +1479,6 @@ class WCB( inkex.Effect ):
 		if ( self.svgHeight == None ) or ( self.svgWidth == None ):
 			return False
 		else:
-			self.RapidThreshold = float(self.svgHeight) * 0.1 
 			return True
 
 e = WCB()
