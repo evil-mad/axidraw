@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
   <_name>AxiDraw Control</_name>
-  <id>command.evilmadscientist.axidraw.rev101</id>
+  <id>command.evilmadscientist.axidraw.rev102</id>
   <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
   <dependency type="executable" location="extensions">axidraw.py</dependency>
   <dependency type="executable" location="extensions">inkex.py</dependency>
@@ -94,13 +94,18 @@ Movement speeds:
 	      xml:space="preserve">
 . . . . . . . . . . . . .
 </_param>
-
        <param name="revMotor1" type="boolean"
            _gui-text="          Reverse motion of Motor 1 (right):">false</param>	
       <param name="revMotor2" type="boolean"
            _gui-text="          Reverse motion of Motor 2 (left):">false</param> 
 
-      <_param name="instructions_options3" type="description">      
+      <_param name="instructions_options3" type="description"
+	      xml:space="preserve">
+. . . . . . . . . . . . .
+</_param>
+       <param name="autoRotate" type="boolean"
+           _gui-text="          Auto-rotate page when printing:">true</param>	
+      <_param name="instructions_options4" type="description">      
 (Press 'Apply' to save settings.)
 </_param>
     </page>
@@ -110,10 +115,10 @@ Movement speeds:
 	      xml:space="preserve">
 AxiDraw Manual Control
 
-You can use this frame to send "manual" commands
+You can use this tab to send "manual" commands
 to the AxiDraw: Walk the stepper motors, raise
 or lower the pen, enable or disable the motors,
-or check the circuit board (EBB) firmware version.
+or test communication with the machine.
 </_param>
 
       <param name="manualType" type="optiongroup" appearance="minimal"
@@ -152,7 +157,7 @@ button on the EBB circuit board. After pausing,
 you can change settings or perform any
 manual adjustments that are needed.
 
-To resume painting-- or to cancel and return
+To resume printing-- or to cancel and return
 home --press 'Apply' with this tab selected.   
 
 Plot progress is stored in the Inkscape file;

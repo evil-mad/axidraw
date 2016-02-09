@@ -110,6 +110,11 @@ class WCB( inkex.Effect ):
 			action="store", type="inkbool",
 			dest="revMotor2", default=False,
 			help="Reverse motion of Motor 2 (left)." )
+
+		self.OptionParser.add_option( "--autoRotate",
+			action="store", type="inkbool",
+			dest="autoRotate", default=False,
+			help="Print in portrait or landscape mode automatically" )
 			
 		self.OptionParser.add_option( "--smoothness",
 			action="store", type="float",
@@ -190,11 +195,13 @@ class WCB( inkex.Effect ):
 
 		self.svgWidth = 0 
 		self.svgHeight = 0
+		self.printPortrait = False
 		
 		self.xBoundsMax = axidraw_conf.N_PAGE_WIDTH
 		self.xBoundsMin = axidraw_conf.StartPos_X
 		self.yBoundsMax = axidraw_conf.N_PAGE_HEIGHT
 		self.yBoundsMin = axidraw_conf.StartPos_Y		
+		self.plogLog = ""
 		
 		self.svgTransform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
 		
@@ -559,6 +566,8 @@ class WCB( inkex.Effect ):
 				inkex.errormsg( 'Internal array data length error. Please contact technical support.' )
 			if (self.warnShortMoves):				
 				inkex.errormsg( 'Warning: Short moves detected.' )
+			if (self.plogLog != ""):
+				inkex.errormsg( self.plogLog )
 
 		finally:
 			# We may have had an exception and lost the serial port...
@@ -1037,25 +1046,32 @@ class WCB( inkex.Effect ):
 				plot_utils.subdivideCubicPath( sp, 0.02 / self.options.smoothness )
 				nIndex = 0
 
+# 				self.plogLog += "plotPath\n"
+				
 				for csp in sp:
 					if self.bStopped:
 						return
 					if self.plotCurrentLayer:
 						if nIndex == 0:
 							self.penUp()
-							self.virtualPenIsUp = True
 						elif nIndex == 1:
 							self.penDown()
-							self.virtualPenIsUp = False
 					nIndex += 1
 
-					fX = float( csp[1][0] ) # Set move destination
-					fY = float( csp[1][1] )
+					if (self.printPortrait):
+						fX = float( csp[1][1] ) #Flipped X/Y
+						fY = ( self.svgWidth) - float( csp[1][0] )
+
+					else:
+						fX = float( csp[1][0] ) # Set move destination
+						fY = float( csp[1][1] )
 
 					if ( self.virtualPenIsUp ):
 						self.penUpRapidMove( fX, fY ) #Rapid pen-up movements
+# 						self.plogLog +=	"Pen up: " + str(fX) + ", " + str(fY) + "\n"
 					else:
 						self.plotLineAndTime( fX, fY ) #Draw a segment
+# 						self.plogLog +=	"Pen down: " + str(fX) + ", " + str(fY) + "\n"
 	
 			if ( not self.bStopped ):	#an "index" for resuming plots quickly-- record last complete path
 				self.svgLastPath = self.pathcount #The number of the last path completed
@@ -1476,6 +1492,8 @@ class WCB( inkex.Effect ):
 		'''
 		self.svgHeight = plot_utils.getLengthInches( self, 'height' )
 		self.svgWidth = plot_utils.getLengthInches( self, 'width' )
+		if (self.options.autoRotate) and (self.svgHeight > self.svgWidth ):
+			self.printPortrait = True
 		if ( self.svgHeight == None ) or ( self.svgWidth == None ):
 			return False
 		else:
