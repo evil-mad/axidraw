@@ -18,12 +18,21 @@ N_PAGE_WIDTH = 11.81      # Default page width in inches 	300 mm = about 11.81 i
 #Machine resolution: Used in converting drawing size to motor steps.
 DPI_16X = 2032       #DPI ("dots per inch") @ 16X microstepping.  Standard value: 2032, or 80 steps per mm.  
 
+Speed_Scale = 24950    #Maximum (100%) speed, in steps per second . If value is 20000 (default), 50% speed will be 10000 steps/s.
+						# Note that 25 kHz is the absolute maximum steps per second for the EBB.
+
 StartPos_X = 0   #parking position, in pixels. Default: 0
 StartPos_Y = 0      #parking position, in pixels. Default: 0
 
-Speed_Scale = 25000    #Default maximum (100%) speed, in steps per second . If value is 20000 (default), 50% speed will be 10000 steps/s.
 
-ACCEL_TIME = 1.0    #Number of seconds of acceleration required to reach full speed
+ACCEL_TIME = .25    #Seconds of acceleration to reach full speed
+ACCEL_TIME_PU = 1.0  #Seconds of acceleration to reach full speed WITH PEN UP.
+
+#Short-move pen-up distance threshold, below which we use the faster pen-down acceleration rate:
+SHORT_THRESHOLD = 1.0  #Distance Threshold (inches)
+
+#Skip pen-up moves shorter than this distance, when possible:
+MIN_GAP = 0.010  #Distance Threshold (inches)
 
 
 
@@ -31,5 +40,5 @@ ACCEL_TIME = 1.0    #Number of seconds of acceleration required to reach full sp
 SERVO_MAX = 28000  #Highest allowed position; "100%" on the scale
 SERVO_MIN = 7500   #Lowest allowed position; "0%" on the scale
 
-
+TIME_SLICE = 0.030  #Interval, in seconds, of when to update the motors.
 
