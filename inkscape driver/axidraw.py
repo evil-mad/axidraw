@@ -33,7 +33,7 @@ import string
 import time
 
 import ebb_serial		# https://github.com/evil-mad/plotink
-import ebb_motion		# https://github.com/evil-mad/plotink  Requires version 0.4
+import ebb_motion		# https://github.com/evil-mad/plotink  Requires version 0.5
 import plot_utils		# https://github.com/evil-mad/plotink  Requires version 0.4
 
 import axidraw_conf       	#Some settings can be changed here.
@@ -1356,7 +1356,6 @@ class WCB( inkex.Effect ):
 		for i in xrange(1, TrajLength):			
 			self.plotSegmentWithVelocity( inputPath[i][0] , inputPath[i][1] ,TrajVels[i-1] , TrajVels[i])
 
-
 	def plotSegmentWithVelocity( self, xDest, yDest, Vi, Vf  ):
 		''' 
 		Control the serial port to command the machine to draw
@@ -1837,7 +1836,9 @@ class WCB( inkex.Effect ):
 	
 					self.svgLastKnownPosX = self.fCurrX - axidraw_conf.StartPos_X
 					self.svgLastKnownPosY = self.fCurrY - axidraw_conf.StartPos_Y	
-
+					if spewSegmentDebugData:			
+						inkex.errormsg( '\nfCurrX,fCurrY (x = %1.2f, y = %1.2f) ' % (self.fCurrX, self.fCurrY))
+						
 		strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
 		if strButton[0] == '1': #button pressed
 			self.svgNodeCount = self.nodeCount;
@@ -1848,6 +1849,7 @@ class WCB( inkex.Effect ):
 			inkex.errormsg( 'Use the "resume" feature to continue.' )
 			self.bStopped = True
 			return
+		
 		
 	def plotLineAndTime( self, xDest, yDest ):
 		'''
