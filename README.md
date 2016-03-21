@@ -1,11 +1,10 @@
 # AxiDraw
-Software for the AxiDraw drawing machine
+The AxiDraw Extensions for Inkscape - Software to drive the AxiDraw drawing machine.
 
 More about AxiDraw:  http://www.axidraw.com/
 
 ---------
 
-The AxiDraw software is created as an Inkscape extension. 
 
 **Normal install (Mac/Windows):**
 
