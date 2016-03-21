@@ -7,10 +7,12 @@ More about AxiDraw:  http://www.axidraw.com/
 
 The AxiDraw software is created as an Inkscape extension. 
 
-Normal install (Mac/Windows):
+**Normal install (Mac/Windows):**
+
 Please read through the installation instructions on the [AxiDraw documentation site](http://wiki.evilmadscientist.com/Axidraw_Software_Installation)
 
-Manual install (Linux):
+**Manual install (Linux):**
+
 Install (along with the dependencies listed below) as you would any other Inkscape extension.
 
 
