@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
 <_name>AxiDraw Control</_name>
-<id>command.evilmadscientist.axidraw.rev110a</id>
+<id>command.evilmadscientist.axidraw.rev110b</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw.py</dependency>
 <dependency type="executable" location="extensions">inkex.py</dependency>
@@ -70,8 +70,8 @@ of the pen for writing and drawing.
 
 
 <param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
-<_option value="2">Normal, ~1000 DPI</_option>
 <_option value="1">Super (slower) ~2000 DPI</_option>
+<_option value="2">Normal, ~1000 DPI</_option>
 </param>
 
 
