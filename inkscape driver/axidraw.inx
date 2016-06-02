@@ -88,7 +88,7 @@ of the pen for writing and drawing.
 <_param indent="1" name="instructions_manual" type="description"  >
 You can use this tab to send "manual" commands to the 
 AxiDraw: Walk (move) the carriage, raise or lower the
-pen,enable or disable the motors, or test communication
+pen, enable or disable the motors, or test communication
 with the machine.
 </_param>
 
