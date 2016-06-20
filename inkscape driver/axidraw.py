@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.0.2, dated April 2, 2016.
+# Version 1.0.3, dated June 19, 2016.
 # 
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 #
@@ -579,10 +579,11 @@ class WCB( inkex.Effect ):
 			if node.tag == inkex.addNS( 'g', 'svg' ) or node.tag == 'g':
 
 				if ( node.get( inkex.addNS( 'groupmode', 'inkscape' ) ) == 'layer' ): 
-					self.DoWePlotLayer( node.get( inkex.addNS( 'label', 'inkscape' ) ) )
+					self.sCurrentLayerName = node.get( inkex.addNS( 'label', 'inkscape' ) )
+					self.DoWePlotLayer(self.sCurrentLayerName )
 					self.penUp()
-				self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )			
-			
+				self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )		
+
 			elif node.tag == inkex.addNS( 'use', 'svg' ) or node.tag == 'use':
 
 				# A <use> element refers to another SVG element via an xlink:href="#blah"
@@ -916,9 +917,11 @@ class WCB( inkex.Effect ):
 				pass
 			elif node.tag == inkex.addNS( 'desc', 'svg' ) or node.tag == 'desc':
 				pass
-			elif node.tag == inkex.addNS( 'text', 'svg' ) or node.tag == 'text':
+			elif (node.tag == inkex.addNS( 'text', 'svg' ) or node.tag == 'text' or
+				node.tag == inkex.addNS( 'flowRoot', 'svg' ) or node.tag == 'flowRoot'):
 				if (not self.warnings.has_key( 'text' )) and (self.plotCurrentLayer):
-					inkex.errormsg( gettext.gettext( 'Warning: Some elements omitted.\n' +
+					inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
+						self.sCurrentLayerName + '" unable to draw text; ' +
 						'Please convert text to a path before drawing, using \n' +
 						'Path > Object to Path. Or, use the Hershey Text extension, '+
 						'which can be found under Extensions > Render.' ) )
@@ -926,9 +929,10 @@ class WCB( inkex.Effect ):
 				pass
 			elif node.tag == inkex.addNS( 'image', 'svg' ) or node.tag == 'image':
 				if (not self.warnings.has_key( 'image' )) and (self.plotCurrentLayer):
-					inkex.errormsg( gettext.gettext( 'Warning: Some elements omitted.\n' +
-						'Please convert images to line art before drawing. ' +
-						' Consider using the Path > Trace bitmap tool. ' ) )
+					inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
+					self.sCurrentLayerName + '" unable to draw bitmap images; ' +
+					'Please convert images to line art before drawing. ' +
+					' Consider using the Path > Trace bitmap tool. ' ) )
 					self.warnings['image'] = 1
 				pass
 			elif node.tag == inkex.addNS( 'pattern', 'svg' ) or node.tag == 'pattern':
@@ -958,10 +962,13 @@ class WCB( inkex.Effect ):
 			else:
 				if (not self.warnings.has_key( str( node.tag ) )) and (self.plotCurrentLayer):
 					t = str( node.tag ).split( '}' )
-					inkex.errormsg( gettext.gettext( 'Warning: unable to draw <' + str( t[-1] ) +
+					inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
+						self.sCurrentLayerName + '" unable to draw <' + str( t[-1] ) +
 						'> object, please convert it to a path first.' ) )
 					self.warnings[str( node.tag )] = 1
 				pass
+
+
 
 	def DoWePlotLayer( self, strLayerName ):
 		"""
