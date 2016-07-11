@@ -452,7 +452,7 @@ class WCB( inkex.Effect ):
 			ebb_motion.sendDisableMotors(self.serialPort)	
 
 		elif self.options.manualType == "version-check":
-			strVersion = ebb_serial.query( self.serialPort, 'v\r' )
+			strVersion = ebb_serial.query( self.serialPort, 'V\r' )
 			inkex.errormsg( 'I asked the EBB for its version info, and it replied:\n ' + strVersion )
 
 		else:  # self.options.manualType is walk motor:
@@ -618,253 +618,139 @@ class WCB( inkex.Effect ):
 						pass
 				else:
 					pass
-
-			elif node.tag == inkex.addNS( 'path', 'svg' ):
-
-				# if we're in resume mode AND self.pathcount < self.svgLastPath,
-				#    then skip over this path.
-				# if we're in resume mode and self.pathcount = self.svgLastPath,
-				#    then start here, and set self.nodeCount equal to self.svgLastPathNC
-				
-				doWePlotThisPath = False 
-				if (self.resumeMode): 
-					if (self.pathcount < self.svgLastPath_Old ): 
-						#This path was *completely plotted* already; skip.
-						self.pathcount += 1 
-					elif (self.pathcount == self.svgLastPath_Old ): 
-						#this path is the first *not completely* plotted path:
-						self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
-						doWePlotThisPath = True 
-				else:
-					doWePlotThisPath = True
-				if (doWePlotThisPath):
-					self.pathcount += 1
-					self.plotPath( node, matNew )
-				
-			elif node.tag == inkex.addNS( 'rect', 'svg' ) or node.tag == 'rect':
-
-				# Manually transform 
-				#    <rect x="X" y="Y" width="W" height="H"/> 
-				# into 
-				#    <path d="MX,Y lW,0 l0,H l-W,0 z"/> 
-				# I.e., explicitly draw three sides of the rectangle and the
-				# fourth side implicitly
-
-				 
-				# if we're in resume mode AND self.pathcount < self.svgLastPath,
-				#    then skip over this path.
-				# if we're in resume mode and self.pathcount = self.svgLastPath,
-				#    then start here, and set
-				# self.nodeCount equal to self.svgLastPathNC
-				
-				doWePlotThisPath = False 
-				if (self.resumeMode): 
-					if (self.pathcount < self.svgLastPath_Old ): 
-						#This path was *completely plotted* already; skip.
-						self.pathcount += 1 
-					elif (self.pathcount == self.svgLastPath_Old ): 
-						#this path is the first *not completely* plotted path:
-						self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
-						doWePlotThisPath = True 
-				else:
-					doWePlotThisPath = True
-				if (doWePlotThisPath):
-					self.pathcount += 1
-					# Create a path with the outline of the rectangle
-					newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
-					x = float( node.get( 'x' ) )
-					y = float( node.get( 'y' ) )
-					w = float( node.get( 'width' ) )
-					h = float( node.get( 'height' ) )
-					s = node.get( 'style' )
-					if s:
-						newpath.set( 'style', s )
-					t = node.get( 'transform' )
-					if t:
-						newpath.set( 'transform', t )
-					a = []
-					a.append( ['M ', [x, y]] )
-					a.append( [' l ', [w, 0]] )
-					a.append( [' l ', [0, h]] )
-					a.append( [' l ', [-w, 0]] )
-					a.append( [' Z', []] )
-					newpath.set( 'd', simplepath.formatPath( a ) )
-					self.plotPath( newpath, matNew )
+			elif self.plotCurrentLayer:	#Skip subsequent tag checks unless we are plotting this layer.
+				if node.tag == inkex.addNS( 'path', 'svg' ):
+	
+					# if we're in resume mode AND self.pathcount < self.svgLastPath,
+					#    then skip over this path.
+					# if we're in resume mode and self.pathcount = self.svgLastPath,
+					#    then start here, and set self.nodeCount equal to self.svgLastPathNC
 					
-			elif node.tag == inkex.addNS( 'line', 'svg' ) or node.tag == 'line':
-
-				# Convert
-				#
-				#   <line x1="X1" y1="Y1" x2="X2" y2="Y2/>
-				#
-				# to
-				#
-				#   <path d="MX1,Y1 LX2,Y2"/>
-
-				# if we're in resume mode AND self.pathcount < self.svgLastPath,
-				#    then skip over this path.
-				# if we're in resume mode and self.pathcount = self.svgLastPath,
-				#    then start here, and set
-				# self.nodeCount equal to self.svgLastPathNC
-
-				doWePlotThisPath = False 
-				if (self.resumeMode): 
-					if (self.pathcount < self.svgLastPath_Old ): 
-						#This path was *completely plotted* already; skip.
-						self.pathcount += 1 
-					elif (self.pathcount == self.svgLastPath_Old ): 
-						#this path is the first *not completely* plotted path:
-						self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
-						doWePlotThisPath = True 
-				else:
-					doWePlotThisPath = True
-				if (doWePlotThisPath):
-					self.pathcount += 1
-					# Create a path to contain the line
-					newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
-					x1 = float( node.get( 'x1' ) )
-					y1 = float( node.get( 'y1' ) )
-					x2 = float( node.get( 'x2' ) )
-					y2 = float( node.get( 'y2' ) )
-					s = node.get( 'style' )
-					if s:
-						newpath.set( 'style', s )
-					t = node.get( 'transform' )
-					if t:
-						newpath.set( 'transform', t )
-					a = []
-					a.append( ['M ', [x1, y1]] )
-					a.append( [' L ', [x2, y2]] )
-					newpath.set( 'd', simplepath.formatPath( a ) )
-					self.plotPath( newpath, matNew )
-					
-
-			elif node.tag == inkex.addNS( 'polyline', 'svg' ) or node.tag == 'polyline':
-
-				# Convert
-				#  <polyline points="x1,y1 x2,y2 x3,y3 [...]"/> 
-				# to 
-				#   <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...]"/> 
-				# Note: we ignore polylines with no points
-
-				pl = node.get( 'points', '' ).strip()
-				if pl == '':
-					pass
-
-				#if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
-				#if we're in resume mode and self.pathcount = self.svgLastPath, then start here, and set
-				# self.nodeCount equal to self.svgLastPathNC
-				
-				doWePlotThisPath = False 
-				if (self.resumeMode): 
-					if (self.pathcount < self.svgLastPath_Old ): 
-						#This path was *completely plotted* already; skip.
-						self.pathcount += 1 
-					elif (self.pathcount == self.svgLastPath_Old ): 
-						#this path is the first *not completely* plotted path:
-						self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
-						doWePlotThisPath = True 
-				else:
-					doWePlotThisPath = True
-				if (doWePlotThisPath):
-					self.pathcount += 1
-					
-					pa = pl.split()
-					if not len( pa ):
-						pass
-					# Issue 29: pre 2.5.? versions of Python do not have
-					#    "statement-1 if expression-1 else statement-2"
-					# which came out of PEP 308, Conditional Expressions
-					#d = "".join( ["M " + pa[i] if i == 0 else " L " + pa[i] for i in range( 0, len( pa ) )] )
-					d = "M " + pa[0]
-					for i in range( 1, len( pa ) ):
-						d += " L " + pa[i]
-					newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
-					newpath.set( 'd', d );
-					s = node.get( 'style' )
-					if s:
-						newpath.set( 'style', s )
-					t = node.get( 'transform' )
-					if t:
-						newpath.set( 'transform', t )
-					self.plotPath( newpath, matNew )
-
-			elif node.tag == inkex.addNS( 'polygon', 'svg' ) or node.tag == 'polygon':
-
-				# Convert 
-				#  <polygon points="x1,y1 x2,y2 x3,y3 [...]"/> 
-				# to 
-				#   <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...] Z"/> 
-				# Note: we ignore polygons with no points
-
-				pl = node.get( 'points', '' ).strip()
-				if pl == '':
-					pass
-
-				#if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
-				#if we're in resume mode and self.pathcount = self.svgLastPath, then start here, and set
-				# self.nodeCount equal to self.svgLastPathNC
-
-				doWePlotThisPath = False 
-				if (self.resumeMode): 
-					if (self.pathcount < self.svgLastPath_Old ): 
-						#This path was *completely plotted* already; skip.
-						self.pathcount += 1 
-					elif (self.pathcount == self.svgLastPath_Old ): 
-						#this path is the first *not completely* plotted path:
-						self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
-						doWePlotThisPath = True 
-				else:
-					doWePlotThisPath = True
-				if (doWePlotThisPath):
-					self.pathcount += 1
-					
-					pa = pl.split()
-					if not len( pa ):
-						pass
-					# Issue 29: pre 2.5.? versions of Python do not have
-					#    "statement-1 if expression-1 else statement-2"
-					# which came out of PEP 308, Conditional Expressions
-					#d = "".join( ["M " + pa[i] if i == 0 else " L " + pa[i] for i in range( 0, len( pa ) )] )
-					d = "M " + pa[0]
-					for i in range( 1, len( pa ) ):
-						d += " L " + pa[i]
-					d += " Z"
-					newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
-					newpath.set( 'd', d );
-					s = node.get( 'style' )
-					if s:
-						newpath.set( 'style', s )
-					t = node.get( 'transform' )
-					if t:
-						newpath.set( 'transform', t )
-					self.plotPath( newpath, matNew )
-					
-			elif node.tag == inkex.addNS( 'ellipse', 'svg' ) or \
-				node.tag == 'ellipse' or \
-				node.tag == inkex.addNS( 'circle', 'svg' ) or \
-				node.tag == 'circle':
-
-					# Convert circles and ellipses to a path with two 180 degree arcs.
-					# In general (an ellipse), we convert 
-					#   <ellipse rx="RX" ry="RY" cx="X" cy="Y"/> 
-					# to 
-					#   <path d="MX1,CY A RX,RY 0 1 0 X2,CY A RX,RY 0 1 0 X1,CY"/> 
-					# where 
-					#   X1 = CX - RX
-					#   X2 = CX + RX 
-					# Note: ellipses or circles with a radius attribute of value 0 are ignored
-
-					if node.tag == inkex.addNS( 'ellipse', 'svg' ) or node.tag == 'ellipse':
-						rx = float( node.get( 'rx', '0' ) )
-						ry = float( node.get( 'ry', '0' ) )
+					doWePlotThisPath = False 
+					if (self.resumeMode): 
+						if (self.pathcount < self.svgLastPath_Old ): 
+							#This path was *completely plotted* already; skip.
+							self.pathcount += 1 
+						elif (self.pathcount == self.svgLastPath_Old ): 
+							#this path is the first *not completely* plotted path:
+							self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+							doWePlotThisPath = True 
 					else:
-						rx = float( node.get( 'r', '0' ) )
-						ry = rx
-					if rx == 0 or ry == 0:
-						pass
-
+						doWePlotThisPath = True
+					if (doWePlotThisPath):
+						self.pathcount += 1
+						self.plotPath( node, matNew )
 					
+				elif node.tag == inkex.addNS( 'rect', 'svg' ) or node.tag == 'rect':
+	
+					# Manually transform 
+					#    <rect x="X" y="Y" width="W" height="H"/> 
+					# into 
+					#    <path d="MX,Y lW,0 l0,H l-W,0 z"/> 
+					# I.e., explicitly draw three sides of the rectangle and the
+					# fourth side implicitly
+	
+					 
+					# if we're in resume mode AND self.pathcount < self.svgLastPath,
+					#    then skip over this path.
+					# if we're in resume mode and self.pathcount = self.svgLastPath,
+					#    then start here, and set
+					# self.nodeCount equal to self.svgLastPathNC
+					
+					doWePlotThisPath = False 
+					if (self.resumeMode): 
+						if (self.pathcount < self.svgLastPath_Old ): 
+							#This path was *completely plotted* already; skip.
+							self.pathcount += 1 
+						elif (self.pathcount == self.svgLastPath_Old ): 
+							#this path is the first *not completely* plotted path:
+							self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+							doWePlotThisPath = True 
+					else:
+						doWePlotThisPath = True
+					if (doWePlotThisPath):
+						self.pathcount += 1
+						# Create a path with the outline of the rectangle
+						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
+						x = float( node.get( 'x' ) )
+						y = float( node.get( 'y' ) )
+						w = float( node.get( 'width' ) )
+						h = float( node.get( 'height' ) )
+						s = node.get( 'style' )
+						if s:
+							newpath.set( 'style', s )
+						t = node.get( 'transform' )
+						if t:
+							newpath.set( 'transform', t )
+						a = []
+						a.append( ['M ', [x, y]] )
+						a.append( [' l ', [w, 0]] )
+						a.append( [' l ', [0, h]] )
+						a.append( [' l ', [-w, 0]] )
+						a.append( [' Z', []] )
+						newpath.set( 'd', simplepath.formatPath( a ) )
+						self.plotPath( newpath, matNew )
+						
+				elif node.tag == inkex.addNS( 'line', 'svg' ) or node.tag == 'line':
+	
+					# Convert
+					#
+					#   <line x1="X1" y1="Y1" x2="X2" y2="Y2/>
+					#
+					# to
+					#
+					#   <path d="MX1,Y1 LX2,Y2"/>
+	
+					# if we're in resume mode AND self.pathcount < self.svgLastPath,
+					#    then skip over this path.
+					# if we're in resume mode and self.pathcount = self.svgLastPath,
+					#    then start here, and set
+					# self.nodeCount equal to self.svgLastPathNC
+	
+					doWePlotThisPath = False 
+					if (self.resumeMode): 
+						if (self.pathcount < self.svgLastPath_Old ): 
+							#This path was *completely plotted* already; skip.
+							self.pathcount += 1 
+						elif (self.pathcount == self.svgLastPath_Old ): 
+							#this path is the first *not completely* plotted path:
+							self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+							doWePlotThisPath = True 
+					else:
+						doWePlotThisPath = True
+					if (doWePlotThisPath):
+						self.pathcount += 1
+						# Create a path to contain the line
+						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
+						x1 = float( node.get( 'x1' ) )
+						y1 = float( node.get( 'y1' ) )
+						x2 = float( node.get( 'x2' ) )
+						y2 = float( node.get( 'y2' ) )
+						s = node.get( 'style' )
+						if s:
+							newpath.set( 'style', s )
+						t = node.get( 'transform' )
+						if t:
+							newpath.set( 'transform', t )
+						a = []
+						a.append( ['M ', [x1, y1]] )
+						a.append( [' L ', [x2, y2]] )
+						newpath.set( 'd', simplepath.formatPath( a ) )
+						self.plotPath( newpath, matNew )
+						
+	
+				elif node.tag == inkex.addNS( 'polyline', 'svg' ) or node.tag == 'polyline':
+	
+					# Convert
+					#  <polyline points="x1,y1 x2,y2 x3,y3 [...]"/> 
+					# to 
+					#   <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...]"/> 
+					# Note: we ignore polylines with no points
+	
+					pl = node.get( 'points', '' ).strip()
+					if pl == '':
+						pass
+	
 					#if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
 					#if we're in resume mode and self.pathcount = self.svgLastPath, then start here, and set
 					# self.nodeCount equal to self.svgLastPathNC
@@ -882,16 +768,68 @@ class WCB( inkex.Effect ):
 						doWePlotThisPath = True
 					if (doWePlotThisPath):
 						self.pathcount += 1
-					
-						cx = float( node.get( 'cx', '0' ) )
-						cy = float( node.get( 'cy', '0' ) )
-						x1 = cx - rx
-						x2 = cx + rx
-						d = 'M %f,%f ' % ( x1, cy ) + \
-							'A %f,%f ' % ( rx, ry ) + \
-							'0 1 0 %f,%f ' % ( x2, cy ) + \
-							'A %f,%f ' % ( rx, ry ) + \
-							'0 1 0 %f,%f' % ( x1, cy )
+						
+						pa = pl.split()
+						if not len( pa ):
+							pass
+						# Issue 29: pre 2.5.? versions of Python do not have
+						#    "statement-1 if expression-1 else statement-2"
+						# which came out of PEP 308, Conditional Expressions
+						#d = "".join( ["M " + pa[i] if i == 0 else " L " + pa[i] for i in range( 0, len( pa ) )] )
+						d = "M " + pa[0]
+						for i in range( 1, len( pa ) ):
+							d += " L " + pa[i]
+						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
+						newpath.set( 'd', d );
+						s = node.get( 'style' )
+						if s:
+							newpath.set( 'style', s )
+						t = node.get( 'transform' )
+						if t:
+							newpath.set( 'transform', t )
+						self.plotPath( newpath, matNew )
+	
+				elif node.tag == inkex.addNS( 'polygon', 'svg' ) or node.tag == 'polygon':
+	
+					# Convert 
+					#  <polygon points="x1,y1 x2,y2 x3,y3 [...]"/> 
+					# to 
+					#   <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...] Z"/> 
+					# Note: we ignore polygons with no points
+	
+					pl = node.get( 'points', '' ).strip()
+					if pl == '':
+						pass
+	
+					#if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
+					#if we're in resume mode and self.pathcount = self.svgLastPath, then start here, and set
+					# self.nodeCount equal to self.svgLastPathNC
+	
+					doWePlotThisPath = False 
+					if (self.resumeMode): 
+						if (self.pathcount < self.svgLastPath_Old ): 
+							#This path was *completely plotted* already; skip.
+							self.pathcount += 1 
+						elif (self.pathcount == self.svgLastPath_Old ): 
+							#this path is the first *not completely* plotted path:
+							self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+							doWePlotThisPath = True 
+					else:
+						doWePlotThisPath = True
+					if (doWePlotThisPath):
+						self.pathcount += 1
+						
+						pa = pl.split()
+						if not len( pa ):
+							pass
+						# Issue 29: pre 2.5.? versions of Python do not have
+						#    "statement-1 if expression-1 else statement-2"
+						# which came out of PEP 308, Conditional Expressions
+						#d = "".join( ["M " + pa[i] if i == 0 else " L " + pa[i] for i in range( 0, len( pa ) )] )
+						d = "M " + pa[0]
+						for i in range( 1, len( pa ) ):
+							d += " L " + pa[i]
+						d += " Z"
 						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
 						newpath.set( 'd', d );
 						s = node.get( 'style' )
@@ -902,72 +840,134 @@ class WCB( inkex.Effect ):
 							newpath.set( 'transform', t )
 						self.plotPath( newpath, matNew )
 						
+				elif node.tag == inkex.addNS( 'ellipse', 'svg' ) or \
+					node.tag == 'ellipse' or \
+					node.tag == inkex.addNS( 'circle', 'svg' ) or \
+					node.tag == 'circle':
+	
+						# Convert circles and ellipses to a path with two 180 degree arcs.
+						# In general (an ellipse), we convert 
+						#   <ellipse rx="RX" ry="RY" cx="X" cy="Y"/> 
+						# to 
+						#   <path d="MX1,CY A RX,RY 0 1 0 X2,CY A RX,RY 0 1 0 X1,CY"/> 
+						# where 
+						#   X1 = CX - RX
+						#   X2 = CX + RX 
+						# Note: ellipses or circles with a radius attribute of value 0 are ignored
+	
+						if node.tag == inkex.addNS( 'ellipse', 'svg' ) or node.tag == 'ellipse':
+							rx = float( node.get( 'rx', '0' ) )
+							ry = float( node.get( 'ry', '0' ) )
+						else:
+							rx = float( node.get( 'r', '0' ) )
+							ry = rx
+						if rx == 0 or ry == 0:
+							pass
+	
+						
+						#if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
+						#if we're in resume mode and self.pathcount = self.svgLastPath, then start here, and set
+						# self.nodeCount equal to self.svgLastPathNC
+						
+						doWePlotThisPath = False 
+						if (self.resumeMode): 
+							if (self.pathcount < self.svgLastPath_Old ): 
+								#This path was *completely plotted* already; skip.
+								self.pathcount += 1 
+							elif (self.pathcount == self.svgLastPath_Old ): 
+								#this path is the first *not completely* plotted path:
+								self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+								doWePlotThisPath = True 
+						else:
+							doWePlotThisPath = True
+						if (doWePlotThisPath):
+							self.pathcount += 1
+						
+							cx = float( node.get( 'cx', '0' ) )
+							cy = float( node.get( 'cy', '0' ) )
+							x1 = cx - rx
+							x2 = cx + rx
+							d = 'M %f,%f ' % ( x1, cy ) + \
+								'A %f,%f ' % ( rx, ry ) + \
+								'0 1 0 %f,%f ' % ( x2, cy ) + \
+								'A %f,%f ' % ( rx, ry ) + \
+								'0 1 0 %f,%f' % ( x1, cy )
+							newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
+							newpath.set( 'd', d );
+							s = node.get( 'style' )
+							if s:
+								newpath.set( 'style', s )
+							t = node.get( 'transform' )
+							if t:
+								newpath.set( 'transform', t )
+							self.plotPath( newpath, matNew )
 							
-			elif node.tag == inkex.addNS( 'metadata', 'svg' ) or node.tag == 'metadata':
-				pass
-			elif node.tag == inkex.addNS( 'defs', 'svg' ) or node.tag == 'defs':
-				pass
-			elif node.tag == inkex.addNS( 'namedview', 'sodipodi' ) or node.tag == 'namedview':
-				pass
-			elif node.tag == inkex.addNS( 'WCB', 'svg' ) or node.tag == 'WCB':
-				pass
-			elif node.tag == inkex.addNS( 'eggbot', 'svg' ) or node.tag == 'eggbot':
-				pass			
-			elif node.tag == inkex.addNS( 'title', 'svg' ) or node.tag == 'title':
-				pass
-			elif node.tag == inkex.addNS( 'desc', 'svg' ) or node.tag == 'desc':
-				pass
-			elif (node.tag == inkex.addNS( 'text', 'svg' ) or node.tag == 'text' or
-				node.tag == inkex.addNS( 'flowRoot', 'svg' ) or node.tag == 'flowRoot'):
-				if (not self.warnings.has_key( 'text' )) and (self.plotCurrentLayer):
-					inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
-						self.sCurrentLayerName + '" unable to draw text; ' +
-						'Please convert text to a path before drawing, using \n' +
-						'Path > Object to Path. Or, use the Hershey Text extension, '+
-						'which can be found under Extensions > Render.' ) )
-					self.warnings['text'] = 1
-				pass
-			elif node.tag == inkex.addNS( 'image', 'svg' ) or node.tag == 'image':
-				if (not self.warnings.has_key( 'image' )) and (self.plotCurrentLayer):
-					inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
-					self.sCurrentLayerName + '" unable to draw bitmap images; ' +
-					'Please convert images to line art before drawing. ' +
-					' Consider using the Path > Trace bitmap tool. ' ) )
-					self.warnings['image'] = 1
-				pass
-			elif node.tag == inkex.addNS( 'pattern', 'svg' ) or node.tag == 'pattern':
-				pass
-			elif node.tag == inkex.addNS( 'radialGradient', 'svg' ) or node.tag == 'radialGradient':
-				# Similar to pattern
-				pass
-			elif node.tag == inkex.addNS( 'linearGradient', 'svg' ) or node.tag == 'linearGradient':
-				# Similar in pattern
-				pass
-			elif node.tag == inkex.addNS( 'style', 'svg' ) or node.tag == 'style':
-				# This is a reference to an external style sheet and not the value
-				# of a style attribute to be inherited by child elements
-				pass
-			elif node.tag == inkex.addNS( 'cursor', 'svg' ) or node.tag == 'cursor':
-				pass
-			elif node.tag == inkex.addNS( 'color-profile', 'svg' ) or node.tag == 'color-profile':
-				# Gamma curves, color temp, etc. are not relevant to single color output
-				pass
-			elif not isinstance( node.tag, basestring ):
-				# This is likely an XML processing instruction such as an XML
-				# comment.  lxml uses a function reference for such node tags
-				# and as such the node tag is likely not a printable string.
-				# Further, converting it to a printable string likely won't
-				# be very useful.
-				pass
-			else:
-				if (not self.warnings.has_key( str( node.tag ) )) and (self.plotCurrentLayer):
-					t = str( node.tag ).split( '}' )
-					inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
-						self.sCurrentLayerName + '" unable to draw <' + str( t[-1] ) +
-						'> object, please convert it to a path first.' ) )
-					self.warnings[str( node.tag )] = 1
-				pass
-
+								
+				elif node.tag == inkex.addNS( 'metadata', 'svg' ) or node.tag == 'metadata':
+					pass
+				elif node.tag == inkex.addNS( 'defs', 'svg' ) or node.tag == 'defs':
+					pass
+				elif node.tag == inkex.addNS( 'namedview', 'sodipodi' ) or node.tag == 'namedview':
+					pass
+				elif node.tag == inkex.addNS( 'WCB', 'svg' ) or node.tag == 'WCB':
+					pass
+				elif node.tag == inkex.addNS( 'eggbot', 'svg' ) or node.tag == 'eggbot':
+					pass			
+				elif node.tag == inkex.addNS( 'title', 'svg' ) or node.tag == 'title':
+					pass
+				elif node.tag == inkex.addNS( 'desc', 'svg' ) or node.tag == 'desc':
+					pass
+				elif (node.tag == inkex.addNS( 'text', 'svg' ) or node.tag == 'text' or
+					node.tag == inkex.addNS( 'flowRoot', 'svg' ) or node.tag == 'flowRoot'):
+					if (not self.warnings.has_key( 'text' )) and (self.plotCurrentLayer):
+						inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
+							self.sCurrentLayerName + '" unable to draw text; ' +
+							'Please convert text to a path before drawing, using \n' +
+							'Path > Object to Path. Or, use the Hershey Text extension, '+
+							'which can be found under Extensions > Render.' ) )
+						self.warnings['text'] = 1
+					pass
+				elif node.tag == inkex.addNS( 'image', 'svg' ) or node.tag == 'image':
+					if (not self.warnings.has_key( 'image' )) and (self.plotCurrentLayer):
+						inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
+						self.sCurrentLayerName + '" unable to draw bitmap images; ' +
+						'Please convert images to line art before drawing. ' +
+						' Consider using the Path > Trace bitmap tool. ' ) )
+						self.warnings['image'] = 1
+					pass
+				elif node.tag == inkex.addNS( 'pattern', 'svg' ) or node.tag == 'pattern':
+					pass
+				elif node.tag == inkex.addNS( 'radialGradient', 'svg' ) or node.tag == 'radialGradient':
+					# Similar to pattern
+					pass
+				elif node.tag == inkex.addNS( 'linearGradient', 'svg' ) or node.tag == 'linearGradient':
+					# Similar in pattern
+					pass
+				elif node.tag == inkex.addNS( 'style', 'svg' ) or node.tag == 'style':
+					# This is a reference to an external style sheet and not the value
+					# of a style attribute to be inherited by child elements
+					pass
+				elif node.tag == inkex.addNS( 'cursor', 'svg' ) or node.tag == 'cursor':
+					pass
+				elif node.tag == inkex.addNS( 'color-profile', 'svg' ) or node.tag == 'color-profile':
+					# Gamma curves, color temp, etc. are not relevant to single color output
+					pass
+				elif not isinstance( node.tag, basestring ):
+					# This is likely an XML processing instruction such as an XML
+					# comment.  lxml uses a function reference for such node tags
+					# and as such the node tag is likely not a printable string.
+					# Further, converting it to a printable string likely won't
+					# be very useful.
+					pass
+				else:
+					if (not self.warnings.has_key( str( node.tag ) )) and (self.plotCurrentLayer):
+						t = str( node.tag ).split( '}' )
+						inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
+							self.sCurrentLayerName + '" unable to draw <' + str( t[-1] ) +
+							'> object, please convert it to a path first.' ) )
+						self.warnings[str( node.tag )] = 1
+					pass
+	
 
 
 	def DoWePlotLayer( self, strLayerName ):
