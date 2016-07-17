@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.0.3, dated June 19, 2016.
+# Version 1.0.4, dated July 15, 2016.
 # 
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 #
@@ -168,6 +168,10 @@ class WCB( inkex.Effect ):
 		self.nodeTarget = int( 0 )
 		self.pathcount = int( 0 )
 		self.LayersFoundToPlot = False
+		self.LayerOverrideSpeed = False
+		self.LayerOverridePenDownHeight = False
+		self.LayerPenDownPosition = -1
+		self.LayerPenDownSpeed = -1
 		
 		#Values read from file:
 		self.svgLayer_Old = int( 0 )
@@ -358,7 +362,8 @@ class WCB( inkex.Effect ):
 				self.ServoSetup()
 				self.penUp() 
 				self.EnableMotors() #Set plotting resolution  
-				self.fSpeed = self.options.penDownSpeed
+				self.fSpeed = self.PenDownSpeed 
+				
 				self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPos_X
 				self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPos_Y
 				 
@@ -465,7 +470,7 @@ class WCB( inkex.Effect ):
 			else:
 				return
 			
-			self.fSpeed = self.options.penDownSpeed
+			self.fSpeed = self.PenDownSpeed
 				
  			self.EnableMotors() #Set plotting resolution 
 			self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPos_X
@@ -972,22 +977,27 @@ class WCB( inkex.Effect ):
 
 	def DoWePlotLayer( self, strLayerName ):
 		"""
-			 
-		First: scan first 4 chars of node id for first non-numeric character,
+		Parse layer name for layer number and other properties.
+		
+		First: scan layer name for first non-numeric character,
 		and scan the part before that (if any) into a number
-		Then, see if the number matches the layer.
+		Then, (if not printing all layers)
+		see if the number matches the layer number that we are printing.
+		
+		Secondary function: Parse characters following the layer number (if any) to see if
+		there is a "+H" or "+S" escape code, that indicates that overrides the pen-down
+		height or speed for the given layer.
+		
 		"""
 
 		# Look at layer name.  Sample first character, then first two, and
 		# so on, until the string ends or the string no longer consists of digit characters only.
-		
 		TempNumString = 'x'
 		stringPos = 1	
 		layerNameInt = -1
 		layerMatch = False	
-		self.plotCurrentLayer = True    #Temporarily assume that we are plotting the layer
 		CurrentLayerName = string.lstrip( strLayerName.encode( 'ascii', 'ignore' ) ) #remove leading whitespace
-				
+	
 		MaxLength = len( CurrentLayerName )
 		if MaxLength > 0:
 			while stringPos <= MaxLength:
@@ -997,16 +1007,69 @@ class WCB( inkex.Effect ):
 				else:
 					break
 
-		if ( str.isdigit( TempNumString ) ):
-			layerNameInt = int( float( TempNumString ) )
-			if ( self.svgLayer == layerNameInt ):
-				layerMatch = True	#Match! The current layer IS named in the Layers tab.
-			
-		if ((self.PrintFromLayersTab) and (layerMatch == False)):
-			self.plotCurrentLayer = False
+		self.plotCurrentLayer = True    #Temporarily assume that we are plotting the layer
+		if (self.PrintFromLayersTab):	#Also true if resuming a print that was of a single layer.
+			if ( str.isdigit( TempNumString ) ):
+				layerNameInt = int( float( TempNumString ) )
+				if ( self.svgLayer == layerNameInt ):
+					layerMatch = True	#Match! The current layer IS named in the Layers tab.
+				
+			if (layerMatch == False):
+				self.plotCurrentLayer = False
 
 		if (self.plotCurrentLayer == True):
 			self.LayersFoundToPlot = True
+
+			#End of part 1, current layer to see if we print it.
+			#Now, check to see if there is additional information coded here.
+
+			oldPenDown = self.LayerPenDownPosition
+			oldSpeed = self.LayerPenDownSpeed
+				
+			#set default values before checking for any overrides:	
+			self.LayerOverridePenDownHeight = False
+			self.LayerOverrideSpeed = False
+			self.LayerPenDownPosition = -1
+			self.LayerPenDownSpeed = -1
+
+			if (stringPos > 0):
+				stringPos = stringPos - 1
+
+			if MaxLength > stringPos + 2:
+				while stringPos <= MaxLength:	
+					EscapeSequence = CurrentLayerName[stringPos:stringPos+2].lower()
+					if (EscapeSequence == "+h") or (EscapeSequence == "+s"):
+						paramStart = stringPos + 2
+						stringPos = stringPos + 3
+						TempNumString = 'x'
+						if MaxLength > 0:
+							while stringPos <= MaxLength:
+								if str.isdigit( CurrentLayerName[paramStart:stringPos] ):
+									TempNumString = CurrentLayerName[paramStart:stringPos] # Longest numeric string so far
+									stringPos = stringPos + 1
+								else:
+									break
+						if ( str.isdigit( TempNumString ) ):
+							parameterInt = int( float( TempNumString ) )
+					
+							if (EscapeSequence == "+h"):
+								if ((parameterInt >= 0) and (parameterInt <= 100)):
+									self.LayerOverridePenDownHeight = True									
+									self.LayerPenDownPosition = parameterInt
+								
+							if (EscapeSequence == "+s"):
+								if ((parameterInt > 0) and (parameterInt <= 100)):
+									self.LayerOverrideSpeed = True									
+									self.LayerPenDownSpeed = parameterInt								
+									
+						stringPos = paramStart + len(TempNumString)
+					else:
+						break #exit loop. 
+			
+			if (self.LayerPenDownSpeed != oldSpeed):
+				self.EnableMotors()	#Set speed value variables for this layer.
+			if (self.LayerPenDownPosition != oldPenDown):
+				self.ServoSetup()	#Set pen height value variables for this layer.
 
 	def plotPath( self, path, matTransform ):
 		'''
@@ -1941,15 +2004,21 @@ class WCB( inkex.Effect ):
 		those two options on and off. 
 		
 		'''
+
+		if (self.LayerOverrideSpeed):
+			LocalPenDownSpeed = self.LayerPenDownSpeed
+		else:	
+			LocalPenDownSpeed = self.options.penDownSpeed
+
 		if ( self.options.resolution == 1 ):
 			ebb_motion.sendEnableMotors(self.serialPort, 1) # 16X microstepping
 			self.stepsPerInch = float( axidraw_conf.DPI_16X)						
-			self.PenDownSpeed = self.options.penDownSpeed * axidraw_conf.Speed_Scale / 110.0
+			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.Speed_Scale / 110.0
 			self.PenUpSpeed = self.options.rapidSpeed * axidraw_conf.Speed_Scale / 110.0
 		elif ( self.options.resolution == 2 ):
 			ebb_motion.sendEnableMotors(self.serialPort, 2) # 8X microstepping
 			self.stepsPerInch = float( axidraw_conf.DPI_16X / 2.0 )  
-			self.PenDownSpeed = self.options.penDownSpeed * axidraw_conf.Speed_Scale / 220.0
+			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.Speed_Scale / 220.0
 			self.PenUpSpeed = self.options.rapidSpeed * axidraw_conf.Speed_Scale / 110.0
 		if (self.options.constSpeed):
 			self.PenDownSpeed = self.PenDownSpeed / 2
@@ -1963,7 +2032,11 @@ class WCB( inkex.Effect ):
 	def penUp( self ):
 		self.virtualPenIsUp = True  # Virtual pen keeps track of state for resuming plotting.
 		if ( not self.resumeMode) and (not self.bPenIsUp):	# skip if pen is already up, or if we're resuming.
-			vDistance = float(self.options.penUpPosition - self.options.penDownPosition)
+			if (self.LayerOverridePenDownHeight):
+				penDownPos = self.LayerPenDownPosition
+			else:	
+				penDownPos = self.options.penDownPosition
+			vDistance = float(self.options.penUpPosition - penDownPos)
 			vTime = int ((1000.0 * vDistance) / self.options.ServoUpSpeed)
 			if (vTime < 0):	#Handle case that penDownPosition is above penUpPosition
 				vTime = -vTime
@@ -1980,7 +2053,11 @@ class WCB( inkex.Effect ):
 		self.virtualPenIsUp = False  # Virtual pen keeps track of state for resuming plotting.
 		if (self.bPenIsUp != False):  # skip if pen is already down
 			if ((not self.resumeMode) and ( not self.bStopped )): #skip if resuming or stopped
-				vDistance = float(self.options.penUpPosition - self.options.penDownPosition)
+				if (self.LayerOverridePenDownHeight):
+					penDownPos = self.LayerPenDownPosition
+				else:	
+					penDownPos = self.options.penDownPosition
+				vDistance = float(self.options.penUpPosition - penDownPos)
 				vTime = int ((1000.0 * vDistance) / self.options.ServoDownSpeed)
 				if (vTime < 0):	#Handle case that penDownPosition is above penUpPosition
 					vTime = -vTime
@@ -2008,6 +2085,11 @@ class WCB( inkex.Effect ):
 		    a typical timing range of 7500 - 25000 in units of 1/(12 MHz).
 		    1% corresponds to ~14.6 us, or 175 units of 1/(12 MHz).
 		'''
+
+		if (self.LayerOverridePenDownHeight):
+			penDownPos = self.LayerPenDownPosition
+		else:	
+			penDownPos = self.options.penDownPosition
 		
 		servo_range = axidraw_conf.SERVO_MAX - axidraw_conf.SERVO_MIN
 		servo_slope = float(servo_range) / 100.0
@@ -2015,7 +2097,7 @@ class WCB( inkex.Effect ):
 		intTemp = int(round(axidraw_conf.SERVO_MIN + servo_slope * self.options.penUpPosition))
 		ebb_serial.command( self.serialPort,  'SC,4,' + str( intTemp ) + '\r' )	
 				
-		intTemp = int(round(axidraw_conf.SERVO_MIN + servo_slope * self.options.penDownPosition))
+		intTemp = int(round(axidraw_conf.SERVO_MIN + servo_slope * penDownPos))
 		ebb_serial.command( self.serialPort,  'SC,5,' + str( intTemp ) + '\r' )
 
 		''' Servo speed units are in units of %/second, referring to the

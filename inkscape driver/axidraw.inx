@@ -159,21 +159,21 @@ layers, for example to plot only a single color of ink.
 
 Pressing 'Apply' from this frame will plot only layers
 whose names begin with the selected number, which can
-be up to 100.
+be in the range 0 to 1000.
 
 For example, a layer named "5-red" will be printed if
 the number 5 is selected, but a layer named "2-black"
 or "guide lines" will not be.
 
 </_param>
-<param indent="2" name="layernumber" type="int" min="0" max="100" _gui-text="Plot only layers beginning with: ">1</param>
+<param indent="2" name="layernumber" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
 </page>			
 
 <page name="Help" _gui-text="*">
 <_param name="instructions_general" type="description"
 xml:space="preserve">
 AxiDraw Control Inkscape extension 
-Release 1.0.3, dated 2016-04-02
+Release 1.0.4, dated 2016-07-15
 
 http://axidraw.com/
 
