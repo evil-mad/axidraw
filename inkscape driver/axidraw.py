@@ -1121,7 +1121,6 @@ class WCB( inkex.Effect ):
 								self.plotSegmentWithVelocity( fX, fY, 0, 0)
 						elif nIndex == 1:
 							self.penDown() 
-							# self.plotLineAndTime( fX, fY ) #Draw a segment - Legacy
 						nIndex += 1
 
 						singlePath.append([fX,fY])
@@ -1481,6 +1480,12 @@ class WCB( inkex.Effect ):
 		plotDistance = plot_utils.distance( motorSteps1, motorSteps2 )
 		if (plotDistance < 1.0): #if total movement is less than one step, skip this movement.
 			return
+
+		if (self.options.report_time): #Also keep track of distance:
+			if (self.virtualPenIsUp):
+				self.penUpDistance = self.penUpDistance + plotDistance
+			else:
+				self.penDownDistance = self.penDownDistance +plotDistance
 
 		# Maximum travel speeds:
 		# & acceleration/deceleration rate: (Maximum speed) / (time to reach that speed)
@@ -1912,99 +1917,6 @@ class WCB( inkex.Effect ):
 			self.bStopped = True
 			return
 		
-	def plotLineAndTime( self, xDest, yDest ):
-		'''
-		Send commands out the com port as a line segment (dx, dy) and a time (ms) the segment
-		should take to draw. Draws a single line segment with constant velocity.
-		Important note: Everything up to this point uses *inch* scale. 
-		Here, we convert to actual motor steps, w/ set DPI.
-		'''
-
-		inkex.errormsg( 'PlotLine: x, y: '+str(xDest)+', '+str(yDest))
-
-		if (self.ignoreLimits == False):
-			xDest, xBounded = plot_utils.checkLimits( xDest, self.xBoundsMin, self.xBoundsMax )
-			yDest, yBounded = plot_utils.checkLimits( yDest, self.yBoundsMin, self.yBoundsMax )
-			if (xBounded or yBounded):
-				self.warnOutOfBounds = True
-
-		if self.bStopped:
-			return
-		if ( self.fCurrX is None ):
-			return
-
-		# Distances to move:
-		xMovementIdeal = self.stepsPerInch * ( xDest - self.fCurrX )	
-		yMovementIdeal = self.stepsPerInch * ( yDest - self.fCurrY )
-
-		# Look at distance to move along 45-degree axes, for native motor steps:
-		motorSteps1 = int (round(xMovementIdeal + yMovementIdeal)) # Number of native motor steps required, Axis 1
-		motorSteps2 = int (round(xMovementIdeal - yMovementIdeal)) # Number of native motor steps required, Axis 2
-
-		plotDistance = plot_utils.distance( motorSteps1, motorSteps2 )
-
-		if (plotDistance < 1.0): #if not moving at least one motor step...
-			return
-
-		if (self.options.report_time): #Also keep track of distance:
-			if (self.virtualPenIsUp):
-				self.penUpDistance = self.penUpDistance + plotDistance
-			else:
-				self.penDownDistance = self.penDownDistance +plotDistance
-
-		#Set the speed at which we will plot this segment
-
-		self.fSpeed = self.PenDownSpeed
-
-		if self.resumeMode:		#Handle a "corner case" -- just in case.
-			if ( self.nodeCount >= self.nodeTarget ):
-				if ( not self.virtualPenIsUp ):
-					self.fSpeed = self.PenDownSpeed
-
-		nTime = int( math.ceil(1000.0 * plotDistance / self.fSpeed))	 #in milliseconds
-		if ( nTime < 1 ):
-			nTime = 1		# don't allow zero-time moves.
-
-		if (abs((float(motorSteps1) / float(nTime))) < 0.002):	
-			motorSteps1 = 0	#don't allow too-slow movements of this axis
-		if (abs((float(motorSteps2) / float(nTime))) < 0.002):	
-			motorSteps2 = 0	#don't allow too-slow movements of this axis
-
-		xSteps = (motorSteps1 + motorSteps2)/2.0	# will force result to be a float.
-		ySteps = (motorSteps1 - motorSteps2)/2.0	# will force result to be a float.
-
-		if ((motorSteps1 != 0) or (motorSteps2 != 0)): # if at least one motor step is required for this move....
-			self.nodeCount += 1
-
-			if self.resumeMode:
-				if ( self.nodeCount >= self.nodeTarget ):
-					self.resumeMode = False
-					if ( not self.virtualPenIsUp ):
-						self.penDown()
-
-			if (not self.resumeMode) and (not self.bStopped):
-				ebb_motion.doXYMove( self.serialPort, motorSteps2, motorSteps1, nTime )			
-				if (nTime > 60):
-					if self.options.tab != '"manual"':
-						time.sleep(float(nTime - 50)/1000.0)  #pause before issuing next command
-						
-				self.fCurrX += xSteps / self.stepsPerInch   # Update current position
-				self.fCurrY += ySteps / self.stepsPerInch		
-
-				self.svgLastKnownPosX = self.fCurrX - axidraw_conf.StartPos_X
-				self.svgLastKnownPosY = self.fCurrY - axidraw_conf.StartPos_Y	
-
-			strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
-			if strButton[0] == '1': #button pressed
-				self.svgNodeCount = self.nodeCount;
-				self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPos_X	#self.svgLastKnownPosX
-				self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPos_Y	#self.svgLastKnownPosY
-				self.penUp()
-				inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
-				inkex.errormsg( 'Use the "Resume" feature to continue.' )
-				self.bStopped = True
-				return
-
 	def EnableMotors( self ):
 		''' 
 		Enable motors, set native motor resolution, and set speed scales.
