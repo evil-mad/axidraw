@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.0.4, dated July 15, 2016.
+# Version 1.0.5, dated July 29, 2016.
 # 
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 #
@@ -172,6 +172,9 @@ class WCB( inkex.Effect ):
 		self.LayerOverridePenDownHeight = False
 		self.LayerPenDownPosition = -1
 		self.LayerPenDownSpeed = -1
+
+		self.penUpDistance = 0.0
+		self.penDownDistance = 0.0
 		
 		#Values read from file:
 		self.svgLayer_Old = int( 0 )
@@ -547,12 +550,17 @@ class WCB( inkex.Effect ):
 					#  IF we have completed a normal plot from the splash, layer, or resume tabs.
 			if (self.warnOutOfBounds):
 				inkex.errormsg( gettext.gettext( 'Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help!' ) )
+
 			if (self.options.report_time):
 				elapsed_time = time.time() - self.start_time
 				m, s = divmod(elapsed_time, 60)
 				h, m = divmod(m, 60)
 				inkex.errormsg("Elapsed time: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
-				
+				downDist = self.penDownDistance / (self.stepsPerInch * sqrt(2))
+				totDist = downDist + self.penUpDistance / (self.stepsPerInch * sqrt(2))
+				inkex.errormsg("Length of path drawn: %1.3f inches." % downDist)
+				inkex.errormsg("Total distance moved: %1.3f inches." % totDist)
+
 		finally:
 			# We may have had an exception and lost the serial port...
 			pass
@@ -1938,6 +1946,12 @@ class WCB( inkex.Effect ):
 		if (plotDistance < 1.0): #if not moving at least one motor step...
 			return
 
+		if (self.options.report_time): #Also keep track of distance:
+			if (self.virtualPenIsUp):
+				self.penUpDistance = self.penUpDistance + plotDistance
+			else:
+				self.penDownDistance = self.penDownDistance +plotDistance
+
 		#Set the speed at which we will plot this segment
 
 		self.fSpeed = self.PenDownSpeed
@@ -1987,7 +2001,7 @@ class WCB( inkex.Effect ):
 				self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPos_Y	#self.svgLastKnownPosY
 				self.penUp()
 				inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
-				inkex.errormsg( 'Use the "resume" feature to continue.' )
+				inkex.errormsg( 'Use the "Resume" feature to continue.' )
 				self.bStopped = True
 				return
 
