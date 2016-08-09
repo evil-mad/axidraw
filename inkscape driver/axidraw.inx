@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
 <_name>AxiDraw Control</_name>
-<id>command.evilmadscientist.axidraw.rev110b</id>
+<id>command.evilmadscientist.axidraw.rev110c</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw.py</dependency>
 <dependency type="executable" location="extensions">inkex.py</dependency>
@@ -67,6 +67,7 @@ of the pen for writing and drawing.
 <param indent="1" name="autoRotate" type="boolean" _gui-text="Auto-rotate page when printing">true</param>	
 <param indent="1" name="constSpeed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
 <param indent="1" name="report_time" type="boolean" _gui-text="Report time elapsed after each drawing">false</param> 
+<param indent="1" name="slow_slices" type="boolean" _gui-text="Use slower communication data rate">false</param> 
 
 
 <param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
@@ -173,7 +174,7 @@ or "guide lines" will not be.
 <_param name="instructions_general" type="description"
 xml:space="preserve">
 AxiDraw Control Inkscape extension 
-Release 1.0.5, dated 2016-07-29
+Release 1.1.0, dated 2016-08-09
 
 http://axidraw.com/
 

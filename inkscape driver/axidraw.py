@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.0.5, dated July 29, 2016.
+# Version 1.1.0, dated August 9, 2016.
 # 
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 #
@@ -105,6 +105,11 @@ class WCB( inkex.Effect ):
 			action="store", type="inkbool",
 			dest="report_time", default=False,
 			help="Report time elapsed." )
+
+		self.OptionParser.add_option( "--slow_slices",
+			action="store", type="inkbool",
+			dest="slow_slices", default=False,
+			help="Use slower communication data rate." )
 
 		self.OptionParser.add_option( "--constSpeed",
 			action="store", type="inkbool",
@@ -1529,7 +1534,11 @@ class WCB( inkex.Effect ):
 		# Use the same model for deceleration distance; modeling it with backwards motion:
 		decelDistMax = ( finalVel * tDecelMax ) + ( 0.5 * accelRate * tDecelMax * tDecelMax )
 
-		timeSlice = axidraw_conf.TIME_SLICE	#(seconds): Slice travel into slices of time that are at least 0.050 seconds (50 ms) long
+		#time slices: Slice travel into intervals that are (say) 30 ms long.
+		if (self.options.slow_slices):
+			timeSlice = axidraw_conf.TIME_SLICE_SLOW #Extra-slow time slices to alleviate communications issues.
+		else:
+			timeSlice = axidraw_conf.TIME_SLICE	#Default slice intervals
 
 		self.nodeCount += 1		# This whole segment move counts as ONE pause/resume node in our plot
 		
