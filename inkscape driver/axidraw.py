@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.1.0, dated August 9, 2016.
+# Version 1.2.0, dated October 29, 2016.
 # 
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 #
@@ -514,14 +514,20 @@ class WCB( inkex.Effect ):
 		viewbox = self.svg.get( 'viewBox' )
 		if viewbox:
 			vinfo = viewbox.strip().replace( ',', ' ' ).split( ' ' )
+			Offset0 = -float(vinfo[0])
+			Offset1 = -float(vinfo[1])
+			
 			if ( vinfo[2] != 0 ) and ( vinfo[3] != 0 ):
 				sx = self.svgWidth / float( vinfo[2] )
 				sy = self.svgHeight / float( vinfo[3] )
-# 				inkex.errormsg( 'self.svgWidth:  ' + str(self.svgWidth) )
-# 				inkex.errormsg( 'float( vinfo[2] ):  ' + str(float( vinfo[2] ) ))
-# 				inkex.errormsg( 'sx:  ' + str(sx) )				
-				self.svgTransform = parseTransform( 'scale(%f,%f) translate(%f,%f)' % (sx, sy, -float( vinfo[0] ), -float( vinfo[1])))
-# 				inkex.errormsg( 'svgTransform:  ' + str(self.svgTransform) )
+		else:	
+			# Handle case of no viewbox provided. 
+			# This can happen with imported documents in Inkscape.	
+			sx = 1.0 / float( plot_utils.pxPerInch)
+			sy = sx	
+			Offset0 = 0.0
+			Offset1 = 0.0
+		self.svgTransform = parseTransform( 'scale(%f,%f) translate(%f,%f)' % (sx, sy,Offset0, Offset1))
 
 		self.ServoSetup()
 		self.penUp() 
