@@ -202,11 +202,6 @@ class WCB( inkex.Effect ):
 		self.svgLastKnownPosY = float( 0.0 )
 		self.svgPausedPosX = float( 0.0 )
 		self.svgPausedPosY = float( 0.0 )	
-
-		self.backlashStepsX = int(0)
-		self.backlashStepsY = int(0)	 
-		self.XBacklashFlag = True
-		self.YBacklashFlag = True
 		
 		self.manConfMode = False
 		self.PrintFromLayersTab = False
@@ -1179,10 +1174,10 @@ class WCB( inkex.Effect ):
 		#Handle simple segments (lines) that do not require any complex planning:
 		if (len(inputPath) < 3):
 			if spewTrajectoryDebugData:
-				inkex.errormsg( 'SHORTPATH ESCAPE: ')	
+				inkex.errormsg( 'Drawing straight line, not a curve.')	# This is the "SHORTPATH ESCAPE"
 			self.plotSegmentWithVelocity( xy[0], xy[1], 0, 0)							  
 			return
-			
+
 		#For other trajectories, we need to go deeper.
 		TrajLength = len(inputPath)
 
@@ -1247,7 +1242,6 @@ class WCB( inkex.Effect ):
 			inkex.errormsg( 'accelRate: %1.3f' % accelRate )
 			inkex.errormsg( 'accelDist: %1.3f' % accelDist )
 			CosinePrintArray = array('f')
-			
 			
 		'''
 		Now, step through every vertex in the trajectory, and calculate what the speed
@@ -1407,8 +1401,6 @@ class WCB( inkex.Effect ):
 			Vfinal = TrajVels[i]
 			Vinitial = TrajVels[i - 1]
 			SegLength = TrajDists[i]
-
-
 
 			if (Vinitial > Vfinal) and (SegLength > 0): 	
 				VInitMax = plot_utils.vInitial_VF_A_Dx(Vfinal,-accelRate,SegLength)
