@@ -106,11 +106,6 @@ class WCB( inkex.Effect ):
 			dest="report_time", default=False,
 			help="Report time elapsed." )
 
-		self.OptionParser.add_option( "--slow_slices",
-			action="store", type="inkbool",
-			dest="slow_slices", default=False,
-			help="Use slower communication data rate." )
-
 		self.OptionParser.add_option( "--constSpeed",
 			action="store", type="inkbool",
 			dest="constSpeed", default=False,
@@ -203,7 +198,6 @@ class WCB( inkex.Effect ):
 		self.svgPausedPosX = float( 0.0 )
 		self.svgPausedPosY = float( 0.0 )	
 		
-		self.manConfMode = False
 		self.PrintFromLayersTab = False
 
 		self.svgWidth = 0 
@@ -1533,10 +1527,7 @@ class WCB( inkex.Effect ):
 		decelDistMax = ( finalVel * tDecelMax ) + ( 0.5 * accelRate * tDecelMax * tDecelMax )
 
 		#time slices: Slice travel into intervals that are (say) 30 ms long.
-		if (self.options.slow_slices):
-			timeSlice = axidraw_conf.TIME_SLICE_SLOW #Extra-slow time slices to alleviate communications issues.
-		else:
-			timeSlice = axidraw_conf.TIME_SLICE	#Default slice intervals
+		timeSlice = axidraw_conf.TIME_SLICE	#Default slice intervals
 
 		self.nodeCount += 1		# This whole segment move counts as ONE pause/resume node in our plot
 		

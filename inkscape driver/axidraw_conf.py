@@ -1,11 +1,10 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.1.0, dated August 9, 2016.
+# Version 1.2.0, dated November 15, 2016.
 #
 # https://github.com/evil-mad/AxiDraw
 #
 # "Change numbers here, not there." :)
-
 
 
 # Page size values typically do not need to be changed. They primarily affect viewpoint and centering.
@@ -41,5 +40,3 @@ SERVO_MAX = 28000  #Highest allowed position; "100%" on the scale
 SERVO_MIN = 7500   #Lowest allowed position; "0%" on the scale
 
 TIME_SLICE = 0.025  #Interval, in seconds, of when to update the motors.
-TIME_SLICE_SLOW = 0.050  #Interval, in seconds, of when to update the motors. (Optional slower setting)
-

@@ -67,8 +67,6 @@ of the pen for writing and drawing.
 <param indent="1" name="autoRotate" type="boolean" _gui-text="Auto-rotate page when printing">true</param>	
 <param indent="1" name="constSpeed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
 <param indent="1" name="report_time" type="boolean" _gui-text="Report time elapsed after each drawing">false</param> 
-<param indent="1" name="slow_slices" type="boolean" _gui-text="Use slower communication data rate">false</param> 
-
 
 <param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
 <_option value="1">Super (slower) ~2000 DPI</_option>
