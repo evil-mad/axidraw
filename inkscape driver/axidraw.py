@@ -1889,7 +1889,7 @@ class WCB( inkex.Effect ):
 	
 				if (not self.resumeMode) and (not self.bStopped):
 					ebb_motion.doXYMove( self.serialPort, moveSteps2, moveSteps1, moveTime )			
-					if (moveTime > 15):
+					if (moveTime > 50):
 						if self.options.tab != '"manual"':
 							time.sleep(float(moveTime - 10)/1000.0)  #pause before issuing next command
 					else:
@@ -1968,7 +1968,7 @@ class WCB( inkex.Effect ):
 			if (vTime < 0): #Do not allow negative delay times
 				vTime = 0	
 			ebb_motion.sendPenUp(self.serialPort, vTime )		
-			if (vTime > 15):
+			if (vTime > 50):
 				if self.options.tab != '"manual"':
 					time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
 			self.bPenIsUp = True
@@ -1989,7 +1989,7 @@ class WCB( inkex.Effect ):
 				if (vTime < 0): #Do not allow negative delay times
 					vTime = 0
 				ebb_motion.sendPenDown(self.serialPort, vTime )						
-				if (vTime > 15):
+				if (vTime > 50):
 					if self.options.tab != '"manual"':
 						time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
 				self.bPenIsUp = False
