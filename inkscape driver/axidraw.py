@@ -1220,7 +1220,10 @@ class WCB( inkex.Effect ):
 		#time to reach full speed (from zero), at maximum acceleration. Defined in settings:
 
 		if ( self.virtualPenIsUp ):	
-			tMax = axidraw_conf.ACCEL_TIME_PU			
+			if ( self.options.resolution == 1 ):	# High-resolution mode
+				tMax = axidraw_conf.ACCEL_TIME_PUHR	#Allow faster pen-up acceleration
+			else:
+				tMax = axidraw_conf.ACCEL_TIME_PU			
 		else:		
 			tMax = axidraw_conf.ACCEL_TIME			
 
@@ -1489,7 +1492,11 @@ class WCB( inkex.Effect ):
 
 		if ( self.virtualPenIsUp ):	
 			speedLimit = self.PenUpSpeed
-			accelRate = speedLimit / axidraw_conf.ACCEL_TIME_PU	
+			
+			if ( self.options.resolution == 1 ):	# High-resolution mode
+				accelRate = speedLimit / axidraw_conf.ACCEL_TIME_PUHR	#Allow faster pen-up acceleration
+			else:
+				accelRate = speedLimit / axidraw_conf.ACCEL_TIME_PU	
 			
 			if plotDistance < (self.stepsPerInch * axidraw_conf.SHORT_THRESHOLD):
 				accelRate = speedLimit / axidraw_conf.ACCEL_TIME	
@@ -1945,7 +1952,7 @@ class WCB( inkex.Effect ):
 			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.Speed_Scale / 220.0
 			self.PenUpSpeed = self.options.rapidSpeed * axidraw_conf.Speed_Scale / 110.0
 		if (self.options.constSpeed):
-			self.PenDownSpeed = self.PenDownSpeed / 2
+			self.PenDownSpeed = self.PenDownSpeed / 3
 		
 		TestArray = array('i')	#signed integer
 		if (TestArray.itemsize < 4):
