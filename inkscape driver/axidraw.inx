@@ -101,6 +101,7 @@ _gui-text="               Command: ">
 <_option value="enable-motors"  >Enable Motors</_option>
 <_option value="disable-motors" >Disable Motors</_option> 
 <_option value="version-check"  >Check EBB Version</_option>
+<_option value="bootload"       >Enter EBB Bootloader mode</_option>
 <_option value="strip-data"     >Strip plotter data from file</_option>
 </param>
 
@@ -172,7 +173,7 @@ or "guide lines" will not be.
 <_param name="instructions_general" type="description"
 xml:space="preserve">
 AxiDraw Control Inkscape extension 
-Release 1.2.0, dated 2016-10-29
+Release 1.2.1, dated 2017-01-07
 
 http://axidraw.com/
 

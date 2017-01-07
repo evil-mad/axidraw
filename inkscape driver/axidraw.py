@@ -2,11 +2,11 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.2.0, dated October 29, 2016.
+# Version 1.2.1, dated January 7, 2017.
 # 
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 #
-# Copyright 2016 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ import serial
 import string
 import time
 
-import ebb_serial		# https://github.com/evil-mad/plotink
+import ebb_serial		# https://github.com/evil-mad/plotink  Requires version 0.4
 import ebb_motion		# https://github.com/evil-mad/plotink  Requires version 0.5
 import plot_utils		# https://github.com/evil-mad/plotink  Requires version 0.4
 
@@ -334,7 +334,8 @@ class WCB( inkex.Effect ):
 		self.svgDataRead = False
 		self.UpdateSVGWCBData( self.svg )
 		if self.serialPort is not None:
-			ebb_motion.doTimedPause(self.serialPort, 10) #Pause a moment for underway commands to finish...
+			if not ((self.options.tab == '"manual"') and (self.options.manualType == "bootload")):
+				ebb_motion.doTimedPause(self.serialPort, 10) #Pause a moment for underway commands to finish...
 			ebb_serial.closePort(self.serialPort)	
 		
 	def resumePlotSetup( self ):
@@ -456,6 +457,9 @@ class WCB( inkex.Effect ):
 		elif self.options.manualType == "version-check":
 			strVersion = ebb_serial.query( self.serialPort, 'V\r' )
 			inkex.errormsg( 'I asked the EBB for its version info, and it replied:\n ' + strVersion )
+
+		elif self.options.manualType == "bootload":
+			ebb_serial.bootload( self.serialPort)	
 
 		else:  # self.options.manualType is walk motor:
 			if self.options.manualType == "walk-y-motor":
