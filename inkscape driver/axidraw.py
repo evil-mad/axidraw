@@ -615,6 +615,7 @@ class WCB( inkex.Effect ):
 				#  2. Even if the use element has visibility="hidden", SVG still calls
 				#     for processing the referenced element.  The referenced element is
 				#     hidden only if its visibility is "inherit" or "hidden".
+				#  3. We may be able to unlink clones using the code in pathmodifier.py
 
 				refid = node.get( inkex.addNS( 'href', 'xlink' ) )
 				if refid:
@@ -937,11 +938,12 @@ class WCB( inkex.Effect ):
 				elif (node.tag == inkex.addNS( 'text', 'svg' ) or node.tag == 'text' or
 					node.tag == inkex.addNS( 'flowRoot', 'svg' ) or node.tag == 'flowRoot'):
 					if (not self.warnings.has_key( 'text' )) and (self.plotCurrentLayer):
-						inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
-							self.sCurrentLayerName + '" unable to draw text; ' +
-							'Please convert text to a path before drawing, using \n' +
-							'Path > Object to Path. Or, use the Hershey Text extension, '+
-							'which can be found under Extensions > Render.' ) )
+						inkex.errormsg( gettext.gettext( 'Note: This file contains some plain text, found in a \nlayer named: "' + 
+							self.sCurrentLayerName + '" .\n' +
+							'Please convert your text into paths before drawing,  \n' +
+							'using Path > Object to Path. \n' +
+							'You can also create new text by using Hershey Text,\n' +
+							'located in the menu at Extensions > Render.' ) )
 						self.warnings['text'] = 1
 					pass
 				elif node.tag == inkex.addNS( 'image', 'svg' ) or node.tag == 'image':
