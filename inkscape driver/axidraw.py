@@ -1194,7 +1194,7 @@ class WCB( inkex.Effect ):
 
 		# Maximum travel speed
 		if ( self.virtualPenIsUp ):	
-			speedLimit = self.PenUpSpeed  / self.stepsPerInch
+			speedLimit = self.PenUpSpeed  / self.stepsPerInch	# Units of speedLimit: inches/second
 		else:		
 			speedLimit = self.PenDownSpeed  / self.stepsPerInch
 

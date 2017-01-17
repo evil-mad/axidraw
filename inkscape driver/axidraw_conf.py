@@ -21,13 +21,14 @@ Speed_Scale = 24950    #Maximum (110%) speed, in steps per second.
 						# Note that 25 kHz is the absolute maximum speed (steps per second) for the EBB.
 
 StartPos_X = 0   #parking position, in pixels. Default: 0
-StartPos_Y = 0      #parking position, in pixels. Default: 0
+StartPos_Y = 0   #parking position, in pixels. Default: 0
 
 
 #Perhaps these should have been made editable in the main GUI. Perhaps not. :3
 ACCEL_TIME = .2    #Seconds of acceleration to reach full speed WITH PEN DOWN
 ACCEL_TIME_PU = .5  #Seconds of acceleration to reach full speed WITH PEN UP.
 ACCEL_TIME_PUHR = .15  #Seconds of acceleration to reach full speed WITH PEN UP in slower high-resolution mode.
+
 
 #Short-move pen-up distance threshold, below which we use the faster pen-down acceleration rate:
 SHORT_THRESHOLD = 1.0  #Distance Threshold (inches)
