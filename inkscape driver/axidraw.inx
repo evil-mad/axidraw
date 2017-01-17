@@ -180,7 +180,7 @@ http://axidraw.com/
 Issue tracker:
 https://github.com/evil-mad/axidraw/issues
 
-*EBB Firmware 2.4.0 or newer required.
+EBB Firmware 2.4.6 or newer is recommended.
 
 Known issues:
 * "Cancel" function does not work while plotting.
