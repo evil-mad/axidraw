@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
 <_name>AxiDraw Control</_name>
-<id>command.evilmadscientist.axidraw.rev110c</id>
+<id>command.evilmadscientist.axidraw.rev122</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw.py</dependency>
 <dependency type="executable" location="extensions">inkex.py</dependency>
@@ -173,7 +173,7 @@ or "guide lines" will not be.
 <_param name="instructions_general" type="description"
 xml:space="preserve">
 AxiDraw Control Inkscape extension 
-Release 1.2.1, dated 2017-01-07
+Release 1.2.2, dated 2017-01-18
 
 http://axidraw.com/
 

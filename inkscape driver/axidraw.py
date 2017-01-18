@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.2.1, dated January 7, 2017.
+# Version 1.2.2, dated January 18, 2017.
 # 
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 #

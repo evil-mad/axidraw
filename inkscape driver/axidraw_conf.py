@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.2.0, dated November 15, 2016.
+# Version 1.2.2, dated January 18, 2016.
 #
 # https://github.com/evil-mad/AxiDraw
 #
