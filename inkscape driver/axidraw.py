@@ -460,6 +460,9 @@ class WCB( inkex.Effect ):
 
 		elif self.options.manualType == "bootload":
 			ebb_serial.bootload( self.serialPort)	
+			inkex.errormsg( gettext.gettext( "Entering bootloader mode for firmware programming.\n" +
+			"To resume normal operation, you will need to first\n" +
+			"disconnect the AxiDraw from both USB and power." ) )
 
 		else:  # self.options.manualType is walk motor:
 			if self.options.manualType == "walk-y-motor":
