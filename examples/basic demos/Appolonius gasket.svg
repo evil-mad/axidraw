@@ -12,7 +12,7 @@
    width="11in"
    height="8.5in"
    viewBox="0 0 11 8.5"
-   id="svg23925"
+   id="svg158335"
    version="1.1"
    inkscape:version="0.91 r13725"
    sodipodi:docname="Appolonius gasket.svg">
@@ -23,11 +23,11 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.91748191"
+     inkscape:zoom="0.85359477"
      inkscape:cx="495"
      inkscape:cy="382.5"
      inkscape:current-layer="layer1"
-     id="namedview23929"
+     id="namedview158339"
      showgrid="false"
      inkscape:window-width="1436"
      inkscape:window-height="855"
@@ -35,16 +35,16 @@
      inkscape:window-y="1"
      inkscape:window-maximized="1" />
   <defs
-     id="defs23927" />
+     id="defs158337" />
   <metadata
-     id="metadata23931">
+     id="metadata158341">
     <rdf:RDF>
       <cc:Work
          rdf:about="">
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
