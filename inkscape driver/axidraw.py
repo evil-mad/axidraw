@@ -591,7 +591,7 @@ class WCB( inkex.Effect ):
 			if v == 'inherit':
 				v = parent_visibility
 			if v == 'hidden' or v == 'collapse':
-				pass
+				continue
 
 			# first apply the current matrix transform to this node's transform
 			matNew = composeTransform( matCurrent, parseTransform( node.get( "transform" ) ) )
