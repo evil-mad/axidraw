@@ -173,7 +173,9 @@ or "guide lines" will not be.
 <_param name="instructions_general" type="description"
 xml:space="preserve">
 AxiDraw Control Inkscape extension 
-Release 1.2.2, dated 2017-01-18
+Release 1.3.0, dated 2017-03-02
+
+Copyright 2017 Evil Mad Science LLC
 
 http://axidraw.com/
 

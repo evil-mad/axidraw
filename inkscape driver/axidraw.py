@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.2.2, dated January 18, 2017.
+# Version 1.3.0, dated March 2, 2017
 # 
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 #
@@ -23,11 +23,14 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 
+import sys
+import inkex
 from simpletransform import *
+import simplepath
+	
 from math import sqrt
 from array import *
 import gettext
-import simplepath
 import serial
 import string
 import time
@@ -38,16 +41,6 @@ import plot_utils		# https://github.com/evil-mad/plotink  Requires version 0.4
 
 import axidraw_conf       	#Some settings can be changed here.
 
-F_DEFAULT_SPEED = 1
-N_PEN_DOWN_DELAY = 400    # delay (ms) for the pen to go down before the next move
-N_PEN_UP_DELAY = 400      # delay (ms) for the pen to up down before the next move
-
-N_PEN_UP_POS = 50      # Default pen-up position
-N_PEN_DOWN_POS = 40      # Default pen-down position
-
-N_SERVOSPEED = 50			# Default pen-lift speed 
-N_DEFAULT_LAYER = 1			# Default inkscape layer
-
 class WCB( inkex.Effect ):
 
 	def __init__( self ):
@@ -56,99 +49,101 @@ class WCB( inkex.Effect ):
 		
 		self.OptionParser.add_option( "--tab",
 			action="store", type="string",
-			dest="tab", default="controls",
+			dest="tab", default="splash",
 			help="The active tab when Apply was pressed" )
-			
+
 		self.OptionParser.add_option( "--penUpPosition",
 			action="store", type="int",
-			dest="penUpPosition", default=N_PEN_UP_POS,
+			dest="penUpPosition", default=axidraw_conf.PenUpPos,
 			help="Position of pen when lifted" )
+			
 		self.OptionParser.add_option( "--penDownPosition",
 			action="store", type="int",
-			dest="penDownPosition", default=N_PEN_DOWN_POS,
+			dest="penDownPosition", default=axidraw_conf.PenDownPos,
 			help="Position of pen for painting" )	
-			 
+			
 		self.OptionParser.add_option( "--setupType",
 			action="store", type="string",
-			dest="setupType", default="controls",
-			help="The active option when Apply was pressed" )
-			
+			dest="setupType", default="align-mode",
+			help="The setup option selected when Apply was pressed" )
+
 		self.OptionParser.add_option( "--penDownSpeed",
 			action="store", type="int",
-			dest="penDownSpeed", default=F_DEFAULT_SPEED,
+			dest="penDownSpeed", default=axidraw_conf.PenDownSpeed,
 			help="Speed (step/sec) while pen is down." )
 
 		self.OptionParser.add_option( "--rapidSpeed",
 			action="store", type="int",
-			dest="rapidSpeed", default=F_DEFAULT_SPEED,
+			dest="rapidSpeed", default=axidraw_conf.PenUpSpeed,
 			help="Rapid speed (percent) while pen is up." )
-
 
 		self.OptionParser.add_option( "--ServoUpSpeed",
 			action="store", type="int",
-			dest="ServoUpSpeed", default=N_SERVOSPEED,
+			dest="ServoUpSpeed", default=axidraw_conf.PenRaiseRate,
 			help="Rate of lifting pen " )
 		self.OptionParser.add_option( "--penUpDelay",
 			action="store", type="int",
-			dest="penUpDelay", default=N_PEN_UP_DELAY,
-			help="Added delay after pen up (msec)." )
+			dest="penUpDelay", default=axidraw_conf.PenRaiseDelay,
+			help="Added delay after pen up (ms)." )
 		self.OptionParser.add_option( "--ServoDownSpeed",
 			action="store", type="int",
-			dest="ServoDownSpeed", default=N_SERVOSPEED,
+			dest="ServoDownSpeed", default=axidraw_conf.PenLowerRate,
 			help="Rate of lowering pen " ) 
 		self.OptionParser.add_option( "--penDownDelay",
 			action="store", type="int",
-			dest="penDownDelay", default=N_PEN_DOWN_DELAY,
-			help="Added delay after pen down (msec)." )
-
-		self.OptionParser.add_option( "--report_time",
-			action="store", type="inkbool",
-			dest="report_time", default=False,
-			help="Report time elapsed." )
-
-		self.OptionParser.add_option( "--constSpeed",
-			action="store", type="inkbool",
-			dest="constSpeed", default=False,
-			help="Use constant velocity mode when pen is down" )
+			dest="penDownDelay", default=axidraw_conf.PenLowerDelay,
+			help="Added delay after pen down (ms)." )
 
 		self.OptionParser.add_option( "--autoRotate",
 			action="store", type="inkbool",
 			dest="autoRotate", default=False,
 			help="Print in portrait or landscape mode automatically" )
+
+		self.OptionParser.add_option( "--constSpeed",
+			action="store", type="inkbool",
+			dest="constSpeed", default=False,
+			help="Use constant velocity mode when pen is down" )
 			
+		self.OptionParser.add_option( "--report_time",
+			action="store", type="inkbool",
+			dest="report_time", default=False,
+			help="Report time elapsed." )
+
+		self.OptionParser.add_option( "--resolution",
+			action="store", type="int",
+			dest="resolution", default=1,
+			help="Resolution factor." )	
+
 		self.OptionParser.add_option( "--smoothness",
 			action="store", type="float",
-			dest="smoothness", default=2.0,
+			dest="smoothness", default=10.0,
 			help="Smoothness of curves" )
 
 		self.OptionParser.add_option( "--cornering",
 			action="store", type="float",
-			dest="cornering", default=2.0,
+			dest="cornering", default=10.0,
 			help="cornering speed factor" )
-
-		self.OptionParser.add_option( "--resolution",
-			action="store", type="int",
-			dest="resolution", default=3,
-			help="Resolution factor." )	
 
 		self.OptionParser.add_option( "--manualType",
 			action="store", type="string",
-			dest="manualType", default="controls",
+			dest="manualType", default="version-check",
 			help="The active option when Apply was pressed" )
+
 		self.OptionParser.add_option( "--WalkDistance",
 			action="store", type="float",
 			dest="WalkDistance", default=1,
-			help="Distance for manual walk" )			
-			
+			help="Distance for manual walk" )
+
+
 		self.OptionParser.add_option( "--resumeType",
 			action="store", type="string",
-			dest="resumeType", default="controls",
-			help="The active option when Apply was pressed" )			
+			dest="resumeType", default="ResumeNow",
+			help="The active option when Apply was pressed" )
 			
 		self.OptionParser.add_option( "--layernumber",
 			action="store", type="int",
-			dest="layernumber", default=N_DEFAULT_LAYER,
-			help="Selected layer for multilayer plotting" )			
+			dest="layernumber", default=axidraw_conf.DefaultLayer,
+			help="Selected layer for multilayer plotting" )
 
 		self.serialPort = None
 		self.bPenIsUp = None  #Initial state of pen is neither up nor down, but _unknown_.
@@ -158,9 +153,9 @@ class WCB( inkex.Effect ):
 
 		fX = None
 		fY = None 
-		self.fCurrX = axidraw_conf.StartPos_X
-		self.fCurrY = axidraw_conf.StartPos_Y 
-		self.ptFirst = ( axidraw_conf.StartPos_X, axidraw_conf.StartPos_Y)
+		self.fCurrX = axidraw_conf.StartPosX
+		self.fCurrY = axidraw_conf.StartPosY 
+		self.ptFirst = ( axidraw_conf.StartPosX, axidraw_conf.StartPosY)
 		self.bStopped = False
 		self.fSpeed = 1
 		self.resumeMode = False
@@ -204,16 +199,16 @@ class WCB( inkex.Effect ):
 		self.svgHeight = 0
 		self.printPortrait = False
 		
-		self.xBoundsMax = axidraw_conf.N_PAGE_WIDTH
-		self.xBoundsMin = axidraw_conf.StartPos_X
-		self.yBoundsMax = axidraw_conf.N_PAGE_HEIGHT
-		self.yBoundsMin = axidraw_conf.StartPos_Y
+		self.xBoundsMax = axidraw_conf.PageWidthIn
+		self.xBoundsMin = axidraw_conf.StartPosX
+		self.yBoundsMax = axidraw_conf.PageHeightIn
+		self.yBoundsMin = axidraw_conf.StartPosY
 		
 		self.svgTransform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
 		
 		self.stepsPerInch = 0 # must be set to a nonzero value before plotting.
-		self.PenDownSpeed = 0.25 * axidraw_conf.Speed_Scale #Default speed when pen is down		
-		self.PenUpSpeed = 0.75 * axidraw_conf.Speed_Scale #Default speed when pen is down	
+		self.PenDownSpeed = axidraw_conf.PenDownSpeed * axidraw_conf.SpeedScale #Default speed when pen is down		
+		self.PenUpSpeed = 0.75 * axidraw_conf.SpeedScale #Default speed when pen is down	
 
 		# So that we only generate a warning once for each
 		# unsupported SVG element, we use a dictionary to track
@@ -261,8 +256,8 @@ class WCB( inkex.Effect ):
 					unused_button = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
 					self.resumePlotSetup()
 					if self.resumeMode:
-						fX = self.svgPausedPosX_Old + axidraw_conf.StartPos_X
-						fY = self.svgPausedPosY_Old + axidraw_conf.StartPos_Y
+						fX = self.svgPausedPosX_Old + axidraw_conf.StartPosX
+						fY = self.svgPausedPosY_Old + axidraw_conf.StartPosY
 		 				self.resumeMode = False
 	
 						self.plotSegmentWithVelocity( fX, fY, 0, 0)
@@ -272,8 +267,8 @@ class WCB( inkex.Effect ):
 						self.plotDocument() 
 						
 					elif ( self.options.resumeType == "justGoHome" ):
-						fX = axidraw_conf.StartPos_X
-						fY = axidraw_conf.StartPos_Y 
+						fX = axidraw_conf.StartPosX
+						fY = axidraw_conf.StartPosY 
 
 						self.plotSegmentWithVelocity( fX, fY, 0, 0)
 							
@@ -362,8 +357,8 @@ class WCB( inkex.Effect ):
 				self.EnableMotors() #Set plotting resolution  
 				self.fSpeed = self.PenDownSpeed 
 				
-				self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPos_X
-				self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPos_Y
+				self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPosX
+				self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPosY
 				 
 
 	def CheckSVGforWCBData( self ):
@@ -477,8 +472,8 @@ class WCB( inkex.Effect ):
 			self.fSpeed = self.PenDownSpeed
 				
  			self.EnableMotors() #Set plotting resolution 
-			self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPos_X
-			self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPos_Y
+			self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPosX
+			self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPosY
 			self.ignoreLimits = True
 			fX = self.fCurrX + nDeltaX   #Note: Walking motors is STRICTLY RELATIVE TO INITIAL POSITION.
 			fY = self.fCurrY + nDeltaY
@@ -536,8 +531,8 @@ class WCB( inkex.Effect ):
  
 			# return to home after end of normal plot
 			if ( ( not self.bStopped ) and ( self.ptFirst ) ):
-				self.xBoundsMin = axidraw_conf.StartPos_X
-				self.yBoundsMin = axidraw_conf.StartPos_Y
+				self.xBoundsMin = axidraw_conf.StartPosX
+				self.yBoundsMin = axidraw_conf.StartPosY
 				fX = self.ptFirst[0]
 				fY = self.ptFirst[1] 
  				self.nodeCount = self.nodeTarget    
@@ -591,7 +586,7 @@ class WCB( inkex.Effect ):
 			if v == 'inherit':
 				v = parent_visibility
 			if v == 'hidden' or v == 'collapse':
-				continue
+				pass
 
 			# first apply the current matrix transform to this node's transform
 			matNew = composeTransform( matCurrent, parseTransform( node.get( "transform" ) ) )
@@ -1125,7 +1120,7 @@ class WCB( inkex.Effect ):
 							fY = float( csp[1][1] )
 
 						if nIndex == 0:
-							if (plot_utils.distance(fX - self.fCurrX,fY - self.fCurrY) > axidraw_conf.MIN_GAP):
+							if (plot_utils.distance(fX - self.fCurrX,fY - self.fCurrY) > axidraw_conf.MinGap):
 								self.penUp()
 								self.plotSegmentWithVelocity( fX, fY, 0, 0)
 						elif nIndex == 1:
@@ -1230,11 +1225,11 @@ class WCB( inkex.Effect ):
 
 		if ( self.virtualPenIsUp ):	
 			if ( self.options.resolution == 1 ):	# High-resolution mode
-				tMax = axidraw_conf.ACCEL_TIME_PUHR	#Allow faster pen-up acceleration
+				tMax = axidraw_conf.AccelTimePUHR	#Allow faster pen-up acceleration
 			else:
-				tMax = axidraw_conf.ACCEL_TIME_PU			
+				tMax = axidraw_conf.AccelTimePU			
 		else:		
-			tMax = axidraw_conf.ACCEL_TIME			
+			tMax = axidraw_conf.AccelTime			
 
 		# acceleration/deceleration rate: (Maximum speed) / (time to reach that speed)
 		accelRate = speedLimit / tMax
@@ -1503,16 +1498,16 @@ class WCB( inkex.Effect ):
 			speedLimit = self.PenUpSpeed
 			
 			if ( self.options.resolution == 1 ):	# High-resolution mode
-				accelRate = speedLimit / axidraw_conf.ACCEL_TIME_PUHR	#Allow faster pen-up acceleration
+				accelRate = speedLimit / axidraw_conf.AccelTimePUHR	#Allow faster pen-up acceleration
 			else:
-				accelRate = speedLimit / axidraw_conf.ACCEL_TIME_PU	
+				accelRate = speedLimit / axidraw_conf.AccelTimePU	
 			
-			if plotDistance < (self.stepsPerInch * axidraw_conf.SHORT_THRESHOLD):
-				accelRate = speedLimit / axidraw_conf.ACCEL_TIME	
+			if plotDistance < (self.stepsPerInch * axidraw_conf.ShortThreshold):
+				accelRate = speedLimit / axidraw_conf.AccelTime	
 				speedLimit = self.PenDownSpeed
 		else:		
 			speedLimit = self.PenDownSpeed
-			accelRate = speedLimit / axidraw_conf.ACCEL_TIME	
+			accelRate = speedLimit / axidraw_conf.AccelTime	
 			
 		if (initialVel > speedLimit):
 			initialVel = speedLimit
@@ -1543,7 +1538,7 @@ class WCB( inkex.Effect ):
 		decelDistMax = ( finalVel * tDecelMax ) + ( 0.5 * accelRate * tDecelMax * tDecelMax )
 
 		#time slices: Slice travel into intervals that are (say) 30 ms long.
-		timeSlice = axidraw_conf.TIME_SLICE	#Default slice intervals
+		timeSlice = axidraw_conf.TimeSlice	#Default slice intervals
 
 		self.nodeCount += 1		# This whole segment move counts as ONE pause/resume node in our plot
 		
@@ -1915,16 +1910,16 @@ class WCB( inkex.Effect ):
 					self.fCurrX += xSteps / self.stepsPerInch   # Update current position
 					self.fCurrY += ySteps / self.stepsPerInch		
 	
-					self.svgLastKnownPosX = self.fCurrX - axidraw_conf.StartPos_X
-					self.svgLastKnownPosY = self.fCurrY - axidraw_conf.StartPos_Y	
+					self.svgLastKnownPosX = self.fCurrX - axidraw_conf.StartPosX
+					self.svgLastKnownPosY = self.fCurrY - axidraw_conf.StartPosY	
 					#if spewSegmentDebugData:			
 					#	inkex.errormsg( '\nfCurrX,fCurrY (x = %1.2f, y = %1.2f) ' % (self.fCurrX, self.fCurrY))
 						
 		strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
 		if strButton[0] == '1': #button pressed
 			self.svgNodeCount = self.nodeCount - 1;
-			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPos_X	#self.svgLastKnownPosX
-			self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPos_Y	#self.svgLastKnownPosY
+			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPosX	#self.svgLastKnownPosX
+			self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPosY	#self.svgLastKnownPosY
 			self.penUp()
 			inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
 			inkex.errormsg( 'Use the "resume" feature to continue.' )
@@ -1953,13 +1948,13 @@ class WCB( inkex.Effect ):
 		if ( self.options.resolution == 1 ):
 			ebb_motion.sendEnableMotors(self.serialPort, 1) # 16X microstepping
 			self.stepsPerInch = float( axidraw_conf.DPI_16X)						
-			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.Speed_Scale / 110.0
-			self.PenUpSpeed = self.options.rapidSpeed * axidraw_conf.Speed_Scale / 110.0
+			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 110.0
+			self.PenUpSpeed = self.options.rapidSpeed * axidraw_conf.SpeedScale / 110.0
 		elif ( self.options.resolution == 2 ):
 			ebb_motion.sendEnableMotors(self.serialPort, 2) # 8X microstepping
 			self.stepsPerInch = float( axidraw_conf.DPI_16X / 2.0 )  
-			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.Speed_Scale / 220.0
-			self.PenUpSpeed = self.options.rapidSpeed * axidraw_conf.Speed_Scale / 110.0
+			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 220.0
+			self.PenUpSpeed = self.options.rapidSpeed * axidraw_conf.SpeedScale / 110.0
 		if (self.options.constSpeed):
 			self.PenDownSpeed = self.PenDownSpeed / 3
 		
@@ -2031,13 +2026,13 @@ class WCB( inkex.Effect ):
 		else:	
 			penDownPos = self.options.penDownPosition
 		
-		servo_range = axidraw_conf.SERVO_MAX - axidraw_conf.SERVO_MIN
+		servo_range = axidraw_conf.ServoMax - axidraw_conf.ServoMin
 		servo_slope = float(servo_range) / 100.0
 		
-		intTemp = int(round(axidraw_conf.SERVO_MIN + servo_slope * self.options.penUpPosition))
+		intTemp = int(round(axidraw_conf.ServoMin + servo_slope * self.options.penUpPosition))
 		ebb_serial.command( self.serialPort,  'SC,4,' + str( intTemp ) + '\r' )	
 				
-		intTemp = int(round(axidraw_conf.SERVO_MIN + servo_slope * penDownPos))
+		intTemp = int(round(axidraw_conf.ServoMin + servo_slope * penDownPos))
 		ebb_serial.command( self.serialPort,  'SC,5,' + str( intTemp ) + '\r' )
 
 		''' Servo speed units are in units of %/second, referring to the
