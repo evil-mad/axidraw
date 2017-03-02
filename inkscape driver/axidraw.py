@@ -2049,9 +2049,6 @@ class WCB( inkex.Effect ):
 		intTemp = 5 * self.options.ServoDownSpeed
 		ebb_serial.command( self.serialPort,  'SC,12,' + str( intTemp ) + '\r' )
 
-	def stop( self ):
-		self.bStopped = True
-
 	def getDocProps( self ):
 		'''
 		Get the document's height and width attributes from the <svg> tag.
