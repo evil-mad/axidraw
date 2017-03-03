@@ -51,8 +51,8 @@ PenDownPos = 40		# Default pen-down position
 PenUpSpeed = 75
 PenDownSpeed = 25
 
-PenLowerDelay = 400    # delay (ms) for the pen to go down before the next move
-PenRaiseDelay = 400      # delay (ms) for the pen to up down before the next move
+PenLowerDelay = 0		# added delay (ms) for the pen to go down before the next move
+PenRaiseDelay = 0		# added delay (ms) for the pen to go up before the next move
 
 PenRaiseRate = 150		# Default pen-lift servo speed 
 PenLowerRate = 150		# Default pen-lift servo speed when lowering
