@@ -1019,9 +1019,12 @@ class WCB( inkex.Effect ):
 		layerNameInt = -1
 		layerMatch = False	
 		CurrentLayerName = string.lstrip( strLayerName.encode( 'ascii', 'ignore' ) ) #remove leading whitespace
+		self.plotCurrentLayer = True    #Temporarily assume that we are plotting the layer
 	
 		MaxLength = len( CurrentLayerName )
 		if MaxLength > 0:
+			if CurrentLayerName[0] == '%':
+				self.plotCurrentLayer = False	#First character is "%" -- skip this layer
 			while stringPos <= MaxLength:
 				if str.isdigit( CurrentLayerName[:stringPos] ):
 					TempNumString = CurrentLayerName[:stringPos] # Store longest numeric string so far
@@ -1029,7 +1032,6 @@ class WCB( inkex.Effect ):
 				else:
 					break
 
-		self.plotCurrentLayer = True    #Temporarily assume that we are plotting the layer
 		if (self.PrintInLayersMode):	#Also true if resuming a print that was of a single layer.
 			if ( str.isdigit( TempNumString ) ):
 				layerNameInt = int( float( TempNumString ) )
