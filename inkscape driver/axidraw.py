@@ -47,10 +47,10 @@ class WCB( inkex.Effect ):
 		inkex.Effect.__init__( self )
 		self.start_time = time.time()
 		
-		self.OptionParser.add_option( "--tab",
+		self.OptionParser.add_option( "--mode",
 			action="store", type="string",
-			dest="tab", default="splash",
-			help="The active tab when Apply was pressed" )
+			dest="mode", default="plot",
+			help="Mode (or GUI tab) selected" )
 
 		self.OptionParser.add_option( "--penUpPosition",
 			action="store", type="int",
@@ -65,7 +65,7 @@ class WCB( inkex.Effect ):
 		self.OptionParser.add_option( "--setupType",
 			action="store", type="string",
 			dest="setupType", default="align-mode",
-			help="The setup option selected when Apply was pressed" )
+			help="The setup option selected" )
 
 		self.OptionParser.add_option( "--penDownSpeed",
 			action="store", type="int",
@@ -193,7 +193,7 @@ class WCB( inkex.Effect ):
 		self.svgPausedPosX = float( 0.0 )
 		self.svgPausedPosY = float( 0.0 )	
 		
-		self.PrintFromLayersTab = False
+		self.PrintInLayersMode = False
 
 		self.svgWidth = 0 
 		self.svgHeight = 0
@@ -217,18 +217,18 @@ class WCB( inkex.Effect ):
 		self.warnOutOfBounds = False
 
 	def effect( self ):
-		'''Main entry point: check to see which tab is selected, and act accordingly.'''
+		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
 		self.svg = self.document.getroot()
 		self.CheckSVGforWCBData()
 		useOldResumeData = True
 
 		skipSerial = False
-		if (self.options.tab == '"Help"'):
+		if (self.options.mode == '"Help"'):
 			skipSerial = True
- 		if (self.options.tab == '"options"'):
+ 		if (self.options.mode == '"options"'):
 			skipSerial = True 		
- 		if (self.options.tab == '"timing"'):
+ 		if (self.options.mode == '"timing"'):
 			skipSerial = True
  		
  		if skipSerial == False:
@@ -236,10 +236,10 @@ class WCB( inkex.Effect ):
  			if self.serialPort is None:
 				inkex.errormsg( gettext.gettext( "Failed to connect to AxiDraw. :(" ) )
 		
-			if self.options.tab == '"splash"': 
+			if self.options.mode == '"plot"': 
 				self.LayersFoundToPlot = False
 				useOldResumeData = False
-				self.PrintFromLayersTab = False
+				self.PrintInLayersMode = False
 				self.plotCurrentLayer = True
 				if self.serialPort is not None:
 					self.svgNodeCount = 0
@@ -248,7 +248,7 @@ class WCB( inkex.Effect ):
 					self.svgLayer = 12345;  # indicate (to resume routine) that we are plotting all layers.
 					self.plotDocument()
 
-			elif self.options.tab == '"resume"':
+			elif self.options.mode == '"resume"':
 				if self.serialPort is None:
 					useOldResumeData = True
 				else:
@@ -283,9 +283,9 @@ class WCB( inkex.Effect ):
 					else:
 						inkex.errormsg( gettext.gettext( "There does not seem to be any in-progress plot to resume." ) )
 	
-			elif self.options.tab == '"layers"':
+			elif self.options.mode == '"layers"':
 				useOldResumeData = False 
-				self.PrintFromLayersTab = True
+				self.PrintInLayersMode = True
 				self.plotCurrentLayer = False
 				self.LayersFoundToPlot = False
 				self.svgLastPath = 0
@@ -295,10 +295,10 @@ class WCB( inkex.Effect ):
 					self.svgLayer = self.options.layernumber
 					self.plotDocument()
 
-			elif self.options.tab == '"setup"':
+			elif self.options.mode == '"setup"':
 				self.setupCommand()
 				
-			elif self.options.tab == '"manual"':
+			elif self.options.mode == '"manual"':
 				if self.options.manualType == "strip-data":
 					for node in self.svg.xpath( '//svg:WCB', namespaces=inkex.NSS ):
 						self.svg.remove( node )
@@ -329,7 +329,7 @@ class WCB( inkex.Effect ):
 		self.svgDataRead = False
 		self.UpdateSVGWCBData( self.svg )
 		if self.serialPort is not None:
-			if not ((self.options.tab == '"manual"') and (self.options.manualType == "bootload")):
+			if not ((self.options.mode == '"manual"') and (self.options.manualType == "bootload")):
 				ebb_motion.doTimedPause(self.serialPort, 10) #Pause a moment for underway commands to finish...
 			ebb_serial.closePort(self.serialPort)	
 		
@@ -337,11 +337,11 @@ class WCB( inkex.Effect ):
 		self.LayerFound = False
 		if ( self.svgLayer_Old < 101 ) and ( self.svgLayer_Old >= 0 ):
 			self.options.layernumber = self.svgLayer_Old 
-			self.PrintFromLayersTab = True
+			self.PrintInLayersMode = True
 			self.plotCurrentLayer = False
 			self.LayerFound = True
 		elif ( self.svgLayer_Old == 12345 ):  # Plot all layers 
-			self.PrintFromLayersTab = False
+			self.PrintInLayersMode = False
 			self.plotCurrentLayer = True
 			self.LayerFound = True 	
 		if ( self.LayerFound ):
@@ -412,7 +412,7 @@ class WCB( inkex.Effect ):
 					self.svgDataRead = True
 					 
 	def setupCommand( self ):
-		"""Execute commands from the "setup" tab"""
+		"""Execute commands from the "setup" mode"""
 
 		if self.serialPort is None:
 			return
@@ -427,7 +427,7 @@ class WCB( inkex.Effect ):
 			ebb_motion.TogglePen(self.serialPort)
 
 	def manualCommand( self ):
-		"""Execute commands from the "manual" tab"""
+		"""Execute commands in the "manual" mode/tab"""
 
 		if self.options.manualType == "none":
 			return
@@ -539,7 +539,7 @@ class WCB( inkex.Effect ):
 				self.plotSegmentWithVelocity( fX, fY, 0, 0)
 				
 			if ( not self.bStopped ): 
-				if (self.options.tab == '"splash"') or (self.options.tab == '"layers"') or (self.options.tab == '"resume"'):
+				if (self.options.mode == '"plot"') or (self.options.mode == '"layers"') or (self.options.mode == '"resume"'):
 					self.svgLayer = 0
 					self.svgNodeCount = 0
 					self.svgLastPath = 0
@@ -549,7 +549,7 @@ class WCB( inkex.Effect ):
 					self.svgPausedPosX = 0
 					self.svgPausedPosY = 0
 					#Clear saved position data from the SVG file,
-					#  IF we have completed a normal plot from the splash, layer, or resume tabs.
+					#  IF we have completed a normal plot from the plot, layer, or resume mode.
 			if (self.warnOutOfBounds):
 				inkex.errormsg( gettext.gettext( 'Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help!' ) )
 
@@ -993,7 +993,7 @@ class WCB( inkex.Effect ):
 		
 		First: scan layer name for first non-numeric character,
 		and scan the part before that (if any) into a number
-		Then, (if not printing all layers)
+		Then, (if not printing in all-layers mode)
 		see if the number matches the layer number that we are printing.
 		
 		Secondary function: Parse characters following the layer number (if any) to see if
@@ -1020,11 +1020,11 @@ class WCB( inkex.Effect ):
 					break
 
 		self.plotCurrentLayer = True    #Temporarily assume that we are plotting the layer
-		if (self.PrintFromLayersTab):	#Also true if resuming a print that was of a single layer.
+		if (self.PrintInLayersMode):	#Also true if resuming a print that was of a single layer.
 			if ( str.isdigit( TempNumString ) ):
 				layerNameInt = int( float( TempNumString ) )
 				if ( self.svgLayer == layerNameInt ):
-					layerMatch = True	#Match! The current layer IS named in the Layers tab.
+					layerMatch = True	#Match! The current layer IS named.
 				
 			if (layerMatch == False):
 				self.plotCurrentLayer = False
@@ -1901,7 +1901,7 @@ class WCB( inkex.Effect ):
 				if (not self.resumeMode) and (not self.bStopped):
 					ebb_motion.doXYMove( self.serialPort, moveSteps2, moveSteps1, moveTime )			
 					if (moveTime > 50):
-						if self.options.tab != '"manual"':
+						if self.options.mode != '"manual"':
 							time.sleep(float(moveTime - 10)/1000.0)  #pause before issuing next command
 					else:
 						if spewSegmentDebugData:	
@@ -1980,7 +1980,7 @@ class WCB( inkex.Effect ):
 				vTime = 0	
 			ebb_motion.sendPenUp(self.serialPort, vTime )		
 			if (vTime > 50):
-				if self.options.tab != '"manual"':
+				if self.options.mode != '"manual"':
 					time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
 			self.bPenIsUp = True
 
@@ -2001,7 +2001,7 @@ class WCB( inkex.Effect ):
 					vTime = 0
 				ebb_motion.sendPenDown(self.serialPort, vTime )						
 				if (vTime > 50):
-					if self.options.tab != '"manual"':
+					if self.options.mode != '"manual"':
 						time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
 				self.bPenIsUp = False
 
