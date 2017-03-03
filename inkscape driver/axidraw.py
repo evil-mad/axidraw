@@ -233,14 +233,25 @@ class WCB( inkex.Effect ):
 
 		if (self.options.mode == "Help"):
 			skipSerial = True
- 		if (self.options.mode == "options"):
+		if (self.options.mode == "options"):
 			skipSerial = True 		
- 		if (self.options.mode == "timing"):
+		if (self.options.mode == "timing"):
 			skipSerial = True
- 		
- 		if skipSerial == False:
- 			self.serialPort = ebb_serial.openPort()
- 			if self.serialPort is None:
+		if (self.options.mode == "manual"):
+			if (self.options.manualType == "none"):
+				skipSerial = True
+			elif (self.options.manualType == "strip-data"):
+				skipSerial = True
+				for node in self.svg.xpath( '//svg:WCB', namespaces=inkex.NSS ):
+					self.svg.remove( node )
+				for node in self.svg.xpath( '//svg:eggbot', namespaces=inkex.NSS ):
+					self.svg.remove( node )
+				inkex.errormsg( gettext.gettext( "I've removed all AxiDraw data from this SVG file. Have a great day!" ) )
+				return	
+
+		if skipSerial == False:
+			self.serialPort = ebb_serial.openPort()
+			if self.serialPort is None:
 				inkex.errormsg( gettext.gettext( "Failed to connect to AxiDraw. :(" ) )
 		
 			if self.options.mode == "plot": 
@@ -306,22 +317,14 @@ class WCB( inkex.Effect ):
 				self.setupCommand()
 				
 			elif self.options.mode == "manual":
-				if self.options.manualType == "strip-data":
-					for node in self.svg.xpath( '//svg:WCB', namespaces=inkex.NSS ):
-						self.svg.remove( node )
-					for node in self.svg.xpath( '//svg:eggbot', namespaces=inkex.NSS ):
-						self.svg.remove( node )
-					inkex.errormsg( gettext.gettext( "I've removed all AxiDraw data from this SVG file. Have a great day!" ) )
-					return	
-				else:	
-					useOldResumeData = False 
-					self.svgNodeCount = self.svgNodeCount_Old
-					self.svgLastPath = self.svgLastPath_Old 
-					self.svgLastPathNC = self.svgLastPathNC_Old 
-					self.svgPausedPosX = self.svgPausedPosX_Old 
-					self.svgPausedPosY = self.svgPausedPosY_Old
-					self.svgLayer = self.svgLayer_Old 
-					self.manualCommand()
+				useOldResumeData = False 
+				self.svgNodeCount = self.svgNodeCount_Old
+				self.svgLastPath = self.svgLastPath_Old 
+				self.svgLastPathNC = self.svgLastPathNC_Old 
+				self.svgPausedPosX = self.svgPausedPosX_Old 
+				self.svgPausedPosY = self.svgPausedPosY_Old
+				self.svgLayer = self.svgLayer_Old 
+				self.manualCommand()
 
 		if (useOldResumeData):	#Do not make any changes to data saved from SVG file.
 			self.svgNodeCount = self.svgNodeCount_Old
