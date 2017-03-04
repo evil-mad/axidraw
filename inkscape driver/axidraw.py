@@ -43,7 +43,7 @@ import plot_utils		# https://github.com/evil-mad/plotink  Requires version 0.4
 
 import axidraw_conf       	#Some settings can be changed here.
 
-class WCB( inkex.Effect ):
+class AxiDrawClass( inkex.Effect ):
 
 	def __init__( self ):
 		inkex.Effect.__init__( self )
@@ -2076,5 +2076,5 @@ class WCB( inkex.Effect ):
 		else:
 			return True
 
-e = WCB()
+e = AxiDrawClass()
 e.affect()
