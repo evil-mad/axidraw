@@ -142,10 +142,15 @@ class AxiDrawClass( inkex.Effect ):
 			dest="resumeType", default="ResumeNow",
 			help="The active option when Apply was pressed" )
 			
-		self.OptionParser.add_option( "--layernumber",
+		self.OptionParser.add_option( "--layerNumber",
 			action="store", type="int",
-			dest="layernumber", default=axidraw_conf.DefaultLayer,
+			dest="layerNumber", default=axidraw_conf.DefaultLayer,
 			help="Selected layer for multilayer plotting" )
+
+		self.OptionParser.add_option( "--fileOutput",
+			action="store", type="inkbool",
+			dest="fileOutput", default=axidraw_conf.fileOutput,
+			help="Output updated contents of SVG on stdout" )
 
 		self.serialPort = None
 		self.bPenIsUp = None  #Initial state of pen is neither up nor down, but _unknown_.
@@ -310,7 +315,7 @@ class AxiDrawClass( inkex.Effect ):
 				if self.serialPort is not None:
 					unused_button = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
 					self.svgNodeCount = 0;
-					self.svgLayer = self.options.layernumber
+					self.svgLayer = self.options.layerNumber
 					self.plotDocument()
 
 			elif self.options.mode == "setup":
@@ -346,7 +351,7 @@ class AxiDrawClass( inkex.Effect ):
 	def resumePlotSetup( self ):
 		self.LayerFound = False
 		if ( self.svgLayer_Old < 101 ) and ( self.svgLayer_Old >= 0 ):
-			self.options.layernumber = self.svgLayer_Old 
+			self.options.layerNumber = self.svgLayer_Old 
 			self.PrintInLayersMode = True
 			self.plotCurrentLayer = False
 			self.LayerFound = True
@@ -374,16 +379,17 @@ class AxiDrawClass( inkex.Effect ):
 	def CheckSVGforWCBData( self ):
 		self.svgDataRead = False
 		self.recursiveWCBDataScan( self.svg )
-		if ( not self.svgDataRead ):    #if there is no WCB data, add some:
-			WCBlayer = inkex.etree.SubElement( self.svg, 'WCB' )
-			WCBlayer.set( 'layer', str( 0 ) )
-			WCBlayer.set( 'node', str( 0 ) )			#node paused at, if saved in paused state
-			WCBlayer.set( 'lastpath', str( 0 ) )		#Last path number that has been fully painted
-			WCBlayer.set( 'lastpathnc', str( 0 ) )		#Node count as of finishing last path.
-			WCBlayer.set( 'lastknownposx', str( 0 ) )  #Last known position of carriage
-			WCBlayer.set( 'lastknownposy', str( 0 ) )
-			WCBlayer.set( 'pausedposx', str( 0 ) )	   #The position of the carriage when "pause" was pressed.
-			WCBlayer.set( 'pausedposy', str( 0 ) )
+		if self.options.fileOutput:
+			if ( not self.svgDataRead ):    #if there is no WCB data, add some:
+				WCBlayer = inkex.etree.SubElement( self.svg, 'WCB' )
+				WCBlayer.set( 'layer', str( 0 ) )
+				WCBlayer.set( 'node', str( 0 ) )			#node paused at, if saved in paused state
+				WCBlayer.set( 'lastpath', str( 0 ) )		#Last path number that has been fully painted
+				WCBlayer.set( 'lastpathnc', str( 0 ) )		#Node count as of finishing last path.
+				WCBlayer.set( 'lastknownposx', str( 0 ) )  #Last known position of carriage
+				WCBlayer.set( 'lastknownposy', str( 0 ) )
+				WCBlayer.set( 'pausedposx', str( 0 ) )	   #The position of the carriage when "pause" was pressed.
+				WCBlayer.set( 'pausedposy', str( 0 ) )
 						
 	def recursiveWCBDataScan( self, aNodeList ):
 		if ( not self.svgDataRead ):
@@ -405,21 +411,22 @@ class AxiDrawClass( inkex.Effect ):
 						pass
 
 	def UpdateSVGWCBData( self, aNodeList ):
-		if ( not self.svgDataRead ):
-			for node in aNodeList:
-				if node.tag == 'svg':
-					self.UpdateSVGWCBData( node )
-				elif node.tag == inkex.addNS( 'WCB', 'svg' ) or node.tag == 'WCB':
-					node.set( 'layer', str( self.svgLayer ) )
-					node.set( 'node', str( self.svgNodeCount ) )
-					node.set( 'lastpath', str( self.svgLastPath ) )
-					node.set( 'lastpathnc', str( self.svgLastPathNC ) )
-					node.set( 'lastknownposx', str( (self.svgLastKnownPosX ) ) )
-					node.set( 'lastknownposy', str( (self.svgLastKnownPosY ) ) )
-					node.set( 'pausedposx', str( (self.svgPausedPosX) ) )
-					node.set( 'pausedposy', str( (self.svgPausedPosY) ) )
-					
-					self.svgDataRead = True
+		if self.options.fileOutput:
+			if ( not self.svgDataRead ):
+				for node in aNodeList:
+					if node.tag == 'svg':
+						self.UpdateSVGWCBData( node )
+					elif node.tag == inkex.addNS( 'WCB', 'svg' ) or node.tag == 'WCB':
+						node.set( 'layer', str( self.svgLayer ) )
+						node.set( 'node', str( self.svgNodeCount ) )
+						node.set( 'lastpath', str( self.svgLastPath ) )
+						node.set( 'lastpathnc', str( self.svgLastPathNC ) )
+						node.set( 'lastknownposx', str( (self.svgLastKnownPosX ) ) )
+						node.set( 'lastknownposy', str( (self.svgLastKnownPosY ) ) )
+						node.set( 'pausedposx', str( (self.svgPausedPosX) ) )
+						node.set( 'pausedposy', str( (self.svgPausedPosY) ) )
+						
+						self.svgDataRead = True
 					 
 	def setupCommand( self ):
 		"""Execute commands from the "setup" mode"""
