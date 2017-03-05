@@ -48,7 +48,7 @@ of the pen for writing and drawing.
 <page name='timing' _gui-text='Timing'>
 <_param name="instructions_timing1" type="description" appearance="header">Movement speeds:</_param>
 <param indent="1" name="penDownSpeed" type="int" min="1" max="110" _gui-text="Writing/Drawing speed (%):">25</param>	
-<param indent="1" name="rapidSpeed" type="int" min="1" max="110" _gui-text="Pen-up movement speed (%):">75</param>
+<param indent="1" name="penUpSpeed" type="int" min="1" max="110" _gui-text="Pen-up movement speed (%):">75</param>
 
 <_param name="instructions_timing3" type="description" appearance="header">Pen lift and lowering speeds:</_param>
 <param indent="1" name="ServoUpSpeed" type="int" min="20" max="500" _gui-text="Pen raising speed (%/s):">150</param>
@@ -166,7 +166,7 @@ the number 5 is selected, but a layer named "2-black"
 or "guide lines" will not be.
 
 </_param>
-<param indent="2" name="layernumber" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
+<param indent="2" name="layerNumber" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
 </page>			
 
 <page name="Help" _gui-text="*">
@@ -187,11 +187,10 @@ EBB Firmware 2.4.6 or newer is recommended.
 Known issues:
 * "Cancel" function does not work while plotting.
 (This is due to a known bug in Inkscape.)
-
 </_param>
+<param name="fileOutput" type="boolean" gui-hidden="true">true</param>
 </page>
 </param>
-
 <effect needs-live-preview="false" needs-document="no">
 <object-type>all</object-type>
 <effects-menu>

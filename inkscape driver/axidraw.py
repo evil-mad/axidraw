@@ -74,9 +74,9 @@ class AxiDrawClass( inkex.Effect ):
 			dest="penDownSpeed", default=axidraw_conf.PenDownSpeed,
 			help="Speed (step/sec) while pen is down." )
 
-		self.OptionParser.add_option( "--rapidSpeed",
+		self.OptionParser.add_option( "--penUpSpeed",
 			action="store", type="int",
-			dest="rapidSpeed", default=axidraw_conf.PenUpSpeed,
+			dest="penUpSpeed", default=axidraw_conf.PenUpSpeed,
 			help="Rapid speed (percent) while pen is up." )
 
 		self.OptionParser.add_option( "--ServoUpSpeed",
@@ -1968,12 +1968,12 @@ class AxiDrawClass( inkex.Effect ):
 			ebb_motion.sendEnableMotors(self.serialPort, 1) # 16X microstepping
 			self.stepsPerInch = float( axidraw_conf.DPI_16X)						
 			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 110.0
-			self.PenUpSpeed = self.options.rapidSpeed * axidraw_conf.SpeedScale / 110.0
+			self.PenUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0
 		elif ( self.options.resolution == 2 ):
 			ebb_motion.sendEnableMotors(self.serialPort, 2) # 8X microstepping
 			self.stepsPerInch = float( axidraw_conf.DPI_16X / 2.0 )  
 			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 220.0
-			self.PenUpSpeed = self.options.rapidSpeed * axidraw_conf.SpeedScale / 110.0
+			self.PenUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0
 		if (self.options.constSpeed):
 			self.PenDownSpeed = self.PenDownSpeed / 3
 		
