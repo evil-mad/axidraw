@@ -2,9 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.3.0, dated March 2, 2017
-# 
-# Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
+# Version 1.3.0, dated March 7, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -21,6 +19,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 
 
 import sys
@@ -72,12 +72,12 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--penDownSpeed",
 			action="store", type="int",
 			dest="penDownSpeed", default=axidraw_conf.PenDownSpeed,
-			help="Speed (step/sec) while pen is down." )
+			help="Speed (step/sec) while pen is down" )
 
 		self.OptionParser.add_option( "--penUpSpeed",
 			action="store", type="int",
 			dest="penUpSpeed", default=axidraw_conf.PenUpSpeed,
-			help="Rapid speed (percent) while pen is up." )
+			help="Rapid speed (percent) while pen is up" )
 
 		self.OptionParser.add_option( "--penLiftRate",
 			action="store", type="int",
@@ -86,7 +86,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--penLiftDelay",
 			action="store", type="int",
 			dest="penLiftDelay", default=axidraw_conf.penLiftDelay,
-			help="Added delay after pen up (ms)." )
+			help="Added delay after pen up (ms)" )
 			
 		self.OptionParser.add_option( "--penLowerRate",
 			action="store", type="int",
@@ -95,37 +95,37 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--penLowerDelay",
 			action="store", type="int",
 			dest="penLowerDelay", default=axidraw_conf.penLowerDelay,
-			help="Added delay after pen down (ms)." )
+			help="Added delay after pen down (ms)" )
 
 		self.OptionParser.add_option( "--autoRotate",
 			action="store", type="inkbool",
-			dest="autoRotate", default=False,
+			dest="autoRotate", default=axidraw_conf.autoRotate,
 			help="Print in portrait or landscape mode automatically" )
 
 		self.OptionParser.add_option( "--constSpeed",
 			action="store", type="inkbool",
-			dest="constSpeed", default=False,
+			dest="constSpeed", default=axidraw_conf.constSpeed,
 			help="Use constant velocity mode when pen is down" )
 			
-		self.OptionParser.add_option( "--report_time",
+		self.OptionParser.add_option( "--reportTime",
 			action="store", type="inkbool",
-			dest="report_time", default=False,
-			help="Report time elapsed." )
+			dest="reportTime", default=axidraw_conf.reportTime,
+			help="Report time elapsed" )
 
 		self.OptionParser.add_option( "--resolution",
 			action="store", type="int",
-			dest="resolution", default=1,
-			help="Resolution factor." )	
+			dest="resolution", default=axidraw_conf.resolution,
+			help="Resolution factor" )	
 
 		self.OptionParser.add_option( "--smoothness",
 			action="store", type="float",
-			dest="smoothness", default=10.0,
+			dest="smoothness", default=axidraw_conf.smoothness,
 			help="Smoothness of curves" )
 
 		self.OptionParser.add_option( "--cornering",
 			action="store", type="float",
-			dest="cornering", default=10.0,
-			help="cornering speed factor" )
+			dest="cornering", default=axidraw_conf.smoothness,
+			help="Cornering speed factor" )
 
 		self.OptionParser.add_option( "--manualType",
 			action="store", type="string",
@@ -571,7 +571,7 @@ class AxiDrawClass( inkex.Effect ):
 			if (self.warnOutOfBounds):
 				inkex.errormsg( gettext.gettext( 'Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help!' ) )
 
-			if (self.options.report_time):
+			if (self.options.reportTime):
 				elapsed_time = time.time() - self.start_time
 				m, s = divmod(elapsed_time, 60)
 				h, m = divmod(m, 60)
@@ -1505,7 +1505,7 @@ class AxiDrawClass( inkex.Effect ):
 		if (plotDistance < 1.0): #if total movement is less than one step, skip this movement.
 			return
 
-		if (self.options.report_time): #Also keep track of distance:
+		if (self.options.reportTime): #Also keep track of distance:
 			if (self.virtualPenIsUp):
 				self.penUpDistance = self.penUpDistance + plotDistance
 			else:
