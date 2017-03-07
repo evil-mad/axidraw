@@ -15,12 +15,13 @@ PenDownPos = 40		# Default pen-down position
 PenUpSpeed = 75
 PenDownSpeed = 25
 
-PenLowerDelay = 0		# added delay (ms) for the pen to go down before the next move
-PenRaiseDelay = 0		# added delay (ms) for the pen to go up before the next move
+penLowerDelay = 0		# added delay (ms) for the pen to go down before the next move
+penLiftDelay = 0		# added delay (ms) for the pen to go up before the next move
 
-PenRaiseRate = 150		# Default pen-lift servo speed 
-PenLowerRate = 150		# Default pen-lift servo speed when lowering
-DefaultLayer = 1		# Default inkscape layer
+penLiftRate = 150		# Default pen-lift servo speed 
+penLowerRate = 150		# Default pen-lift servo speed when lowering
+
+DefaultLayer = 1		# Default inkscape layer (when printing in "layers" mode)
 
 
 #Command-line defaults: Not visible from within Inkscape GUI.

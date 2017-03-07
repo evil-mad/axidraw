@@ -79,21 +79,22 @@ class AxiDrawClass( inkex.Effect ):
 			dest="penUpSpeed", default=axidraw_conf.PenUpSpeed,
 			help="Rapid speed (percent) while pen is up." )
 
-		self.OptionParser.add_option( "--ServoUpSpeed",
+		self.OptionParser.add_option( "--penLiftRate",
 			action="store", type="int",
-			dest="ServoUpSpeed", default=axidraw_conf.PenRaiseRate,
+			dest="penLiftRate", default=axidraw_conf.penLiftRate,
 			help="Rate of lifting pen " )
-		self.OptionParser.add_option( "--penUpDelay",
+		self.OptionParser.add_option( "--penLiftDelay",
 			action="store", type="int",
-			dest="penUpDelay", default=axidraw_conf.PenRaiseDelay,
+			dest="penLiftDelay", default=axidraw_conf.penLiftDelay,
 			help="Added delay after pen up (ms)." )
-		self.OptionParser.add_option( "--ServoDownSpeed",
+			
+		self.OptionParser.add_option( "--penLowerRate",
 			action="store", type="int",
-			dest="ServoDownSpeed", default=axidraw_conf.PenLowerRate,
+			dest="penLowerRate", default=axidraw_conf.penLowerRate,
 			help="Rate of lowering pen " ) 
-		self.OptionParser.add_option( "--penDownDelay",
+		self.OptionParser.add_option( "--penLowerDelay",
 			action="store", type="int",
-			dest="penDownDelay", default=axidraw_conf.PenLowerDelay,
+			dest="penLowerDelay", default=axidraw_conf.penLowerDelay,
 			help="Added delay after pen down (ms)." )
 
 		self.OptionParser.add_option( "--autoRotate",
@@ -1991,10 +1992,10 @@ class AxiDrawClass( inkex.Effect ):
 			else:	
 				penDownPos = self.options.penDownPosition
 			vDistance = float(self.options.penUpPosition - penDownPos)
-			vTime = int ((1000.0 * vDistance) / self.options.ServoUpSpeed)
+			vTime = int ((1000.0 * vDistance) / self.options.penLiftRate)
 			if (vTime < 0):	#Handle case that penDownPosition is above penUpPosition
 				vTime = -vTime
-			vTime += self.options.penUpDelay	
+			vTime += self.options.penLiftDelay	
 			if (vTime < 0): #Do not allow negative delay times
 				vTime = 0	
 			ebb_motion.sendPenUp(self.serialPort, vTime )		
@@ -2012,10 +2013,10 @@ class AxiDrawClass( inkex.Effect ):
 				else:	
 					penDownPos = self.options.penDownPosition
 				vDistance = float(self.options.penUpPosition - penDownPos)
-				vTime = int ((1000.0 * vDistance) / self.options.ServoDownSpeed)
+				vTime = int ((1000.0 * vDistance) / self.options.penLowerRate)
 				if (vTime < 0):	#Handle case that penDownPosition is above penUpPosition
 					vTime = -vTime
-				vTime += self.options.penDownDelay	
+				vTime += self.options.penLowerDelay	
 				if (vTime < 0): #Do not allow negative delay times
 					vTime = 0
 				ebb_motion.sendPenDown(self.serialPort, vTime )						
@@ -2062,10 +2063,10 @@ class AxiDrawClass( inkex.Effect ):
 			That gives 0.205 steps/ms, or 4.92 steps / 24 ms
 			Rounding this to 5 steps/24 ms is sufficient.		'''
 		
-		intTemp = 5 * self.options.ServoUpSpeed
+		intTemp = 5 * self.options.penLiftRate
 		ebb_serial.command( self.serialPort, 'SC,11,' + str( intTemp ) + '\r' )
 
-		intTemp = 5 * self.options.ServoDownSpeed
+		intTemp = 5 * self.options.penLowerRate
 		ebb_serial.command( self.serialPort,  'SC,12,' + str( intTemp ) + '\r' )
 
 	def getDocProps( self ):

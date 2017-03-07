@@ -51,10 +51,10 @@ of the pen for writing and drawing.
 <param indent="1" name="penUpSpeed" type="int" min="1" max="110" _gui-text="Pen-up movement speed (%):">75</param>
 
 <_param name="instructions_timing3" type="description" appearance="header">Pen lift and lowering speeds:</_param>
-<param indent="1" name="ServoUpSpeed" type="int" min="20" max="500" _gui-text="Pen raising speed (%/s):">150</param>
-<param indent="1" name="penUpDelay" type="int" min="-500" max="500" _gui-text="Added delay after raising pen (ms):">0</param>
-<param indent="1" name="ServoDownSpeed" type="int" min="20" max="500" _gui-text="Pen lowering speed (%/s):">150</param>
-<param indent="1" name="penDownDelay" type="int" min="-500" max="500" _gui-text="Added delay after lowering pen (ms):">0</param>
+<param indent="1" name="penLiftRate" type="int" min="20" max="500" _gui-text="Pen raising speed (%/s):">150</param>
+<param indent="1" name="penLiftDelay" type="int" min="-500" max="500" _gui-text="Added delay after raising pen (ms):">0</param>
+<param indent="1" name="penLowerRate" type="int" min="20" max="500" _gui-text="Pen lowering speed (%/s):">150</param>
+<param indent="1" name="penLowerDelay" type="int" min="-500" max="500" _gui-text="Added delay after lowering pen (ms):">0</param>
 
 <_param indent="2" name="instructions_timing4" type="description" xml:space="preserve">
 
