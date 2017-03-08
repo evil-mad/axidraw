@@ -1026,7 +1026,8 @@ class AxiDrawClass( inkex.Effect ):
 		stringPos = 1	
 		layerNameInt = -1
 		layerMatch = False	
-		CurrentLayerName = string.lstrip( strLayerName.encode( 'ascii', 'ignore' ) ) #remove leading whitespace
+		CurrentLayerName = strLayerName.encode( 'ascii', 'ignore' ) 
+		CurrentLayerName.lstrip #remove leading whitespace
 		self.plotCurrentLayer = True    #Temporarily assume that we are plotting the layer
 	
 		MaxLength = len( CurrentLayerName )
@@ -1034,7 +1035,8 @@ class AxiDrawClass( inkex.Effect ):
 			if CurrentLayerName[0] == '%':
 				self.plotCurrentLayer = False	#First character is "%" -- skip this layer
 			while stringPos <= MaxLength:
-				if str.isdigit( CurrentLayerName[:stringPos] ):
+				LayerNameFragment = CurrentLayerName[:stringPos]
+				if (LayerNameFragment.isdigit()):
 					TempNumString = CurrentLayerName[:stringPos] # Store longest numeric string so far
 					stringPos = stringPos + 1
 				else:
