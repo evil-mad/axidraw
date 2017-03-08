@@ -41,7 +41,7 @@ import ebb_serial		# https://github.com/evil-mad/plotink  Requires version 0.4
 import ebb_motion		# https://github.com/evil-mad/plotink  Requires version 0.5
 import plot_utils		# https://github.com/evil-mad/plotink  Requires version 0.4
 
-import axidraw_conf       	#Some settings can be changed here.
+import axidraw_conf	#Some settings can be changed here.
 
 class AxiDrawClass( inkex.Effect ):
 
@@ -282,7 +282,7 @@ class AxiDrawClass( inkex.Effect ):
 					if self.resumeMode:
 						fX = self.svgPausedPosX_Old + axidraw_conf.StartPosX
 						fY = self.svgPausedPosY_Old + axidraw_conf.StartPosY
-		 				self.resumeMode = False
+						self.resumeMode = False
 	
 						self.plotSegmentWithVelocity( fX, fY, 0, 0)
 						
@@ -381,7 +381,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.svgDataRead = False
 		self.recursiveWCBDataScan( self.svg )
 		if self.options.fileOutput:
-			if ( not self.svgDataRead ):    #if there is no WCB data, add some:
+			if ( not self.svgDataRead ): #if there is no WCB data, add some:
 				WCBlayer = inkex.etree.SubElement( self.svg, 'WCB' )
 				WCBlayer.set( 'layer', str( 0 ) )
 				WCBlayer.set( 'node', str( 0 ) )			#node paused at, if saved in paused state
@@ -489,7 +489,7 @@ class AxiDrawClass( inkex.Effect ):
 			
 			self.fSpeed = self.PenDownSpeed
 				
- 			self.EnableMotors() #Set plotting resolution 
+			self.EnableMotors() #Set plotting resolution 
 			self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPosX
 			self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPosY
 			self.ignoreLimits = True
@@ -553,7 +553,7 @@ class AxiDrawClass( inkex.Effect ):
 				self.yBoundsMin = axidraw_conf.StartPosY
 				fX = self.ptFirst[0]
 				fY = self.ptFirst[1] 
- 				self.nodeCount = self.nodeTarget    
+				self.nodeCount = self.nodeTarget
 				self.plotSegmentWithVelocity( fX, fY, 0, 0)
 				
 			if ( not self.bStopped ): 
