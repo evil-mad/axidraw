@@ -29,7 +29,7 @@ sys.path.append('lib')
 import inkex
 from simpletransform import *
 import simplepath
-	
+
 from math import sqrt
 from array import *
 import gettext
@@ -37,11 +37,18 @@ import serial
 import string
 import time
 
-import ebb_serial		# https://github.com/evil-mad/plotink  Requires version 0.4
+import ebb_serial		# https://github.com/evil-mad/plotink  Requires version 0.5
 import ebb_motion		# https://github.com/evil-mad/plotink  Requires version 0.5
 import plot_utils		# https://github.com/evil-mad/plotink  Requires version 0.4
 
 import axidraw_conf	#Some settings can be changed here.
+
+try:
+	xrange = xrange
+	# We have Python 2
+except:
+	xrange = range
+	# We have Python 3
 
 class AxiDrawClass( inkex.Effect ):
 
@@ -861,7 +868,7 @@ class AxiDrawClass( inkex.Effect ):
 						# which came out of PEP 308, Conditional Expressions
 						#d = "".join( ["M " + pa[i] if i == 0 else " L " + pa[i] for i in range( 0, len( pa ) )] )
 						d = "M " + pa[0]
-						for i in range( 1, len( pa ) ):
+						for i in xrange( 1, len( pa ) ):
 							d += " L " + pa[i]
 						d += " Z"
 						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
@@ -1026,7 +1033,10 @@ class AxiDrawClass( inkex.Effect ):
 		stringPos = 1	
 		layerNameInt = -1
 		layerMatch = False	
-		CurrentLayerName = strLayerName.encode( 'ascii', 'ignore' ) 
+		if sys.version_info < (3,): #Yes this is ugly. More elegant suggestions welcome. :)
+			CurrentLayerName = strLayerName.encode( 'ascii', 'ignore' ) #Drop non-ascii characters	
+		else:
+			CurrentLayerName=str(strLayerName)		
 		CurrentLayerName.lstrip #remove leading whitespace
 		self.plotCurrentLayer = True    #Temporarily assume that we are plotting the layer
 	
@@ -1088,13 +1098,13 @@ class AxiDrawClass( inkex.Effect ):
 					
 							if (EscapeSequence == "+h"):
 								if ((parameterInt >= 0) and (parameterInt <= 100)):
-									self.LayerOverridePenDownHeight = True									
+									self.LayerOverridePenDownHeight = True
 									self.LayerPenDownPosition = parameterInt
 								
 							if (EscapeSequence == "+s"):
 								if ((parameterInt > 0) and (parameterInt <= 100)):
-									self.LayerOverrideSpeed = True									
-									self.LayerPenDownSpeed = parameterInt								
+									self.LayerOverrideSpeed = True
+									self.LayerPenDownSpeed = parameterInt
 									
 						stringPos = paramStart + len(TempNumString)
 					else:
@@ -1638,7 +1648,7 @@ class AxiDrawClass( inkex.Effect ):
 					# 6th (last) time interval is at 6*max/7
 					# after this interval, we are at full speed.
 					
-					for index in range(0, intervals):		#Calculate acceleration phase
+					for index in xrange(0, intervals):		#Calculate acceleration phase
 						velocity += velocityStepSize
 						timeElapsed += timePerInterval
 						position += velocity * timePerInterval
@@ -1669,7 +1679,7 @@ class AxiDrawClass( inkex.Effect ):
 					timePerInterval = tDecelMax / intervals			
 					velocityStepSize = (speedMax - finalVel)/(intervals + 1.0)	
 	
-					for index in range(0, intervals):		#Calculate deceleration phase
+					for index in xrange(0, intervals):		#Calculate deceleration phase
 						velocity -= velocityStepSize
 						timeElapsed += timePerInterval
 						position += velocity * timePerInterval
@@ -1766,7 +1776,7 @@ class AxiDrawClass( inkex.Effect ):
 						# 6th (last) time interval is at 6*max/7
 						# after this interval, we are at full speed.
 						
-						for index in range(0, intervals):		#Calculate acceleration phase
+						for index in xrange(0, intervals):		#Calculate acceleration phase
 							velocity += velocityStepSize
 							timeElapsed += timePerInterval
 							position += velocity * timePerInterval
@@ -1787,7 +1797,7 @@ class AxiDrawClass( inkex.Effect ):
 						# 6th (last) time interval is at 6*max/7
 						# after this interval, we are at full speed.
 						
-						for index in range(0, Dintervals):		#Calculate acceleration phase
+						for index in xrange(0, Dintervals):		#Calculate acceleration phase
 							velocity -= velocityStepSize
 							timeElapsed += timePerInterval
 							position += velocity * timePerInterval
@@ -1839,7 +1849,7 @@ class AxiDrawClass( inkex.Effect ):
 						# 6th (last) time interval is at 6*max/7
 						# after this interval, we are at full speed.
 						
-						for index in range(0, intervals):		#Calculate acceleration phase
+						for index in xrange(0, intervals):		#Calculate acceleration phase
 							velocity += velocityStepSize
 							timeElapsed += timePerInterval
 							position += velocity * timePerInterval
@@ -1888,7 +1898,7 @@ class AxiDrawClass( inkex.Effect ):
 		if spewSegmentDebugData:	
 			inkex.errormsg( 'position/plotDistance: '+str(position/plotDistance))
 
-		for index in range (0, len(distArray) ):
+		for index in xrange (0, len(distArray) ):
 			#Scale our trajectory to the "actual" travel distance that we need:
 			fractionalDistance = distArray[index] / position # Fractional position along the intended path
 			destArray1.append ( int(round( fractionalDistance * motorSteps1)))
@@ -1898,7 +1908,7 @@ class AxiDrawClass( inkex.Effect ):
 		prevMotor2 = 0
 		prevTime = 0
 		
-		for index in range (0, len(destArray1) ):
+		for index in xrange (0, len(destArray1) ):
 			moveSteps1 = destArray1[index] - prevMotor1
 			moveSteps2 = destArray2[index] - prevMotor2
 			moveTime = durationArray[index] - prevTime
