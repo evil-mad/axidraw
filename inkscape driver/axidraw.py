@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.3.0, dated March 7, 2017.
+# Version 1.3.1, dated May 15, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -862,7 +862,7 @@ class AxiDrawClass( inkex.Effect ):
 						
 						pa = pl.split()
 						if not len( pa ):
-							pass
+							continue # skip the following statements
 						# Issue 29: pre 2.5.? versions of Python do not have
 						#    "statement-1 if expression-1 else statement-2"
 						# which came out of PEP 308, Conditional Expressions
