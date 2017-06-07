@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.3.1, dated May 15, 2017.
+# Version 1.3.2, dated June 7, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -605,13 +605,15 @@ class AxiDrawClass( inkex.Effect ):
 		handled include text.  Unhandled elements should be converted to
 		paths in Inkscape.
 		"""
+
 		for node in aNodeList:
-			# Ignore invisible nodes
-			v = node.get( 'visibility', parent_visibility )
+			if self.bStopped:
+				return
+			v = node.get( 'visibility', parent_visibility )			# Ignore invisible nodes
 			if v == 'inherit':
 				v = parent_visibility
 			if v == 'hidden' or v == 'collapse':
-				pass
+				continue
 
 			# first apply the current matrix transform to this node's transform
 			matNew = composeTransform( matCurrent, parseTransform( node.get( "transform" ) ) )
@@ -656,9 +658,9 @@ class AxiDrawClass( inkex.Effect ):
 						v = node.get( 'visibility', v )
 						self.recursivelyTraverseSvg( refnode, matNew2, parent_visibility=v )
 					else:
-						pass
+						continue
 				else:
-					pass
+					continue
 			elif self.plotCurrentLayer:	#Skip subsequent tag checks unless we are plotting this layer.
 				if node.tag == inkex.addNS( 'path', 'svg' ):
 	
@@ -790,7 +792,7 @@ class AxiDrawClass( inkex.Effect ):
 	
 					pl = node.get( 'points', '' ).strip()
 					if pl == '':
-						pass
+						continue
 	
 					#if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
 					#if we're in resume mode and self.pathcount = self.svgLastPath, then start here, and set
@@ -840,7 +842,7 @@ class AxiDrawClass( inkex.Effect ):
 	
 					pl = node.get( 'points', '' ).strip()
 					if pl == '':
-						pass
+						continue
 	
 					#if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
 					#if we're in resume mode and self.pathcount = self.svgLastPath, then start here, and set
@@ -903,7 +905,7 @@ class AxiDrawClass( inkex.Effect ):
 							rx = float( node.get( 'r', '0' ) )
 							ry = rx
 						if rx == 0 or ry == 0:
-							pass
+							continue
 	
 						
 						#if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
@@ -945,19 +947,19 @@ class AxiDrawClass( inkex.Effect ):
 							
 								
 				elif node.tag == inkex.addNS( 'metadata', 'svg' ) or node.tag == 'metadata':
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'defs', 'svg' ) or node.tag == 'defs':
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'namedview', 'sodipodi' ) or node.tag == 'namedview':
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'WCB', 'svg' ) or node.tag == 'WCB':
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'eggbot', 'svg' ) or node.tag == 'eggbot':
-					pass			
+					continue			
 				elif node.tag == inkex.addNS( 'title', 'svg' ) or node.tag == 'title':
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'desc', 'svg' ) or node.tag == 'desc':
-					pass
+					continue
 				elif (node.tag == inkex.addNS( 'text', 'svg' ) or node.tag == 'text' or
 					node.tag == inkex.addNS( 'flowRoot', 'svg' ) or node.tag == 'flowRoot'):
 					if (not self.warnings.has_key( 'text' )) and (self.plotCurrentLayer):
@@ -968,7 +970,7 @@ class AxiDrawClass( inkex.Effect ):
 							'You can also create new text by using Hershey Text,\n' +
 							'located in the menu at Extensions > Render.' ) )
 						self.warnings['text'] = 1
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'image', 'svg' ) or node.tag == 'image':
 					if (not self.warnings.has_key( 'image' )) and (self.plotCurrentLayer):
 						inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
@@ -976,31 +978,31 @@ class AxiDrawClass( inkex.Effect ):
 						'Please convert images to line art before drawing. ' +
 						' Consider using the Path > Trace bitmap tool. ' ) )
 						self.warnings['image'] = 1
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'pattern', 'svg' ) or node.tag == 'pattern':
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'radialGradient', 'svg' ) or node.tag == 'radialGradient':
 					# Similar to pattern
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'linearGradient', 'svg' ) or node.tag == 'linearGradient':
 					# Similar in pattern
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'style', 'svg' ) or node.tag == 'style':
 					# This is a reference to an external style sheet and not the value
 					# of a style attribute to be inherited by child elements
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'cursor', 'svg' ) or node.tag == 'cursor':
-					pass
+					continue
 				elif node.tag == inkex.addNS( 'color-profile', 'svg' ) or node.tag == 'color-profile':
 					# Gamma curves, color temp, etc. are not relevant to single color output
-					pass
+					continue
 				elif not isinstance( node.tag, basestring ):
 					# This is likely an XML processing instruction such as an XML
 					# comment.  lxml uses a function reference for such node tags
 					# and as such the node tag is likely not a printable string.
 					# Further, converting it to a printable string likely won't
 					# be very useful.
-					pass
+					continue
 				else:
 					if (not self.warnings.has_key( str( node.tag ) )) and (self.plotCurrentLayer):
 						t = str( node.tag ).split( '}' )
@@ -1008,7 +1010,7 @@ class AxiDrawClass( inkex.Effect ):
 							self.sCurrentLayerName + '" unable to draw <' + str( t[-1] ) +
 							'> object, please convert it to a path first.' ) )
 						self.warnings[str( node.tag )] = 1
-					pass
+					continue
 	
 
 
