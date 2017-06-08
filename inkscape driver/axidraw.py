@@ -22,7 +22,6 @@
 #
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 
-
 import sys
 sys.path.append('lib')
 
@@ -37,9 +36,9 @@ import serial
 import string
 import time
 
-import ebb_serial		# https://github.com/evil-mad/plotink  Requires version 0.5
-import ebb_motion		# https://github.com/evil-mad/plotink  Requires version 0.5
-import plot_utils		# https://github.com/evil-mad/plotink  Requires version 0.4
+import ebb_serial		# https://github.com/evil-mad/plotink	Requires version 0.5
+import ebb_motion		# https://github.com/evil-mad/plotink	Requires version 0.5
+import plot_utils		# https://github.com/evil-mad/plotink	Requires version 0.4
 
 import axidraw_conf	#Some settings can be changed here.
 
@@ -504,8 +503,6 @@ class AxiDrawClass( inkex.Effect ):
 			fY = self.fCurrY + nDeltaY
 			self.plotSegmentWithVelocity( fX, fY, 0, 0)
 
-
-
 	def plotDocument( self ):
 		'''Plot the actual SVG document, if so selected in the interface:'''
 		#parse the svg data as a series of line segments and send each segment to be plotted
@@ -685,15 +682,14 @@ class AxiDrawClass( inkex.Effect ):
 						self.plotPath( node, matNew )
 					
 				elif node.tag == inkex.addNS( 'rect', 'svg' ) or node.tag == 'rect':
-	
+
 					# Manually transform 
 					#    <rect x="X" y="Y" width="W" height="H"/> 
 					# into 
 					#    <path d="MX,Y lW,0 l0,H l-W,0 z"/> 
 					# I.e., explicitly draw three sides of the rectangle and the
 					# fourth side implicitly
-	
-					 
+					#
 					# if we're in resume mode AND self.pathcount < self.svgLastPath,
 					#    then skip over this path.
 					# if we're in resume mode and self.pathcount = self.svgLastPath,
@@ -735,7 +731,7 @@ class AxiDrawClass( inkex.Effect ):
 						self.plotPath( newpath, matNew )
 						
 				elif node.tag == inkex.addNS( 'line', 'svg' ) or node.tag == 'line':
-	
+
 					# Convert
 					#
 					#   <line x1="X1" y1="Y1" x2="X2" y2="Y2/>
@@ -780,10 +776,9 @@ class AxiDrawClass( inkex.Effect ):
 						a.append( [' L ', [x2, y2]] )
 						newpath.set( 'd', simplepath.formatPath( a ) )
 						self.plotPath( newpath, matNew )
-						
-	
+
 				elif node.tag == inkex.addNS( 'polyline', 'svg' ) or node.tag == 'polyline':
-	
+
 					# Convert
 					#  <polyline points="x1,y1 x2,y2 x3,y3 [...]"/> 
 					# to 
@@ -811,14 +806,9 @@ class AxiDrawClass( inkex.Effect ):
 						doWePlotThisPath = True
 					if (doWePlotThisPath):
 						self.pathcount += 1
-						
 						pa = pl.split()
 						if not len( pa ):
 							continue
-						# Issue 29: pre 2.5.? versions of Python do not have
-						#    "statement-1 if expression-1 else statement-2"
-						# which came out of PEP 308, Conditional Expressions
-						#d = "".join( ["M " + pa[i] if i == 0 else " L " + pa[i] for i in range( 0, len( pa ) )] )
 						d = "M " + pa[0]
 						for i in range( 1, len( pa ) ):
 							d += " L " + pa[i]
@@ -839,14 +829,14 @@ class AxiDrawClass( inkex.Effect ):
 					# to 
 					#   <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...] Z"/> 
 					# Note: we ignore polygons with no points
-	
+
 					pl = node.get( 'points', '' ).strip()
 					if pl == '':
 						continue
-	
+
 					#if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
 					#if we're in resume mode and self.pathcount = self.svgLastPath, then start here, and set
-					# self.nodeCount equal to self.svgLastPathNC
+					#	self.nodeCount equal to self.svgLastPathNC
 	
 					doWePlotThisPath = False 
 					if (self.resumeMode): 
@@ -861,14 +851,9 @@ class AxiDrawClass( inkex.Effect ):
 						doWePlotThisPath = True
 					if (doWePlotThisPath):
 						self.pathcount += 1
-						
 						pa = pl.split()
 						if not len( pa ):
 							continue # skip the following statements
-						# Issue 29: pre 2.5.? versions of Python do not have
-						#    "statement-1 if expression-1 else statement-2"
-						# which came out of PEP 308, Conditional Expressions
-						#d = "".join( ["M " + pa[i] if i == 0 else " L " + pa[i] for i in range( 0, len( pa ) )] )
 						d = "M " + pa[0]
 						for i in xrange( 1, len( pa ) ):
 							d += " L " + pa[i]
@@ -906,11 +891,10 @@ class AxiDrawClass( inkex.Effect ):
 							ry = rx
 						if rx == 0 or ry == 0:
 							continue
-	
-						
+
 						#if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
 						#if we're in resume mode and self.pathcount = self.svgLastPath, then start here, and set
-						# self.nodeCount equal to self.svgLastPathNC
+						#	self.nodeCount equal to self.svgLastPathNC
 						
 						doWePlotThisPath = False 
 						if (self.resumeMode): 
@@ -944,8 +928,7 @@ class AxiDrawClass( inkex.Effect ):
 							if t:
 								newpath.set( 'transform', t )
 							self.plotPath( newpath, matNew )
-							
-								
+
 				elif node.tag == inkex.addNS( 'metadata', 'svg' ) or node.tag == 'metadata':
 					continue
 				elif node.tag == inkex.addNS( 'defs', 'svg' ) or node.tag == 'defs':
@@ -1011,8 +994,6 @@ class AxiDrawClass( inkex.Effect ):
 							'> object, please convert it to a path first.' ) )
 						self.warnings[str( node.tag )] = 1
 					continue
-	
-
 
 	def DoWePlotLayer( self, strLayerName ):
 		"""
@@ -1026,7 +1007,6 @@ class AxiDrawClass( inkex.Effect ):
 		Secondary function: Parse characters following the layer number (if any) to see if
 		there is a "+H" or "+S" escape code, that indicates that overrides the pen-down
 		height or speed for the given layer.
-		
 		"""
 
 		# Look at layer name.  Sample first character, then first two, and
@@ -1121,8 +1101,9 @@ class AxiDrawClass( inkex.Effect ):
 		'''
 		Plot the path while applying the transformation defined
 		by the matrix [matTransform].
+
+		Turn this path into a cubicsuperpath (list of beziers)...
 		'''
-		# turn this path into a cubicsuperpath (list of beziers)...
 
 		d = path.get( 'd' )
 		if len( simplepath.parsePath( d ) ) == 0:
@@ -1168,7 +1149,6 @@ class AxiDrawClass( inkex.Effect ):
 			if ( not self.bStopped ):	#an "index" for resuming plots quickly-- record last complete path
 				self.svgLastPath = self.pathcount #The number of the last path completed
 				self.svgLastPathNC = self.nodeCount #the node count after the last path was completed.			
-
 
 	def PlanTrajectory( self, inputPath ):
 		'''
@@ -1242,13 +1222,12 @@ class AxiDrawClass( inkex.Effect ):
 			tmpDist = plot_utils.distance( inputPath[i][0] - inputPath[i - 1][0] ,
 			inputPath[i][1] - inputPath[i - 1][1] )
 			TrajDists.append(tmpDist)
-			#Normalized unit vectors:
 			
 			if (tmpDist == 0):
 				tmpDist = 1
 			tmpX = (inputPath[i][0] - inputPath[i - 1][0]) / tmpDist
 			tmpY = (inputPath[i][1] - inputPath[i - 1][1]) / tmpDist
-			TrajVectors.append([tmpX,tmpY])
+			TrajVectors.append([tmpX,tmpY])		#These are normalized unit vectors
 
 		if spewTrajectoryDebugData:
 			for dist in TrajDists:
@@ -1475,7 +1454,6 @@ class AxiDrawClass( inkex.Effect ):
 		
 		Inputs are expected be in units of inches (for distance) 
 			or inches per second (for velocity).
-		
 		'''	
 
 		spewSegmentDebugData = False
@@ -1673,8 +1651,6 @@ class AxiDrawClass( inkex.Effect ):
 					if spewSegmentDebugData:
 						inkex.errormsg( 'Coast Distance: '+str(coastingDistance))
 
-
-	
 				intervals = int(math.floor(tDecelMax / timeSlice))	# Number of intervals during deceleration
 				
 				if (intervals > 0):	
@@ -1743,7 +1719,6 @@ class AxiDrawClass( inkex.Effect ):
 					[We pick the positive root in the quadratic formula, since Ta must be positive.]
 				
 				(vii) From Ta and part (iv) above, we can find Vmax and Td.
-				 
 				'''
 				
 				if spewSegmentDebugData:	
@@ -1894,7 +1869,6 @@ class AxiDrawClass( inkex.Effect ):
 		Next: We scale to the correct intended travel distance, 
 		round into integer motor steps and manage the process
 		of sending the output commands to the motors.
-		
 		'''
 		
 		if spewSegmentDebugData:	
@@ -1903,8 +1877,8 @@ class AxiDrawClass( inkex.Effect ):
 		for index in xrange (0, len(distArray) ):
 			#Scale our trajectory to the "actual" travel distance that we need:
 			fractionalDistance = distArray[index] / position # Fractional position along the intended path
-			destArray1.append ( int(round( fractionalDistance * motorSteps1)))
-			destArray2.append ( int(round( fractionalDistance * motorSteps2)))
+			destArray1.append (int(round( fractionalDistance * motorSteps1)))
+			destArray2.append (int(round( fractionalDistance * motorSteps2)))
 
 		prevMotor1 = 0
 		prevMotor2 = 0
@@ -1918,20 +1892,19 @@ class AxiDrawClass( inkex.Effect ):
 
 			if ( moveTime < 1 ):
 				moveTime = 1		# don't allow zero-time moves.
-	
+
 			if (abs((float(moveSteps1) / float(moveTime))) < 0.002):	
 				moveSteps1 = 0		#don't allow too-slow movements of this axis
 			if (abs((float(moveSteps2) / float(moveTime))) < 0.002):	
 				moveSteps2 = 0		#don't allow too-slow movements of this axis
-	
+
 			prevMotor1 += moveSteps1
 			prevMotor2 += moveSteps2
 
 			xSteps = (moveSteps1 + moveSteps2)/2.0	# Result will be a float.
 			ySteps = (moveSteps1 - moveSteps2)/2.0	
 
-			if ((moveSteps1 != 0) or (moveSteps2 != 0)): # if at least one motor step is required for this move....
-	
+			if ((moveSteps1 != 0) or (moveSteps2 != 0)): # if at least one motor step is required for this move.
 				if (not self.resumeMode) and (not self.bStopped):
 					ebb_motion.doXYMove( self.serialPort, moveSteps2, moveSteps1, moveTime )			
 					if (moveTime > 50):
@@ -1971,7 +1944,6 @@ class AxiDrawClass( inkex.Effect ):
 		
 		These factors prevent unexpected dramatic changes in speed when turning
 		those two options on and off. 
-		
 		'''
 
 		if (self.LayerOverrideSpeed):
