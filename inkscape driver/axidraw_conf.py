@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.3.0, dated March 7, 2017.
+# Version 1.4.0, dated March 7, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -61,7 +61,7 @@ visible from within the Inkscape GUI.
 '''
 
 fileOutput = False		# If True: Output updated contents of SVG on stdout. 
-
+previewOnly = False		# "Offline preview mode. Simulate plotting only. 
 
 
 

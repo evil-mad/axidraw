@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.3.2, dated June 7, 2017.
+# Version 1.4.0, dated June 8, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -143,7 +143,6 @@ class AxiDrawClass( inkex.Effect ):
 			dest="WalkDistance", default=1,
 			help="Distance for manual walk" )
 
-
 		self.OptionParser.add_option( "--resumeType",
 			action="store", type="string",
 			dest="resumeType", default="ResumeNow",
@@ -159,11 +158,15 @@ class AxiDrawClass( inkex.Effect ):
 			dest="fileOutput", default=axidraw_conf.fileOutput,
 			help="Output updated contents of SVG on stdout" )
 
+		self.OptionParser.add_option( "--previewOnly",
+			action="store", type="inkbool",
+			dest="previewOnly", default=axidraw_conf.previewOnly,
+			help="Offline preview mode. Simulate plotting only." )
+
 		self.serialPort = None
 		self.bPenIsUp = None  #Initial state of pen is neither up nor down, but _unknown_.
 		self.virtualPenIsUp = False  #Keeps track of pen postion when stepping through plot before resuming
 		self.ignoreLimits = False
-
 
 		fX = None
 		fY = None 
@@ -233,10 +236,9 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.svg = self.document.getroot()
-		self.CheckSVGforWCBData()
-		useOldResumeData = True
 		skipSerial = False
+		if self.options.previewOnly:
+			skipSerial = True
 		
 		self.options.mode = self.options.mode.strip("\"")
 		self.options.setupType = self.options.setupType.strip("\"")
@@ -245,111 +247,91 @@ class AxiDrawClass( inkex.Effect ):
 
 		if (self.options.mode == "Help"):
 			skipSerial = True
+			return
 		if (self.options.mode == "options"):
-			skipSerial = True 		
+			skipSerial = True
+			return
 		if (self.options.mode == "timing"):
 			skipSerial = True
+			return
 		if (self.options.mode == "manual"):
 			if (self.options.manualType == "none"):
-				skipSerial = True
+				return	#No option selected. Do nothing and return no error.
 			elif (self.options.manualType == "strip-data"):
-				skipSerial = True
+				self.svg = self.document.getroot()
 				for node in self.svg.xpath( '//svg:WCB', namespaces=inkex.NSS ):
 					self.svg.remove( node )
 				for node in self.svg.xpath( '//svg:eggbot', namespaces=inkex.NSS ):
 					self.svg.remove( node )
 				inkex.errormsg( gettext.gettext( "I've removed all AxiDraw data from this SVG file. Have a great day!" ) )
-				return	
+				return
 
 		if skipSerial == False:
 			self.serialPort = ebb_serial.openPort()
 			if self.serialPort is None:
 				inkex.errormsg( gettext.gettext( "Failed to connect to AxiDraw. :(" ) )
-		
-			if self.options.mode == "plot": 
-				self.LayersFoundToPlot = False
-				useOldResumeData = False
-				self.PrintInLayersMode = False
-				self.plotCurrentLayer = True
-				if self.serialPort is not None:
-					self.svgNodeCount = 0
-					self.svgLastPath = 0
-					unused_button = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
-					self.svgLayer = 12345;  # indicate (to resume routine) that we are plotting all layers.
-					self.plotDocument()
-
-			elif self.options.mode == "resume":
-				if self.serialPort is None:
-					useOldResumeData = True
-				else:
-					useOldResumeData = False
-					unused_button = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
-					self.resumePlotSetup()
-					if self.resumeMode:
-						fX = self.svgPausedPosX_Old + axidraw_conf.StartPosX
-						fY = self.svgPausedPosY_Old + axidraw_conf.StartPosY
-						self.resumeMode = False
-	
-						self.plotSegmentWithVelocity( fX, fY, 0, 0)
-						
-						self.resumeMode = True
-						self.nodeCount = 0
-						self.plotDocument() 
-						
-					elif ( self.options.resumeType == "justGoHome" ):
-						fX = axidraw_conf.StartPosX
-						fY = axidraw_conf.StartPosY 
-
-						self.plotSegmentWithVelocity( fX, fY, 0, 0)
-							
-						#New values to write to file:
-						self.svgNodeCount = self.svgNodeCount_Old
-						self.svgLastPath = self.svgLastPath_Old 
-						self.svgLastPathNC = self.svgLastPathNC_Old 
-						self.svgPausedPosX = self.svgPausedPosX_Old 
-						self.svgPausedPosY = self.svgPausedPosY_Old
-						self.svgLayer = self.svgLayer_Old 
-		
-					else:
-						inkex.errormsg( gettext.gettext( "There does not seem to be any in-progress plot to resume." ) )
-	
-			elif self.options.mode == "layers":
-				useOldResumeData = False 
-				self.PrintInLayersMode = True
-				self.plotCurrentLayer = False
-				self.LayersFoundToPlot = False
-				self.svgLastPath = 0
-				if self.serialPort is not None:
-					unused_button = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
-					self.svgNodeCount = 0;
-					self.svgLayer = self.options.layerNumber
-					self.plotDocument()
-
-			elif self.options.mode == "setup":
-				self.setupCommand()
+				return
 				
-			elif self.options.mode == "manual":
-				useOldResumeData = False 
+		self.svg = self.document.getroot()
+		self.CheckSVGforWCBData()
+		useOldResumeData = True	
+			
+		if self.options.mode == "plot": 
+			self.LayersFoundToPlot = False
+			useOldResumeData = False
+			self.PrintInLayersMode = False
+			self.plotCurrentLayer = True
+			self.svgNodeCount = 0
+			self.svgLastPath = 0
+			self.svgLayer = 12345;  # indicate (to resume routine) that we are plotting all layers.
+			self.plotDocument()
+
+		elif self.options.mode == "resume":
+			useOldResumeData = False
+			self.resumePlotSetup()
+			if self.resumeMode:
+				fX = self.svgPausedPosX_Old + axidraw_conf.StartPosX
+				fY = self.svgPausedPosY_Old + axidraw_conf.StartPosY
+				self.resumeMode = False
+				self.plotSegmentWithVelocity( fX, fY, 0, 0)
+				self.resumeMode = True
+				self.nodeCount = 0
+				self.plotDocument() 
+			elif ( self.options.resumeType == "justGoHome" ):
+				fX = axidraw_conf.StartPosX
+				fY = axidraw_conf.StartPosY 
+				self.plotSegmentWithVelocity( fX, fY, 0, 0)
+				#New values to write to file:
 				self.svgNodeCount = self.svgNodeCount_Old
 				self.svgLastPath = self.svgLastPath_Old 
 				self.svgLastPathNC = self.svgLastPathNC_Old 
 				self.svgPausedPosX = self.svgPausedPosX_Old 
 				self.svgPausedPosY = self.svgPausedPosY_Old
 				self.svgLayer = self.svgLayer_Old 
-				self.manualCommand()
+			else:
+				inkex.errormsg( gettext.gettext( "There does not seem to be any in-progress plot to resume." ) )
 
-		if (useOldResumeData):	#Do not make any changes to data saved from SVG file.
-			self.svgNodeCount = self.svgNodeCount_Old
-			self.svgLastPath = self.svgLastPath_Old 
-			self.svgLastPathNC = self.svgLastPathNC_Old 
-			self.svgPausedPosX = self.svgPausedPosX_Old 
-			self.svgPausedPosY = self.svgPausedPosY_Old
-			self.svgLayer = self.svgLayer_Old 				
-			self.svgLastKnownPosX = self.svgLastKnownPosX_Old
-			self.svgLastKnownPosY = self.svgLastKnownPosY_Old 
+		elif self.options.mode == "layers":
+			useOldResumeData = False 
+			self.PrintInLayersMode = True
+			self.plotCurrentLayer = False
+			self.LayersFoundToPlot = False
+			self.svgLastPath = 0
+			self.svgNodeCount = 0;
+			self.svgLayer = self.options.layerNumber
+			self.plotDocument()
 
-		self.svgDataRead = False
-		self.UpdateSVGWCBData( self.svg )
+		elif self.options.mode == "setup":
+			useOldResumeData = True 
+			self.setupCommand()
+			
+		elif self.options.mode == "manual":
+			useOldResumeData = True 
+			self.manualCommand()
+
+		if not (useOldResumeData):
+			self.svgDataRead = False
+			self.UpdateSVGWCBData( self.svg )
 		if self.serialPort is not None:
 			if not ((self.options.mode == "manual") and (self.options.manualType == "bootload")):
 				ebb_motion.doTimedPause(self.serialPort, 10) #Pause a moment for underway commands to finish...
@@ -509,6 +491,8 @@ class AxiDrawClass( inkex.Effect ):
 
 		if self.serialPort is None:
 			return
+
+		unused_button = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
 
 		if (not self.getDocProps()):
 			# Cannot handle the document's dimensions!!!
