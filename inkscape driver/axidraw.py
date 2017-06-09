@@ -36,9 +36,9 @@ import serial
 import string
 import time
 
-import ebb_serial		# https://github.com/evil-mad/plotink	Requires version 0.5
-import ebb_motion		# https://github.com/evil-mad/plotink	Requires version 0.5
-import plot_utils		# https://github.com/evil-mad/plotink	Requires version 0.4
+import ebb_serial	# Requires plotink v 0.7	 https://github.com/evil-mad/plotink
+import ebb_motion
+import plot_utils
 
 import axidraw_conf	#Some settings can be changed here.
 
@@ -447,11 +447,11 @@ class AxiDrawClass( inkex.Effect ):
 			ebb_motion.sendDisableMotors(self.serialPort)	
 
 		elif self.options.manualType == "version-check":
-			strVersion = ebb_serial.query( self.serialPort, 'V\r' )
+			strVersion = ebb_serial.queryVersion( self.serialPort)
 			inkex.errormsg( 'I asked the EBB for its version info, and it replied:\n ' + strVersion )
 
 		elif self.options.manualType == "bootload":
-			ebb_serial.bootload( self.serialPort)	
+			ebb_serial.bootload(self.serialPort)	
 			inkex.errormsg( gettext.gettext( "Entering bootloader mode for firmware programming.\n" +
 			"To resume normal operation, you will need to first\n" +
 			"disconnect the AxiDraw from both USB and power." ) )
@@ -2025,13 +2025,12 @@ class AxiDrawClass( inkex.Effect ):
 			self.penUp = True			#A fine assumption when in preview mode
 			self.virtualPenUp = True		
 		else:
-			strVersion = ebb_serial.query( self.serialPort, 'QP\r' )
-			if strVersion[0] == '0':
-				self.penUp = False
-				self.virtualPenUp = False
-			else:
+			if ebb_motion.QueryPenUp():
 				self.penUp = True
 				self.virtualPenUp = True
+			else:
+				self.penUp = False
+				self.virtualPenUp = False
 
 	def ServoSetup( self ):
 		''' Pen position units range from 0% to 100%, which correspond to
@@ -2049,10 +2048,10 @@ class AxiDrawClass( inkex.Effect ):
 			servo_slope = float(servo_range) / 100.0
 			
 			intTemp = int(round(axidraw_conf.ServoMin + servo_slope * self.options.penUpPosition))
-			ebb_serial.command( self.serialPort,  'SC,4,' + str( intTemp ) + '\r' )	
-					
+			ebb_motion.setPenUpPos(self.serialPort, intTemp);
+
 			intTemp = int(round(axidraw_conf.ServoMin + servo_slope * penDownPos))
-			ebb_serial.command( self.serialPort,  'SC,5,' + str( intTemp ) + '\r' )
+			ebb_motion.setPenDownPos(self.serialPort, intTemp);
 	
 			''' Servo speed units are in units of %/second, referring to the
 				percentages above.  The EBB takes speeds in units of 1/(12 MHz) steps
@@ -2063,10 +2062,10 @@ class AxiDrawClass( inkex.Effect ):
 				Rounding this to 5 steps/24 ms is sufficient.		'''
 			
 			intTemp = 5 * self.options.penLiftRate
-			ebb_serial.command( self.serialPort, 'SC,11,' + str( intTemp ) + '\r' )
+			ebb_motion.setPenUpRate(self.serialPort, intTemp);
 	
 			intTemp = 5 * self.options.penLowerRate
-			ebb_serial.command( self.serialPort,  'SC,12,' + str( intTemp ) + '\r' )
+			ebb_motion.setPenDownRate(self.serialPort, intTemp);
 
 	def getDocProps( self ):
 		'''
