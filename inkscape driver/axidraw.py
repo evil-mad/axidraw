@@ -54,6 +54,7 @@ class AxiDrawClass( inkex.Effect ):
 	def __init__( self ):
 		inkex.Effect.__init__( self )
 		self.start_time = time.time()
+		self.ptEstimate = 0.0	#plot time estimate
 		
 		self.OptionParser.add_option( "--mode",
 			action="store", type="string",
@@ -164,8 +165,8 @@ class AxiDrawClass( inkex.Effect ):
 			help="Offline preview mode. Simulate plotting only." )
 
 		self.serialPort = None
-		self.bPenIsUp = None  #Initial state of pen is neither up nor down, but _unknown_.
-		self.virtualPenIsUp = False  #Keeps track of pen postion when stepping through plot before resuming
+		self.penUp = None  #Initial state of pen is neither up nor down, but _unknown_.
+		self.virtualPenUp = False  #Keeps track of pen postion when stepping through plot before resuming
 		self.ignoreLimits = False
 
 		fX = None
@@ -225,7 +226,7 @@ class AxiDrawClass( inkex.Effect ):
 		
 		self.stepsPerInch = 0 # must be set to a nonzero value before plotting.
 		self.PenDownSpeed = axidraw_conf.PenDownSpeed * axidraw_conf.SpeedScale #Default speed when pen is down		
-		self.PenUpSpeed = 0.75 * axidraw_conf.SpeedScale #Default speed when pen is down	
+		self.penUpSpeed = 0.75 * axidraw_conf.SpeedScale #Default speed when pen is down	
 
 		# So that we only generate a warning once for each
 		# unsupported SVG element, we use a dictionary to track
@@ -246,13 +247,10 @@ class AxiDrawClass( inkex.Effect ):
 		self.options.resumeType = self.options.resumeType.strip("\"")
 
 		if (self.options.mode == "Help"):
-			skipSerial = True
 			return
 		if (self.options.mode == "options"):
-			skipSerial = True
 			return
 		if (self.options.mode == "timing"):
-			skipSerial = True
 			return
 		if (self.options.mode == "manual"):
 			if (self.options.manualType == "none"):
@@ -354,16 +352,12 @@ class AxiDrawClass( inkex.Effect ):
 				self.svgLayer = self.svgLayer_Old
 				if self.options.resumeType == "ResumeNow":
 					self.resumeMode = True
-				if self.serialPort is None:
-					return
 				self.ServoSetup()
-				self.penUp() 
+				self.penRaise() 
 				self.EnableMotors() #Set plotting resolution  
 				self.fSpeed = self.PenDownSpeed 
-				
 				self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPosX
 				self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPosY
-				 
 
 	def CheckSVGforWCBData( self ):
 		self.svgDataRead = False
@@ -426,7 +420,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.ServoSetupWrapper()
 
 		if self.options.setupType == "align-mode":
-			self.penUp()
+			self.penRaise()
 			ebb_motion.sendDisableMotors(self.serialPort)	
 
 		elif self.options.setupType == "toggle-pen":
@@ -435,19 +429,16 @@ class AxiDrawClass( inkex.Effect ):
 	def manualCommand( self ):
 		"""Execute commands in the "manual" mode/tab"""
 
-		if self.options.manualType == "none":
-			return
-			
 		if self.serialPort is None:
 			return 
 
 		if self.options.manualType == "raise-pen":
 			self.ServoSetupWrapper()
-			self.penUp()
+			self.penRaise()
 
 		elif self.options.manualType == "lower-pen":
 			self.ServoSetupWrapper()
-			self.penDown()
+			self.penLower()
 
 		elif self.options.manualType == "enable-motors":
 			self.EnableMotors()
@@ -486,13 +477,13 @@ class AxiDrawClass( inkex.Effect ):
 			self.plotSegmentWithVelocity( fX, fY, 0, 0)
 
 	def plotDocument( self ):
-		'''Plot the actual SVG document, if so selected in the interface:'''
-		#parse the svg data as a series of line segments and send each segment to be plotted
+		# Plot the actual SVG document, if so selected in the interface
+		# parse the svg data as a series of line segments and send each segment to be plotted
 
-		if self.serialPort is None:
-			return
-
-		unused_button = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
+		if not (self.options.previewOnly):
+			if self.serialPort is None:
+				return
+			unused = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
 
 		if (not self.getDocProps()):
 			# Cannot handle the document's dimensions!!!
@@ -527,13 +518,13 @@ class AxiDrawClass( inkex.Effect ):
 		self.svgTransform = parseTransform( 'scale(%f,%f) translate(%f,%f)' % (sx, sy,Offset0, Offset1))
 
 		self.ServoSetup()
-		self.penUp() 
+		self.penRaise() 
 		self.EnableMotors() #Set plotting resolution
 
 		try:
 			# wrap everything in a try so we can for sure close the serial port 
 			self.recursivelyTraverseSvg( self.svg, self.svgTransform )
-			self.penUp()   #Always end with pen-up
+			self.penRaise()   #Always end with pen-up
  
 			# return to home after end of normal plot
 			if ( ( not self.bStopped ) and ( self.ptFirst ) ):
@@ -560,14 +551,30 @@ class AxiDrawClass( inkex.Effect ):
 				inkex.errormsg( gettext.gettext( 'Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help!' ) )
 
 			if (self.options.reportTime):
+				if self.options.previewOnly:
+					m, s = divmod(self.ptEstimate/1000.0, 60)
+					h, m = divmod(m, 60)
+					if (h > 0):
+						inkex.errormsg("Estimated print time: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
+					else:
+						inkex.errormsg("Estimated print time: %02d:%02d" % (m, s) + " (minutes, seconds)")
+
 				elapsed_time = time.time() - self.start_time
 				m, s = divmod(elapsed_time, 60)
 				h, m = divmod(m, 60)
-				inkex.errormsg("Elapsed time: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
-				downDist = self.penDownDistance / (self.stepsPerInch * sqrt(2))
-				totDist = downDist + self.penUpDistance / (self.stepsPerInch * sqrt(2))
-				inkex.errormsg("Length of path drawn: %1.3f inches." % downDist)
-				inkex.errormsg("Total distance moved: %1.3f inches." % totDist)
+				downDist = 0.0254 * self.penDownDistance / (self.stepsPerInch * sqrt(2))
+				totDist = 0.0254 * downDist + self.penUpDistance / (self.stepsPerInch * sqrt(2))
+				if self.options.previewOnly:
+					inkex.errormsg("Length of path to draw: %1.2f m." % downDist)
+					inkex.errormsg("Total movement distance: %1.2f m." % totDist)
+					#inkex.errormsg("This estimate took: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
+				else:
+					if (h > 0):
+						inkex.errormsg("Elapsed time: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
+					else:
+						inkex.errormsg("Elapsed time: %02d:%02d" % (m, s) + " (minutes, seconds)")
+					inkex.errormsg("Length of path drawn: %1.2f m." % downDist)
+					inkex.errormsg("Total distance moved: %1.2f m." % totDist)
 
 		finally:
 			# We may have had an exception and lost the serial port...
@@ -604,7 +611,7 @@ class AxiDrawClass( inkex.Effect ):
 				if ( node.get( inkex.addNS( 'groupmode', 'inkscape' ) ) == 'layer' ): 
 					self.sCurrentLayerName = node.get( inkex.addNS( 'label', 'inkscape' ) )
 					self.DoWePlotLayer(self.sCurrentLayerName )
-					self.penUp()
+					self.penRaise()
 				self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )		
 
 			elif node.tag == inkex.addNS( 'use', 'svg' ) or node.tag == 'use':
@@ -1120,10 +1127,10 @@ class AxiDrawClass( inkex.Effect ):
 
 						if nIndex == 0:
 							if (plot_utils.distance(fX - self.fCurrX,fY - self.fCurrY) > axidraw_conf.MinGap):
-								self.penUp()
+								self.penRaise()
 								self.plotSegmentWithVelocity( fX, fY, 0, 0)
 						elif nIndex == 1:
-							self.penDown() 
+							self.penLower() 
 						nIndex += 1
 
 						singlePath.append([fX,fY])
@@ -1189,8 +1196,8 @@ class AxiDrawClass( inkex.Effect ):
 		# we now presently switch into inches per second. 
 
 		# Maximum travel speed
-		if ( self.virtualPenIsUp ):	
-			speedLimit = self.PenUpSpeed  / self.stepsPerInch	# Units of speedLimit: inches/second
+		if ( self.penUp ):	
+			speedLimit = self.penUpSpeed  / self.stepsPerInch	# Units of speedLimit: inches/second
 		else:		
 			speedLimit = self.PenDownSpeed  / self.stepsPerInch
 
@@ -1220,7 +1227,7 @@ class AxiDrawClass( inkex.Effect ):
 
 		#time to reach full speed (from zero), at maximum acceleration. Defined in settings:
 
-		if ( self.virtualPenIsUp ):	
+		if ( self.penUp ):	
 			if ( self.options.resolution == 1 ):	# High-resolution mode
 				tMax = axidraw_conf.AccelTimePUHR	#Allow faster pen-up acceleration
 			else:
@@ -1450,7 +1457,7 @@ class AxiDrawClass( inkex.Effect ):
 				inkex.errormsg( 'resumeMode is active')
 
 		ConstantVelMode = False
-		if (self.options.constSpeed and not self.virtualPenIsUp):
+		if (self.options.constSpeed and not self.penUp):
 			ConstantVelMode = True
 
 		if self.bStopped:
@@ -1482,7 +1489,7 @@ class AxiDrawClass( inkex.Effect ):
 			return
 
 		if (self.options.reportTime): #Also keep track of distance:
-			if (self.virtualPenIsUp):
+			if (self.penUp):
 				self.penUpDistance = self.penUpDistance + plotDistance
 			else:
 				self.penDownDistance = self.penDownDistance +plotDistance
@@ -1490,8 +1497,8 @@ class AxiDrawClass( inkex.Effect ):
 		# Maximum travel speeds:
 		# & acceleration/deceleration rate: (Maximum speed) / (time to reach that speed)
 
-		if ( self.virtualPenIsUp ):	
-			speedLimit = self.PenUpSpeed
+		if ( self.penUp ):	
+			speedLimit = self.penUpSpeed
 			
 			if ( self.options.resolution == 1 ):	# High-resolution mode
 				accelRate = speedLimit / axidraw_conf.AccelTimePUHR	#Allow faster pen-up acceleration
@@ -1541,8 +1548,8 @@ class AxiDrawClass( inkex.Effect ):
 		if self.resumeMode:
 			if ( self.nodeCount >= (self.nodeTarget)):
 				self.resumeMode = False
-				if ( not self.virtualPenIsUp ):
-					self.penDown()	
+				if ( not self.virtualPenUp ):	# This is the point where we switch from virtual to real pen
+					self.penLower()	
 
 		# Declare arrays:
 		# These are _normally_ 4-byte integers, but could (theoretically) be 2-byte integers on some systems.
@@ -1591,7 +1598,7 @@ class AxiDrawClass( inkex.Effect ):
 		
 		'''
 
-		if (ConstantVelMode == False) or ( self.virtualPenIsUp ):	#Allow accel when pen is up.		
+		if (ConstantVelMode == False) or ( self.penUp ):	#Allow accel when pen is up.		
 			if (plotDistance > (accelDistMax + decelDistMax + timeSlice * speedLimit)):
 				''' 
 				#Case 1: 'Trapezoid'
@@ -1829,7 +1836,7 @@ class AxiDrawClass( inkex.Effect ):
 				inkex.errormsg( '-> [Constant Velocity Mode Segment]'+ '\n')	
 			#Single segment with constant velocity.
 			
-			if (self.options.constSpeed and not self.virtualPenIsUp):
+			if (self.options.constSpeed and not self.penUp):
 				velocity = self.PenDownSpeed 	#Constant pen-down speed		
 			elif (finalVel > initialVel):
 				velocity = finalVel
@@ -1890,13 +1897,16 @@ class AxiDrawClass( inkex.Effect ):
 
 			if ((moveSteps1 != 0) or (moveSteps2 != 0)): # if at least one motor step is required for this move.
 				if (not self.resumeMode) and (not self.bStopped):
-					ebb_motion.doXYMove( self.serialPort, moveSteps2, moveSteps1, moveTime )			
-					if (moveTime > 50):
-						if self.options.mode != "manual":
-							time.sleep(float(moveTime - 10)/1000.0)  #pause before issuing next command
+					if self.options.previewOnly:
+						self.ptEstimate += moveTime
 					else:
-						if spewSegmentDebugData:	
-							inkex.errormsg( 'ShortMoves: ' + str( moveTime ) + '.' )
+						ebb_motion.doXYMove( self.serialPort, moveSteps2, moveSteps1, moveTime )
+						if (moveTime > 50):
+							if self.options.mode != "manual":
+								time.sleep(float(moveTime - 10)/1000.0)  #pause before issuing next command
+						else:
+							if spewSegmentDebugData:	
+								inkex.errormsg( 'ShortMoves: ' + str( moveTime ) + '.' )
 
 					self.fCurrX += xSteps / self.stepsPerInch   # Update current position
 					self.fCurrY += ySteps / self.stepsPerInch		
@@ -1905,13 +1915,16 @@ class AxiDrawClass( inkex.Effect ):
 					self.svgLastKnownPosY = self.fCurrY - axidraw_conf.StartPosY	
 					#if spewSegmentDebugData:			
 					#	inkex.errormsg( '\nfCurrX,fCurrY (x = %1.2f, y = %1.2f) ' % (self.fCurrX, self.fCurrY))
-						
-		strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
+		
+		if self.options.previewOnly:
+			strButton = ['0']
+		else:
+			strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
 		if strButton[0] == '1': #button pressed
 			self.svgNodeCount = self.nodeCount - 1;
 			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPosX	#self.svgLastKnownPosX
 			self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPosY	#self.svgLastKnownPosY
-			self.penUp()
+			self.penRaise()
 			inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
 			inkex.errormsg( 'Use the "resume" feature to continue.' )
 			self.bStopped = True
@@ -1936,15 +1949,17 @@ class AxiDrawClass( inkex.Effect ):
 			LocalPenDownSpeed = self.options.penDownSpeed
 
 		if ( self.options.resolution == 1 ):
-			ebb_motion.sendEnableMotors(self.serialPort, 1) # 16X microstepping
+			if not (self.options.previewOnly):
+				ebb_motion.sendEnableMotors(self.serialPort, 1) # 16X microstepping
 			self.stepsPerInch = float( axidraw_conf.DPI_16X)						
 			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 110.0
-			self.PenUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0
+			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0
 		elif ( self.options.resolution == 2 ):
-			ebb_motion.sendEnableMotors(self.serialPort, 2) # 8X microstepping
+			if not (self.options.previewOnly):
+				ebb_motion.sendEnableMotors(self.serialPort, 2) # 8X microstepping
 			self.stepsPerInch = float( axidraw_conf.DPI_16X / 2.0 )  
 			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 220.0
-			self.PenUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0
+			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0
 		if (self.options.constSpeed):
 			self.PenDownSpeed = self.PenDownSpeed / 3
 		
@@ -1954,9 +1969,9 @@ class AxiDrawClass( inkex.Effect ):
 			# This is being run on a system that has a shorter length for a signed integer
 			# than we are expecting. If anyone ever comes across such a system, we need to know!
 	
-	def penUp( self ):
-		self.virtualPenIsUp = True  # Virtual pen keeps track of state for resuming plotting.
-		if ( not self.resumeMode) and (not self.bPenIsUp):	# skip if pen is already up, or if we're resuming.
+	def penRaise( self ):
+		self.virtualPenUp = True  # Virtual pen keeps track of state for resuming plotting.
+		if ( not self.resumeMode) and (not self.penUp):	# skip if pen is already up, or if we're resuming.
 			if (self.LayerOverridePenDownHeight):
 				penDownPos = self.LayerPenDownPosition
 			else:	
@@ -1967,16 +1982,19 @@ class AxiDrawClass( inkex.Effect ):
 				vTime = -vTime
 			vTime += self.options.penLiftDelay	
 			if (vTime < 0): #Do not allow negative delay times
-				vTime = 0	
-			ebb_motion.sendPenUp(self.serialPort, vTime )		
-			if (vTime > 50):
-				if self.options.mode != "manual":
-					time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
-			self.bPenIsUp = True
+				vTime = 0
+			if self.options.previewOnly:
+				self.ptEstimate += vTime
+			else:
+				ebb_motion.sendPenUp(self.serialPort, vTime )
+				if (vTime > 50):
+					if self.options.mode != "manual":
+						time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
+			self.penUp = True
 
-	def penDown( self ):
-		self.virtualPenIsUp = False  # Virtual pen keeps track of state for resuming plotting.
-		if (self.bPenIsUp != False):  # skip if pen is already down
+	def penLower( self ):
+		self.virtualPenUp = False  # Virtual pen keeps track of state for resuming plotting.
+		if (self.penUp != False):  # skip if pen is already down
 			if ((not self.resumeMode) and ( not self.bStopped )): #skip if resuming or stopped
 				if (self.LayerOverridePenDownHeight):
 					penDownPos = self.LayerPenDownPosition
@@ -1989,21 +2007,31 @@ class AxiDrawClass( inkex.Effect ):
 				vTime += self.options.penLowerDelay	
 				if (vTime < 0): #Do not allow negative delay times
 					vTime = 0
-				ebb_motion.sendPenDown(self.serialPort, vTime )						
-				if (vTime > 50):
-					if self.options.mode != "manual":
-						time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
-				self.bPenIsUp = False
+					
+				if self.options.previewOnly:
+					self.ptEstimate += vTime
+				else:
+					ebb_motion.sendPenDown(self.serialPort, vTime )	
+					if (vTime > 50):
+						if self.options.mode != "manual":
+							time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
+				self.penUp = False
 
 	def ServoSetupWrapper( self ):
 		# Assert what the defined "up" and "down" positions of the servo motor should be,
 		#    and determine what the pen state is.
 		self.ServoSetup()
-		strVersion = ebb_serial.query( self.serialPort, 'QP\r' )
-		if strVersion[0] == '0':
-			self.bPenIsUp = False
+		if self.options.previewOnly:
+			self.penUp = True			#A fine assumption when in preview mode
+			self.virtualPenUp = True		
 		else:
-			self.bPenIsUp = True
+			strVersion = ebb_serial.query( self.serialPort, 'QP\r' )
+			if strVersion[0] == '0':
+				self.penUp = False
+				self.virtualPenUp = False
+			else:
+				self.penUp = True
+				self.virtualPenUp = True
 
 	def ServoSetup( self ):
 		''' Pen position units range from 0% to 100%, which correspond to
@@ -2015,29 +2043,30 @@ class AxiDrawClass( inkex.Effect ):
 			penDownPos = self.LayerPenDownPosition
 		else:	
 			penDownPos = self.options.penDownPosition
-		
-		servo_range = axidraw_conf.ServoMax - axidraw_conf.ServoMin
-		servo_slope = float(servo_range) / 100.0
-		
-		intTemp = int(round(axidraw_conf.ServoMin + servo_slope * self.options.penUpPosition))
-		ebb_serial.command( self.serialPort,  'SC,4,' + str( intTemp ) + '\r' )	
-				
-		intTemp = int(round(axidraw_conf.ServoMin + servo_slope * penDownPos))
-		ebb_serial.command( self.serialPort,  'SC,5,' + str( intTemp ) + '\r' )
 
-		''' Servo speed units are in units of %/second, referring to the
-			percentages above.  The EBB takes speeds in units of 1/(12 MHz) steps
-			per 24 ms.  Scaling as above, 1% of range in 1 second 
-			with SERVO_MAX = 28000  and  SERVO_MIN = 7500
-			corresponds to 205 steps change in 1 s
-			That gives 0.205 steps/ms, or 4.92 steps / 24 ms
-			Rounding this to 5 steps/24 ms is sufficient.		'''
-		
-		intTemp = 5 * self.options.penLiftRate
-		ebb_serial.command( self.serialPort, 'SC,11,' + str( intTemp ) + '\r' )
-
-		intTemp = 5 * self.options.penLowerRate
-		ebb_serial.command( self.serialPort,  'SC,12,' + str( intTemp ) + '\r' )
+		if not (self.options.previewOnly):
+			servo_range = axidraw_conf.ServoMax - axidraw_conf.ServoMin
+			servo_slope = float(servo_range) / 100.0
+			
+			intTemp = int(round(axidraw_conf.ServoMin + servo_slope * self.options.penUpPosition))
+			ebb_serial.command( self.serialPort,  'SC,4,' + str( intTemp ) + '\r' )	
+					
+			intTemp = int(round(axidraw_conf.ServoMin + servo_slope * penDownPos))
+			ebb_serial.command( self.serialPort,  'SC,5,' + str( intTemp ) + '\r' )
+	
+			''' Servo speed units are in units of %/second, referring to the
+				percentages above.  The EBB takes speeds in units of 1/(12 MHz) steps
+				per 24 ms.  Scaling as above, 1% of range in 1 second 
+				with SERVO_MAX = 28000  and  SERVO_MIN = 7500
+				corresponds to 205 steps change in 1 s
+				That gives 0.205 steps/ms, or 4.92 steps / 24 ms
+				Rounding this to 5 steps/24 ms is sufficient.		'''
+			
+			intTemp = 5 * self.options.penLiftRate
+			ebb_serial.command( self.serialPort, 'SC,11,' + str( intTemp ) + '\r' )
+	
+			intTemp = 5 * self.options.penLowerRate
+			ebb_serial.command( self.serialPort,  'SC,12,' + str( intTemp ) + '\r' )
 
 	def getDocProps( self ):
 		'''
