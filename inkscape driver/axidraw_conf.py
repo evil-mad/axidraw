@@ -44,6 +44,7 @@ penLowerRate = 150		# Default pen-lift servo speed when lowering
 autoRotate = True		# Print in portrait or landscape mode automatically
 constSpeed = False		# Use constant velocity mode when pen is down
 reportTime = False		# Report time elapsed
+previewOnly = False		# Plot preview mode. Simulate plotting only. 
 
 resolution = 1			# Resolution: Either 1 for 2032 DPI, or value 2 for 1016 DPI
 
@@ -61,14 +62,13 @@ visible from within the Inkscape GUI.
 '''
 
 fileOutput = False		# If True: Output updated contents of SVG on stdout. 
-previewOnly = False		# "Offline preview mode. Simulate plotting only. 
 
 
 
 '''
 Secondary control parameters:
 
-Values below this point have been carefully chosen, and generaly do not need to be 
+Values below this point have been carefully chosen, and generally do not need to be 
 adjusted in everyday use. That said, proceed with caution, and keep a backup copy.
 '''
 
