@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.5.0, dated June 9, 2017.
+# Version 1.5.1, dated June 10, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -54,7 +54,7 @@ class AxiDrawClass( inkex.Effect ):
 	def __init__( self ):
 		inkex.Effect.__init__( self )
 		self.start_time = time.time()
-		self.versionString = "AxiDraw Control - Version 1.5.0, dated 2017-06-09"
+		self.versionString = "AxiDraw Control - Version 1.5.1, dated 2017-06-10"
 		
 		self.ptEstimate = 0.0	#plot time estimate
 		
@@ -2031,7 +2031,7 @@ class AxiDrawClass( inkex.Effect ):
 			self.penUp = True			#A fine assumption when in preview mode
 			self.virtualPenUp = True		
 		else:
-			if ebb_motion.QueryPenUp():
+			if ebb_motion.QueryPenUp( self.serialPort ):
 				self.penUp = True
 				self.virtualPenUp = True
 			else:
