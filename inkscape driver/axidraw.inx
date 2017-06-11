@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
 <_name>AxiDraw Control</_name>
-<id>command.evilmadscientist.axidraw.rev151</id>
+<id>command.evilmadscientist.axidraw.rev152</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw.py</dependency>
 <dependency type="executable" location="extensions">inkex.py</dependency>
@@ -67,14 +67,19 @@ of the pen for writing and drawing.
 <param indent="1" name="autoRotate" type="boolean" _gui-text="Auto-rotate page when printing">true</param>	
 <param indent="1" name="constSpeed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
 <param indent="1" name="reportTime" type="boolean" _gui-text="Report time elapsed after each drawing">false</param> 
+
 <param indent="1" name="previewOnly" type="boolean" _gui-text="Preview mode: Simulate plotting only">false</param> 
-<param indent="1" name="previewShow" type="boolean" _gui-text="When in preview mode, render preview layers">false</param> 
+<param indent="5" name="previewType" type="optiongroup" appearance="minimal" _gui-text="Preview mode rendering:">
+<_option value="0">None</_option>
+<_option value="1">Pen-down movement</_option>
+<_option value="2">Pen-up movement</_option>
+<_option value="3">All movement</_option>
+</param>
 
 <param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
 <_option value="1">Super (slower) ~2000 DPI</_option>
 <_option value="2">Normal, ~1000 DPI</_option>
 </param>
-
 
 <param indent="1" name="smoothness" type="float" min=".1" max="100" _gui-text="Curve smoothing (default: 10.0):">10.0</param>
 <param indent="1" name="cornering" type="float" min=".1" max="100" _gui-text="Cornering speed factor (default: 10.0):">10.0</param>
@@ -175,7 +180,7 @@ or "guide lines" will not be.
 <_param name="instructions_general" type="description"
 xml:space="preserve">
 AxiDraw Control Inkscape extension 
-Version 1.5.1, dated 2017-06-10
+Version 1.5.2, dated 2017-06-10
 
 Copyright 2017 Evil Mad Science LLC
 

@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.5.1, dated June 10, 2017.
+# Version 1.5.2, dated June 10, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -53,11 +53,11 @@ class AxiDrawClass( inkex.Effect ):
 
 	def __init__( self ):
 		inkex.Effect.__init__( self )
-		self.start_time = time.time()
-		self.versionString = "AxiDraw Control - Version 1.5.1, dated 2017-06-10"
-		
+		self.versionString = "AxiDraw Control - Version 1.5.2, dated 2017-06-10"
+
+		self.start_time = time.time()		
 		self.ptEstimate = 0.0	#plot time estimate
-		
+
 		self.OptionParser.add_option( "--mode",	action="store", type="string", dest="mode", default="plot", help="Mode (or GUI tab) selected" )
 		self.OptionParser.add_option( "--penUpPosition", action="store", type="int", dest="penUpPosition", default=axidraw_conf.PenUpPos, help="Position of pen when lifted" )
 		self.OptionParser.add_option( "--penDownPosition", action="store", type="int", dest="penDownPosition", default=axidraw_conf.PenDownPos, help="Position of pen for painting" )	
@@ -68,8 +68,8 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--penLiftDelay", action="store", type="int", dest="penLiftDelay", default=axidraw_conf.penLiftDelay, help="Added delay after pen up (ms)" )
 		self.OptionParser.add_option( "--penLowerRate", action="store", type="int", dest="penLowerRate", default=axidraw_conf.penLowerRate, help="Rate of lowering pen " ) 
 		self.OptionParser.add_option( "--penLowerDelay", action="store", type="int", dest="penLowerDelay", default=axidraw_conf.penLowerDelay, help="Added delay after pen down (ms)" )
-		self.OptionParser.add_option( "--autoRotate", action="store", type="inkbool", dest="autoRotate", default=axidraw_conf.autoRotate, help="Print in portrait or landscape mode automatically" )
-		self.OptionParser.add_option( "--constSpeed", action="store", type="inkbool", dest="constSpeed", default=axidraw_conf.constSpeed, help="Use constant velocity mode when pen is down" )
+		self.OptionParser.add_option( "--autoRotate", action="store", type="inkbool", dest="autoRotate", default=axidraw_conf.autoRotate, help="Auto pick portrait or landscape mode" )
+		self.OptionParser.add_option( "--constSpeed", action="store", type="inkbool", dest="constSpeed", default=axidraw_conf.constSpeed, help="Constant velocity when pen is down" )
 		self.OptionParser.add_option( "--reportTime", action="store", type="inkbool", dest="reportTime", default=axidraw_conf.reportTime, help="Report time elapsed" )
 		self.OptionParser.add_option( "--resolution", action="store", type="int", dest="resolution", default=axidraw_conf.resolution, help="Resolution factor" )	
 		self.OptionParser.add_option( "--smoothness", action="store", type="float", dest="smoothness", default=axidraw_conf.smoothness, help="Smoothness of curves" )
@@ -78,10 +78,9 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--WalkDistance", action="store", type="float", dest="WalkDistance", default=1, help="Distance for manual walk" )
 		self.OptionParser.add_option( "--resumeType", action="store", type="string", dest="resumeType", default="ResumeNow", help="The active option when Apply was pressed" )
 		self.OptionParser.add_option( "--layerNumber", action="store", type="int", dest="layerNumber", default=axidraw_conf.DefaultLayer, help="Selected layer for multilayer plotting" )
-		self.OptionParser.add_option( "--fileOutput", action="store", type="inkbool", dest="fileOutput", default=axidraw_conf.fileOutput, help="Output updated contents of SVG on stdout" )
-		self.OptionParser.add_option( "--previewOnly", action="store", type="inkbool", dest="previewOnly", default=axidraw_conf.previewOnly, help="Offline preview mode. Simulate plotting only." )
-		self.OptionParser.add_option( "--previewShow", action="store", type="inkbool", dest="previewShow", default=axidraw_conf.previewShow, help="When in preview mode, render preview layers." )
-
+		self.OptionParser.add_option( "--fileOutput", action="store", type="inkbool", dest="fileOutput", default=axidraw_conf.fileOutput, help="Output new contents of SVG on stdout" )
+		self.OptionParser.add_option( "--previewOnly", action="store", type="inkbool", dest="previewOnly", default=axidraw_conf.previewOnly, help="Offline preview. Simulate plotting only." )
+		self.OptionParser.add_option( "--previewType", action="store", type="int", dest="previewType", default=axidraw_conf.previewType, help="Preview mode rendering" )	
 		self.serialPort = None
 		self.penUp = None  #Initial state of pen is neither up nor down, but _unknown_.
 		self.virtualPenUp = False  #Keeps track of pen postion when stepping through plot before resuming
@@ -453,9 +452,9 @@ class AxiDrawClass( inkex.Effect ):
 		self.EnableMotors() #Set plotting resolution
 
 		if not self.options.previewOnly:
-			self.options.previewShow = False	# Only render previews if we are in preview mode.
-		if self.options.previewShow:
-			# Remove old preview layer, prior to building a new one.
+			self.options.previewType = 0	# Only render previews if we are in preview mode.
+		if self.options.previewOnly:
+			# Remove old preview layers, whenever preview mode is enabled
 			for node in self.svg:
 				if node.tag == inkex.addNS( 'g', 'svg' ) or node.tag == 'g':
 					if ( node.get( inkex.addNS( 'groupmode', 'inkscape' ) ) == 'layer' ): 
@@ -504,29 +503,28 @@ class AxiDrawClass( inkex.Effect ):
 			if (self.warnOutOfBounds):
 				inkex.errormsg( gettext.gettext( 'Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help!' ) )
 
-			if self.options.previewShow: # Render preview. Only possible when in preview mode.
+			if (self.options.previewType > 0): # Render preview. Only possible when in preview mode.
 				strokeWidth = "0.2mm"	# Adjust this here, in your preferred units.
 				userUnitsWidth = self.unittouu(strokeWidth)
 				strokeWidthConverted = self.uutounit(userUnitsWidth, self.DocUnits)
-				
 				nsPrefix = "plot"
-				style = { 'stroke': 'blue', 'stroke-width': strokeWidthConverted, 'fill': 'none' }
-				path_attrs = {
-					'style': simplestyle.formatStyle( style ),
-					'd': " ".join(self.pathDataPU),
-					inkex.addNS( 'desc', nsPrefix ): "pen-up transit" }
-				PUpath = inkex.etree.SubElement( self.previewSLU,
-					inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
+				if (self.options.previewType > 1):
+					style = { 'stroke': 'blue', 'stroke-width': strokeWidthConverted, 'fill': 'none' } #Pen-up: blue
+					path_attrs = {
+						'style': simplestyle.formatStyle( style ),
+						'd': " ".join(self.pathDataPU),
+						inkex.addNS( 'desc', nsPrefix ): "pen-up transit" }
+					PUpath = inkex.etree.SubElement( self.previewSLU,
+						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
-				style = { 'stroke': 'red', 'stroke-width': strokeWidthConverted, 'fill': 'none' }
-				path_attrs = {
-					'style': simplestyle.formatStyle( style ),
-					'd': " ".join(self.pathDataPD),
-					inkex.addNS( 'desc', nsPrefix ): "pen-down drawing" }
-				PDpath = inkex.etree.SubElement( self.previewSLD,
-					inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
-					
-					#TypeError: sequence item 0: expected string, list found
+				if ((self.options.previewType == 1) or (self.options.previewType == 3)):
+					style = { 'stroke': 'red', 'stroke-width': strokeWidthConverted, 'fill': 'none' } #Pen-down: red
+					path_attrs = {
+						'style': simplestyle.formatStyle( style ),
+						'd': " ".join(self.pathDataPD),
+						inkex.addNS( 'desc', nsPrefix ): "pen-down drawing" }
+					PDpath = inkex.etree.SubElement( self.previewSLD,
+						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 			if (self.options.reportTime):
 				if self.options.previewOnly:
@@ -545,7 +543,7 @@ class AxiDrawClass( inkex.Effect ):
 				if self.options.previewOnly:
 					inkex.errormsg("Length of path to draw: %1.2f m." % downDist)
 					inkex.errormsg("Total movement distance: %1.2f m." % totDist)
-					if self.options.previewShow:
+					if (self.options.previewType > 0):
 						inkex.errormsg("This estimate took: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
 				else:
 					if (h > 0):
@@ -1882,7 +1880,7 @@ class AxiDrawClass( inkex.Effect ):
 		
 					if self.options.previewOnly:
 						self.ptEstimate += moveTime
-						if self.options.previewShow:
+						if (self.options.previewType > 0):
 							if (self.printPortrait):
 								xNewt = self.DocUnitScaleFactor * (self.svgWidth - fNewY)
 								yNewt = self.DocUnitScaleFactor * fNewX
@@ -1893,18 +1891,18 @@ class AxiDrawClass( inkex.Effect ):
 								yNewt = self.DocUnitScaleFactor * fNewY
 								xOldt = self.DocUnitScaleFactor * self.fCurrX
 								yOldt = self.DocUnitScaleFactor * self.fCurrY
-
 							if self.penUp:
-								if (self.pathDataPenUp != 1):
-									self.pathDataPU.append("M%0.3f %0.3f" % (xOldt, yOldt) )
-									self.pathDataPenUp = 1
-								self.pathDataPU.append(" %0.3f %0.3f" % (xNewt, yNewt) )
-
+								if (self.options.previewType > 1): # previewType is 2 or 3. Show pen-up movement
+									if (self.pathDataPenUp != 1):
+										self.pathDataPU.append("M%0.3f %0.3f" % (xOldt, yOldt) )
+									self.pathDataPU.append(" %0.3f %0.3f" % (xNewt, yNewt) )
+								self.pathDataPenUp = 1	# Reset pen state boolean, whether or not we are previewing this movement
 							else:
-								if (self.pathDataPenUp == 1):
-									self.pathDataPD.append("M%0.3f %0.3f" % (xOldt, yOldt) )
-									self.pathDataPenUp = 0
-								self.pathDataPD.append(" %0.3f %0.3f" % (xNewt, yNewt) )
+								if ((self.options.previewType == 1) or (self.options.previewType == 3)): #previewType is 1 or 3. Show pen-down movement
+									if (self.pathDataPenUp == 1):
+										self.pathDataPD.append("M%0.3f %0.3f" % (xOldt, yOldt) )
+									self.pathDataPD.append(" %0.3f %0.3f" % (xNewt, yNewt) )
+								self.pathDataPenUp = 0 # Reset pen state boolean, whether or not we are previewing this movement
 					else:
 						ebb_motion.doXYMove( self.serialPort, moveSteps2, moveSteps1, moveTime )
 						if (moveTime > 50):
