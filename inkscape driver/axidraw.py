@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.5.2, dated June 10, 2017.
+# Version 1.5.3, dated June 10, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -49,11 +49,17 @@ except:
 	xrange = range
 	# We have Python 3
 
+try:
+	basestring
+except NameError:
+	basestring = str	
+
+
 class AxiDrawClass( inkex.Effect ):
 
 	def __init__( self ):
 		inkex.Effect.__init__( self )
-		self.versionString = "AxiDraw Control - Version 1.5.2, dated 2017-06-10"
+		self.versionString = "AxiDraw Control - Version 1.5.3, dated 2017-06-10"
 
 		self.start_time = time.time()		
 		self.ptEstimate = 0.0	#plot time estimate
@@ -145,8 +151,8 @@ class AxiDrawClass( inkex.Effect ):
 		self.PenDownSpeed = axidraw_conf.PenDownSpeed * axidraw_conf.SpeedScale #Default speed when pen is down		
 		self.penUpSpeed = 0.75 * axidraw_conf.SpeedScale #Default speed when pen is down	
 
- 		self.DocUnits = "in"
- 		self.DocUnitScaleFactor = 1
+		self.DocUnits = "in"
+		self.DocUnitScaleFactor = 1
 
 		# So that we only generate a warning once for each
 		# unsupported SVG element, we use a dictionary to track
@@ -409,7 +415,7 @@ class AxiDrawClass( inkex.Effect ):
 	def plotDocument( self ):
 		# Plot the actual SVG document, if so selected in the interface
 		# parse the svg data as a series of line segments and send each segment to be plotted
-
+		
 		if not (self.options.previewOnly):
 			if self.serialPort is None:
 				return
@@ -913,7 +919,7 @@ class AxiDrawClass( inkex.Effect ):
 					continue
 				elif (node.tag == inkex.addNS( 'text', 'svg' ) or node.tag == 'text' or
 					node.tag == inkex.addNS( 'flowRoot', 'svg' ) or node.tag == 'flowRoot'):
-					if (not self.warnings.has_key( 'text' )) and (self.plotCurrentLayer):
+					if ('text' not in self.warnings) and (self.plotCurrentLayer):
 						inkex.errormsg( gettext.gettext( 'Note: This file contains some plain text, found in a \nlayer named: "' + 
 							self.sCurrentLayerName + '" .\n' +
 							'Please convert your text into paths before drawing,  \n' +
@@ -923,7 +929,7 @@ class AxiDrawClass( inkex.Effect ):
 						self.warnings['text'] = 1
 					continue
 				elif node.tag == inkex.addNS( 'image', 'svg' ) or node.tag == 'image':
-					if (not self.warnings.has_key( 'image' )) and (self.plotCurrentLayer):
+					if ('image' not in self.warnings) and (self.plotCurrentLayer):
 						inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
 						self.sCurrentLayerName + '" unable to draw bitmap images; ' +
 						'Please convert images to line art before drawing. ' +
@@ -955,7 +961,7 @@ class AxiDrawClass( inkex.Effect ):
 					# be very useful.
 					continue
 				else:
-					if (not self.warnings.has_key( str( node.tag ) )) and (self.plotCurrentLayer):
+					if (str( node.tag ) not in self.warnings) and (self.plotCurrentLayer):
 						t = str( node.tag ).split( '}' )
 						inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
 							self.sCurrentLayerName + '" unable to draw <' + str( t[-1] ) +
