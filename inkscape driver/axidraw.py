@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.5.3, dated June 10, 2017.
+# Version 1.5.4, dated June 12, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -43,23 +43,21 @@ import plot_utils
 import axidraw_conf	#Some settings can be changed here.
 
 try:
-	xrange = xrange
-	# We have Python 2
+	xrange = xrange # We have Python 2
 except:
-	xrange = range
-	# We have Python 3
-
+	xrange = range # We have Python 3
 try:
 	basestring
 except NameError:
 	basestring = str	
 
-
 class AxiDrawClass( inkex.Effect ):
 
 	def __init__( self ):
 		inkex.Effect.__init__( self )
-		self.versionString = "AxiDraw Control - Version 1.5.3, dated 2017-06-10"
+		self.versionString = "AxiDraw Control - Version 1.5.4, dated 2017-06-12"
+		self.spewDebugdata = False
+		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
 		self.start_time = time.time()		
 		self.ptEstimate = 0.0	#plot time estimate
@@ -165,7 +163,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.previewSLU = inkex.etree.SubElement( self.previewLayer, inkex.addNS( 'g', 'svg' ) )
 		self.pathDataPU = []	# pen-up path data for preview layers
 		self.pathDataPD = []	# pen-down path data for preview layers
-		self.pathDataPenUp = -1
+		self.pathDataPenUp = -1	# A value of -1 indicates an indeterminate state- requiring new "M" in path.
 
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
@@ -203,13 +201,13 @@ class AxiDrawClass( inkex.Effect ):
 		if skipSerial == False:
 			self.serialPort = ebb_serial.openPort()
 			if self.serialPort is None:
-				inkex.errormsg( gettext.gettext( "Failed to connect to AxiDraw. :(" ) )
+				inkex.errormsg( gettext.gettext( "Failed to connect to AxiDraw. :(" ))
 				return
 				
 		self.svg = self.document.getroot()
 		self.CheckSVGforWCBData()
 		useOldResumeData = True	
-			
+
 		if self.options.mode == "plot": 
 			self.LayersFoundToPlot = False
 			useOldResumeData = False
@@ -224,26 +222,17 @@ class AxiDrawClass( inkex.Effect ):
 			useOldResumeData = False
 			self.resumePlotSetup()
 			if self.resumeMode:
-				fX = self.svgPausedPosX_Old + axidraw_conf.StartPosX
-				fY = self.svgPausedPosY_Old + axidraw_conf.StartPosY
-				self.resumeMode = False
-				self.plotSegmentWithVelocity( fX, fY, 0, 0)
-				self.resumeMode = True
-				self.nodeCount = 0
 				self.plotDocument() 
 			elif ( self.options.resumeType == "justGoHome" ):
-				fX = axidraw_conf.StartPosX
-				fY = axidraw_conf.StartPosY 
-				self.plotSegmentWithVelocity( fX, fY, 0, 0)
-				#New values to write to file:
-				self.svgNodeCount = self.svgNodeCount_Old
-				self.svgLastPath = self.svgLastPath_Old 
-				self.svgLastPathNC = self.svgLastPathNC_Old 
-				self.svgPausedPosX = self.svgPausedPosX_Old 
+				self.plotDocument()
+				self.svgNodeCount = self.svgNodeCount_Old	# New values to write to file:
+				self.svgLastPath = self.svgLastPath_Old
+				self.svgLastPathNC = self.svgLastPathNC_Old
+				self.svgPausedPosX = self.svgPausedPosX_Old
 				self.svgPausedPosY = self.svgPausedPosY_Old
-				self.svgLayer = self.svgLayer_Old 
+				self.svgLayer = self.svgLayer_Old
 			else:
-				inkex.errormsg( gettext.gettext( "There does not seem to be any in-progress plot to resume." ) )
+				inkex.errormsg( gettext.gettext( "There does not seem to be any in-progress plot to resume." ))
 
 		elif self.options.mode == "layers":
 			useOldResumeData = False 
@@ -272,6 +261,7 @@ class AxiDrawClass( inkex.Effect ):
 			ebb_serial.closePort(self.serialPort)	
 		
 	def resumePlotSetup( self ):
+
 		self.LayerFound = False
 		if ( self.svgLayer_Old < 101 ) and ( self.svgLayer_Old >= 0 ):
 			self.options.layerNumber = self.svgLayer_Old 
@@ -286,14 +276,16 @@ class AxiDrawClass( inkex.Effect ):
 			if ( self.svgNodeCount_Old > 0 ):
 				self.nodeTarget = self.svgNodeCount_Old
 				self.svgLayer = self.svgLayer_Old
-				if self.options.resumeType == "ResumeNow":
-					self.resumeMode = True
 				self.ServoSetup()
 				self.penRaise() 
 				self.EnableMotors() #Set plotting resolution  
+				if self.options.resumeType == "ResumeNow":
+					self.resumeMode = True
 				self.fSpeed = self.PenDownSpeed 
 				self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPosX
 				self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPosY
+				if self.spewDebugdata:
+					inkex.errormsg( 'Entering resume mode at layer:  ' + str(self.svgLayer) )
 
 	def CheckSVGforWCBData( self ):
 		self.svgDataRead = False
@@ -344,7 +336,6 @@ class AxiDrawClass( inkex.Effect ):
 						node.set( 'lastknownposy', str( (self.svgLastKnownPosY ) ) )
 						node.set( 'pausedposx', str( (self.svgPausedPosX) ) )
 						node.set( 'pausedposy', str( (self.svgPausedPosY) ) )
-						
 						self.svgDataRead = True
 					 
 	def setupCommand( self ):
@@ -408,19 +399,14 @@ class AxiDrawClass( inkex.Effect ):
 			self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPosX
 			self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPosY
 			self.ignoreLimits = True
-			fX = self.fCurrX + nDeltaX   #Note: Walking motors is STRICTLY RELATIVE TO INITIAL POSITION.
-			fY = self.fCurrY + nDeltaY
+			fX = self.fCurrX + nDeltaX   # Note: Walking motors is strictly relative to initial position.
+			fY = self.fCurrY + nDeltaY   #       New position is not saved, and may interfere with (e.g.,) resuming plots.
 			self.plotSegmentWithVelocity( fX, fY, 0, 0)
 
 	def plotDocument( self ):
 		# Plot the actual SVG document, if so selected in the interface
 		# parse the svg data as a series of line segments and send each segment to be plotted
 		
-		if not (self.options.previewOnly):
-			if self.serialPort is None:
-				return
-			unused = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
-
 		if (not self.getDocProps()):
 			# Cannot handle the document's dimensions!!!
 			inkex.errormsg( gettext.gettext(
@@ -432,6 +418,47 @@ class AxiDrawClass( inkex.Effect ):
 			'Document dimensions may also be set in Inkscape,\r' +
 			'using File > Document Properties.') )
 			return
+
+		self.DocUnits = self.getDocumentUnit()
+		userUnitsWidth = self.unittouu("1in")
+		self.DocUnitScaleFactor = self.uutounit(userUnitsWidth, self.DocUnits)	# For preview only
+
+		if not self.options.previewOnly:
+			self.options.previewType = 0	# Only render previews if we are in preview mode.
+			if self.serialPort is None:
+				return
+			unused = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
+			
+		if self.options.previewOnly:
+			# Remove old preview layers, whenever preview mode is enabled
+			for node in self.svg:
+				if node.tag == inkex.addNS( 'g', 'svg' ) or node.tag == 'g':
+					if ( node.get( inkex.addNS( 'groupmode', 'inkscape' ) ) == 'layer' ): 
+						LayerName = node.get( inkex.addNS( 'label', 'inkscape' ) )
+						if LayerName == '% Preview':
+							self.svg.remove( node )
+
+			self.previewLayer.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
+			self.previewLayer.set( inkex.addNS( 'label', 'inkscape' ), '% Preview' )
+			self.previewSLD.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
+			self.previewSLD.set( inkex.addNS( 'label', 'inkscape' ), '% Pen-down drawing' )
+			self.previewSLU.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
+			self.previewSLU.set( inkex.addNS( 'label', 'inkscape' ), '% Pen-up transit' )
+			self.svg.append( self.previewLayer )
+
+		if self.options.mode == "resume":
+			if self.resumeMode:
+				fX = self.svgPausedPosX_Old + axidraw_conf.StartPosX
+				fY = self.svgPausedPosY_Old + axidraw_conf.StartPosY
+				self.resumeMode = False
+				self.plotSegmentWithVelocity(fX, fY, 0, 0) # pen-up move to starting point
+				self.resumeMode = True
+				self.nodeCount = 0
+			elif ( self.options.resumeType == "justGoHome" ):
+				fX = axidraw_conf.StartPosX
+				fY = axidraw_conf.StartPosY 
+				self.plotSegmentWithVelocity(fX, fY, 0, 0)
+				return
 
 		# Viewbox handling
 		# Also ignores the preserveAspectRatio attribute
@@ -456,29 +483,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.ServoSetup()
 		self.penRaise() 
 		self.EnableMotors() #Set plotting resolution
-
-		if not self.options.previewOnly:
-			self.options.previewType = 0	# Only render previews if we are in preview mode.
-		if self.options.previewOnly:
-			# Remove old preview layers, whenever preview mode is enabled
-			for node in self.svg:
-				if node.tag == inkex.addNS( 'g', 'svg' ) or node.tag == 'g':
-					if ( node.get( inkex.addNS( 'groupmode', 'inkscape' ) ) == 'layer' ): 
-						LayerName = node.get( inkex.addNS( 'label', 'inkscape' ) )
-						if LayerName == '% Preview':
-							self.svg.remove( node )
-
-			self.previewLayer.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
-			self.previewLayer.set( inkex.addNS( 'label', 'inkscape' ), '% Preview' )
-			self.previewSLD.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
-			self.previewSLD.set( inkex.addNS( 'label', 'inkscape' ), '% Pen-down drawing' )
-			self.previewSLU.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
-			self.previewSLU.set( inkex.addNS( 'label', 'inkscape' ), '% Pen-up transit' )
-			self.svg.append( self.previewLayer )
-
-			self.DocUnits = self.getDocumentUnit()
-			userUnitsWidth = self.unittouu("1in")
-			self.DocUnitScaleFactor = self.uutounit(userUnitsWidth, self.DocUnits)	# For preview only
 
 		try:
 			# wrap everything in a try so we can for sure close the serial port 
@@ -635,19 +639,16 @@ class AxiDrawClass( inkex.Effect ):
 			elif self.plotCurrentLayer:	#Skip subsequent tag checks unless we are plotting this layer.
 				if node.tag == inkex.addNS( 'path', 'svg' ):
 	
-					# if we're in resume mode AND self.pathcount < self.svgLastPath,
-					#    then skip over this path.
-					# if we're in resume mode and self.pathcount = self.svgLastPath,
-					#    then start here, and set self.nodeCount equal to self.svgLastPathNC
+					# If in resume mode AND self.pathcount < self.svgLastPath, then skip this path.
+					# If in resume mode and self.pathcount = self.svgLastPath, then start here, and set
+					# self.nodeCount equal to self.svgLastPathNC
 					
 					doWePlotThisPath = False 
 					if (self.resumeMode): 
-						if (self.pathcount < self.svgLastPath_Old ): 
-							#This path was *completely plotted* already; skip.
+						if (self.pathcount < self.svgLastPath_Old ): # Fully plotted; skip.
 							self.pathcount += 1 
-						elif (self.pathcount == self.svgLastPath_Old ): 
-							#this path is the first *not completely* plotted path:
-							self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+						elif (self.pathcount == self.svgLastPath_Old ): # First partially-plotted path
+							self.nodeCount =  self.svgLastPathNC_Old	# nodeCount after last completed path
 							doWePlotThisPath = True 
 					else:
 						doWePlotThisPath = True
@@ -664,20 +665,16 @@ class AxiDrawClass( inkex.Effect ):
 					# I.e., explicitly draw three sides of the rectangle and the
 					# fourth side implicitly
 					#
-					# if we're in resume mode AND self.pathcount < self.svgLastPath,
-					#    then skip over this path.
-					# if we're in resume mode and self.pathcount = self.svgLastPath,
-					#    then start here, and set
+					# If in resume mode AND self.pathcount < self.svgLastPath, then skip this path.
+					# If in resume mode and self.pathcount = self.svgLastPath, then start here, and set
 					# self.nodeCount equal to self.svgLastPathNC
 					
 					doWePlotThisPath = False 
 					if (self.resumeMode): 
-						if (self.pathcount < self.svgLastPath_Old ): 
-							#This path was *completely plotted* already; skip.
+						if (self.pathcount < self.svgLastPath_Old ): # Fully plotted; skip.
 							self.pathcount += 1 
-						elif (self.pathcount == self.svgLastPath_Old ): 
-							#this path is the first *not completely* plotted path:
-							self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+						elif (self.pathcount == self.svgLastPath_Old ): # First partially-plotted path
+							self.nodeCount =  self.svgLastPathNC_Old	# nodeCount after last completed path
 							doWePlotThisPath = True 
 					else:
 						doWePlotThisPath = True
@@ -707,27 +704,20 @@ class AxiDrawClass( inkex.Effect ):
 				elif node.tag == inkex.addNS( 'line', 'svg' ) or node.tag == 'line':
 
 					# Convert
-					#
 					#   <line x1="X1" y1="Y1" x2="X2" y2="Y2/>
-					#
 					# to
-					#
 					#   <path d="MX1,Y1 LX2,Y2"/>
 	
-					# if we're in resume mode AND self.pathcount < self.svgLastPath,
-					#    then skip over this path.
-					# if we're in resume mode and self.pathcount = self.svgLastPath,
-					#    then start here, and set
+					# If in resume mode AND self.pathcount < self.svgLastPath, then skip this path.
+					# If in resume mode and self.pathcount = self.svgLastPath, then start here, and set
 					# self.nodeCount equal to self.svgLastPathNC
 	
 					doWePlotThisPath = False 
 					if (self.resumeMode): 
-						if (self.pathcount < self.svgLastPath_Old ): 
-							#This path was *completely plotted* already; skip.
+						if (self.pathcount < self.svgLastPath_Old ): # Fully plotted; skip.
 							self.pathcount += 1 
-						elif (self.pathcount == self.svgLastPath_Old ): 
-							#this path is the first *not completely* plotted path:
-							self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+						elif (self.pathcount == self.svgLastPath_Old ): # First partially-plotted path
+							self.nodeCount =  self.svgLastPathNC_Old	# nodeCount after last completed path
 							doWePlotThisPath = True 
 					else:
 						doWePlotThisPath = True
@@ -769,12 +759,10 @@ class AxiDrawClass( inkex.Effect ):
 					
 					doWePlotThisPath = False 
 					if (self.resumeMode): 
-						if (self.pathcount < self.svgLastPath_Old ): 
-							#This path was *completely plotted* already; skip.
+						if (self.pathcount < self.svgLastPath_Old ): # Fully plotted; skip.
 							self.pathcount += 1 
-						elif (self.pathcount == self.svgLastPath_Old ): 
-							#this path is the first *not completely* plotted path:
-							self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+						elif (self.pathcount == self.svgLastPath_Old ): # First partially-plotted path
+							self.nodeCount =  self.svgLastPathNC_Old	# nodeCount after last completed path
 							doWePlotThisPath = True 
 					else:
 						doWePlotThisPath = True
@@ -814,12 +802,10 @@ class AxiDrawClass( inkex.Effect ):
 	
 					doWePlotThisPath = False 
 					if (self.resumeMode): 
-						if (self.pathcount < self.svgLastPath_Old ): 
-							#This path was *completely plotted* already; skip.
+						if (self.pathcount < self.svgLastPath_Old ): # Fully plotted; skip.
 							self.pathcount += 1 
-						elif (self.pathcount == self.svgLastPath_Old ): 
-							#this path is the first *not completely* plotted path:
-							self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+						elif (self.pathcount == self.svgLastPath_Old ): # First partially-plotted path
+							self.nodeCount =  self.svgLastPathNC_Old	# nodeCount after last completed path
 							doWePlotThisPath = True 
 					else:
 						doWePlotThisPath = True
@@ -877,7 +863,7 @@ class AxiDrawClass( inkex.Effect ):
 								self.pathcount += 1 
 							elif (self.pathcount == self.svgLastPath_Old ): 
 								#this path is the first *not completely* plotted path:
-								self.nodeCount =  self.svgLastPathNC_Old	#Nodecount after last completed path
+								self.nodeCount =  self.svgLastPathNC_Old	# nodeCount after last completed path
 								doWePlotThisPath = True 
 						else:
 							doWePlotThisPath = True
@@ -1073,13 +1059,19 @@ class AxiDrawClass( inkex.Effect ):
 
 	def plotPath( self, path, matTransform ):
 		'''
-		Plot the path while applying the transformation defined
-		by the matrix [matTransform].
-
-		Turn this path into a cubicsuperpath (list of beziers)...
+		Plot the path while applying the transformation defined by the matrix [matTransform].
+		- Turn this path into a cubicsuperpath (list of beziers).
+		- We also identify "even and odd" parts of the path, to decide when the pen is up and down. 
 		'''
 
 		d = path.get( 'd' )
+
+		if self.spewDebugdata:
+			inkex.errormsg( 'plotPath()\n')
+			inkex.errormsg( 'path d: ' + d)
+			if len( simplepath.parsePath( d ) ) == 0:
+				inkex.errormsg( 'path length is zero, will not be plotting this path.')
+
 		if len( simplepath.parsePath( d ) ) == 0:
 			return
 
@@ -1111,7 +1103,7 @@ class AxiDrawClass( inkex.Effect ):
 						if nIndex == 0:
 							if (plot_utils.distance(fX - self.fCurrX,fY - self.fCurrY) > axidraw_conf.MinGap):
 								self.penRaise()
-								self.plotSegmentWithVelocity( fX, fY, 0, 0)
+								self.plotSegmentWithVelocity( fX, fY, 0, 0)	# Pen up straight move, still at endpoints
 						elif nIndex == 1:
 							self.penLower() 
 						nIndex += 1
@@ -1131,15 +1123,13 @@ class AxiDrawClass( inkex.Effect ):
 		Output: A list of segments to plot, of the form (Xfinal, Yfinal, Vinitial, Vfinal)
 
 		Note: Native motor axes are Motor 1, Motor 2.
-			Motor1Steps = xSteps + ySteps
-			Motor2Steps = xSteps - ysteps
+				Motor1Steps = xSteps + ySteps
+				Motor2Steps = xSteps - ysteps
 			
 		Important note: This routine uses *inch* units (inches, inches/second, etc.). 
-		
 		'''
 		
-# 		spewTrajectoryDebugData = True
-		spewTrajectoryDebugData = False
+		spewTrajectoryDebugData = self.spewDebugdata	#Suggested settings: False or self.spewDebugdata
 		
 		if spewTrajectoryDebugData:
 			inkex.errormsg( '\nPlanTrajectory()\n')
@@ -1156,7 +1146,7 @@ class AxiDrawClass( inkex.Effect ):
 				xy[1], yBounded = plot_utils.checkLimits( xy[1], self.yBoundsMin, self.yBoundsMax )
 				if (xBounded or yBounded):
 					self.warnOutOfBounds = True
-							
+
 		#Handle simple segments (lines) that do not require any complex planning:
 		if (len(inputPath) < 3):
 			if spewTrajectoryDebugData:
@@ -1168,6 +1158,7 @@ class AxiDrawClass( inkex.Effect ):
 		TrajLength = len(inputPath)
 
 		if spewTrajectoryDebugData:
+			inkex.errormsg( 'Input path to PlanTrajectory: ')
 			for xy in inputPath:
 				inkex.errormsg( 'x: %1.2f,  y: %1.2f' %(xy[0],xy[1]))
 			inkex.errormsg( '\nTrajLength: '+str(TrajLength) + '\n')
@@ -1191,25 +1182,44 @@ class AxiDrawClass( inkex.Effect ):
 		TrajDists.append(0.0)	#First value, at time t = 0
 		TrajVels.append(0.0)	#First value, at time t = 0
 
+		lastIndex = 0
+		
+		minDist = 1.0 / self.stepsPerInch	# do not allow moves of less than 2 steps.
+		
 		for i in xrange(1, TrajLength):
 			#Distance per segment:
-			tmpDist = plot_utils.distance( inputPath[i][0] - inputPath[i - 1][0] ,
-			inputPath[i][1] - inputPath[i - 1][1] )
-			TrajDists.append(tmpDist)
+			tmpDist = plot_utils.distance(inputPath[i][0] - inputPath[lastIndex][0], inputPath[i][1] - inputPath[lastIndex][1])
 			
-			if (tmpDist == 0):
-				tmpDist = 1
-			tmpX = (inputPath[i][0] - inputPath[i - 1][0]) / tmpDist
-			tmpY = (inputPath[i][1] - inputPath[i - 1][1]) / tmpDist
-			TrajVectors.append([tmpX,tmpY])		#These are normalized unit vectors
+			if (tmpDist >= minDist):
+				TrajDists.append(tmpDist)
+				tmpX = (inputPath[i][0] - inputPath[lastIndex][0]) / tmpDist
+				tmpY = (inputPath[i][1] - inputPath[lastIndex][1]) / tmpDist
+				TrajVectors.append([tmpX,tmpY])		#Normalized unit vectors
+				lastIndex = i
+			elif spewTrajectoryDebugData:
+				inkex.errormsg( 'Zero-length segment detected' )
+
+		TrajLength = len(TrajDists)
 
 		if spewTrajectoryDebugData:
 			for dist in TrajDists:
 				inkex.errormsg( 'TrajDists: %1.3f' % dist )
 			inkex.errormsg( '\n')
 
-		#time to reach full speed (from zero), at maximum acceleration. Defined in settings:
+		#Handle zero-length plot:
+		if (TrajLength == 1):
+			if spewTrajectoryDebugData:
+				inkex.errormsg( 'No full segments to plot.')
+			return
 
+		#Handle simple segments (lines) that do not require any complex planning (after removing zero-length elements):
+		if (TrajLength < 3):
+			if spewTrajectoryDebugData:
+				inkex.errormsg( 'Drawing straight line, not a curve.')
+			self.plotSegmentWithVelocity( inputPath[lastIndex][0], inputPath[lastIndex][1], 0, 0)
+			return
+
+		# time to reach full speed (from zero), at maximum acceleration. Defined in settings:
 		if ( self.penUp ):	
 			if ( self.options.resolution == 1 ):	# High-resolution mode
 				tMax = axidraw_conf.AccelTimePUHR	#Allow faster pen-up acceleration
@@ -1361,7 +1371,7 @@ class AxiDrawClass( inkex.Effect ):
 				VcurrentMax = VjunctionMax
 				
 			TrajVels.append( VcurrentMax)	# "Forward-going" speed limit for velocity at this particular vertex.
-		TrajVels.append( 0.0 	)				# Add zero velocity, for final vertex.
+		TrajVels.append( 0.0 )				# Add zero velocity, for final vertex.
 
 		if spewTrajectoryDebugData:
 			inkex.errormsg( ' ')
@@ -1430,14 +1440,27 @@ class AxiDrawClass( inkex.Effect ):
 			or inches per second (for velocity).
 		'''	
 
-		spewSegmentDebugData = False
-# 		spewSegmentDebugData = True
+# 		spewSegmentDebugData = False
+		spewSegmentDebugData = self.spewDebugdata
 
 		if spewSegmentDebugData:
-			inkex.errormsg( '\nPlotSegment (x = %1.2f, y = %1.2f, Vi = %1.2f, Vf = %1.2f ) ' 
-			% (xDest, yDest, Vi, Vf))
+			if self.resumeMode or self.bStopped:
+				spewText = '\nSkipping '
+			else:
+				spewText = '\nExecuting '
+			spewText += 'plotSegmentWithVelocity() function\n'
+			if self.penUp:
+				spewText += '  Pen-up transit'
+			else:
+				spewText += '  Pen-down move'
+			spewText += ' from (x = %1.3f, y = %1.3f)' % (self.fCurrX, self.fCurrY)
+			spewText += ' to (x = %1.3f, y = %1.3f)\n' % (xDest, yDest)
+			spewText += '    w/ Vi = %1.2f, Vf = %1.2f ' % (Vi, Vf)
+			inkex.errormsg(spewText)
 			if self.resumeMode:	
-				inkex.errormsg( 'resumeMode is active')
+				inkex.errormsg(' -> NOTE: ResumeMode is active')
+			if self.bStopped:	
+				inkex.errormsg(' -> NOTE: Stopped by button press.')
 
 		ConstantVelMode = False
 		if (self.options.constSpeed and not self.penUp):
@@ -1472,17 +1495,16 @@ class AxiDrawClass( inkex.Effect ):
 			return
 
 		if (self.options.reportTime): #Also keep track of distance:
-			if (self.penUp):
+			if self.penUp:
 				self.penUpDistance = self.penUpDistance + plotDistance
 			else:
-				self.penDownDistance = self.penDownDistance +plotDistance
+				self.penDownDistance = self.penDownDistance + plotDistance
 
 		# Maximum travel speeds:
 		# & acceleration/deceleration rate: (Maximum speed) / (time to reach that speed)
 
 		if ( self.penUp ):	
 			speedLimit = self.penUpSpeed
-			
 			if ( self.options.resolution == 1 ):	# High-resolution mode
 				accelRate = speedLimit / axidraw_conf.AccelTimePUHR	#Allow faster pen-up acceleration
 			else:
@@ -1509,7 +1531,7 @@ class AxiDrawClass( inkex.Effect ):
 		tDecelMax = (speedLimit - finalVel) / accelRate	
 
 		if spewSegmentDebugData:
-			inkex.errormsg( 'accelRate: ' + str(accelRate) )
+			inkex.errormsg( '\naccelRate: ' + str(accelRate) )
 			inkex.errormsg( 'speedLimit: ' + str(speedLimit) )
 			inkex.errormsg( 'initialVel: ' + str(initialVel) )
 			inkex.errormsg( 'finalVel: ' + str(finalVel) )
@@ -1526,11 +1548,35 @@ class AxiDrawClass( inkex.Effect ):
 		#time slices: Slice travel into intervals that are (say) 30 ms long.
 		timeSlice = axidraw_conf.TimeSlice	#Default slice intervals
 
+
+		if self.options.previewOnly:
+			strButton = ['0']
+		else:
+			strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
+			
+		if (self.debugPause > 0):
+			if ((self.nodeCount == self.debugPause) and (self.options.mode == "plot")):
+				strButton = ['1']	# simulate pause button press at given node
+			
+		if strButton[0] == '1': #button pressed
+			self.svgNodeCount = self.nodeCount;
+			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPosX
+			self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPosY
+			self.penRaise()
+			inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
+			inkex.errormsg( 'Use the "resume" feature to continue.' )
+			self.bStopped = True
+			return	 # Note: This segment is not plotted.
+
 		self.nodeCount += 1		# This whole segment move counts as ONE pause/resume node in our plot
 		
 		if self.resumeMode:
 			if ( self.nodeCount >= (self.nodeTarget)):
 				self.resumeMode = False
+				if self.spewDebugdata:
+					inkex.errormsg( '\nRESUMING PLOT at node : ' + str(self.nodeCount) )				
+					inkex.errormsg( '\nself.virtualPenUp : ' + str(self.virtualPenUp) )				
+					inkex.errormsg( '\nself.penUp : ' + str(self.penUp) )				
 				if ( not self.virtualPenUp ):	# This is the point where we switch from virtual to real pen
 					self.penLower()	
 
@@ -1736,8 +1782,7 @@ class AxiDrawClass( inkex.Effect ):
 					else:
 						if spewSegmentDebugData:	
 							inkex.errormsg( 'Note: Skipping accel phase in triangle.')
-							
-	
+
 					if (Dintervals > 0):
 						if spewSegmentDebugData:	
 							inkex.errormsg( 'Triangle intervals Down: '+str(intervals))
@@ -1865,12 +1910,12 @@ class AxiDrawClass( inkex.Effect ):
 			prevTime = durationArray[index]
 
 			if ( moveTime < 1 ):
-				moveTime = 1		# don't allow zero-time moves.
+				moveTime = 1	# don't allow zero-time moves.
 
 			if (abs((float(moveSteps1) / float(moveTime))) < 0.002):	
-				moveSteps1 = 0		#don't allow too-slow movements of this axis
+				moveSteps1 = 0	#don't allow too-slow movements of this axis
 			if (abs((float(moveSteps2) / float(moveTime))) < 0.002):	
-				moveSteps2 = 0		#don't allow too-slow movements of this axis
+				moveSteps2 = 0	#don't allow too-slow movements of this axis
 
 			prevMotor1 += moveSteps1
 			prevMotor2 += moveSteps2
@@ -1886,7 +1931,7 @@ class AxiDrawClass( inkex.Effect ):
 		
 					if self.options.previewOnly:
 						self.ptEstimate += moveTime
-						if (self.options.previewType > 0):
+						if (self.options.previewType > 0):		# Generate preview paths
 							if (self.printPortrait):
 								xNewt = self.DocUnitScaleFactor * (self.svgWidth - fNewY)
 								yNewt = self.DocUnitScaleFactor * fNewX
@@ -1901,22 +1946,22 @@ class AxiDrawClass( inkex.Effect ):
 								if (self.options.previewType > 1): # previewType is 2 or 3. Show pen-up movement
 									if (self.pathDataPenUp != 1):
 										self.pathDataPU.append("M%0.3f %0.3f" % (xOldt, yOldt) )
+										self.pathDataPenUp = 1	# Reset pen state indicator
 									self.pathDataPU.append(" %0.3f %0.3f" % (xNewt, yNewt) )
-								self.pathDataPenUp = 1	# Reset pen state boolean, whether or not we are previewing this movement
 							else:
-								if ((self.options.previewType == 1) or (self.options.previewType == 3)): #previewType is 1 or 3. Show pen-down movement
-									if (self.pathDataPenUp == 1):
+								if ((self.options.previewType == 1) or (self.options.previewType == 3)): #If 1 or 3, show pen-down movement
+									if (self.pathDataPenUp != 0):
 										self.pathDataPD.append("M%0.3f %0.3f" % (xOldt, yOldt) )
+										self.pathDataPenUp = 0 # Reset pen state indicator
 									self.pathDataPD.append(" %0.3f %0.3f" % (xNewt, yNewt) )
-								self.pathDataPenUp = 0 # Reset pen state boolean, whether or not we are previewing this movement
 					else:
 						ebb_motion.doXYMove( self.serialPort, moveSteps2, moveSteps1, moveTime )
 						if (moveTime > 50):
 							if self.options.mode != "manual":
 								time.sleep(float(moveTime - 10)/1000.0)  #pause before issuing next command
-# 						else:
-# 							if spewSegmentDebugData:	
-# 								inkex.errormsg( 'ShortMoves: ' + str( moveTime ) + '.' )
+
+					if spewSegmentDebugData:
+						inkex.errormsg( 'XY move:({}, {}), in {} ms'.format(moveSteps1,moveSteps2,moveTime))
 
 					self.fCurrX = fNewX   # Update current position
 					self.fCurrY = fNewY		
@@ -1925,21 +1970,7 @@ class AxiDrawClass( inkex.Effect ):
 					self.svgLastKnownPosY = self.fCurrY - axidraw_conf.StartPosY	
 					#if spewSegmentDebugData:			
 					#	inkex.errormsg( '\nfCurrX,fCurrY (x = %1.2f, y = %1.2f) ' % (self.fCurrX, self.fCurrY))
-		
-		if self.options.previewOnly:
-			strButton = ['0']
-		else:
-			strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
-		if strButton[0] == '1': #button pressed
-			self.svgNodeCount = self.nodeCount - 1;
-			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPosX	#self.svgLastKnownPosX
-			self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPosY	#self.svgLastKnownPosY
-			self.penRaise()
-			inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
-			inkex.errormsg( 'Use the "resume" feature to continue.' )
-			self.bStopped = True
-			return
-		
+
 	def EnableMotors( self ):
 		''' 
 		Enable motors, set native motor resolution, and set speed scales.
@@ -1981,7 +2012,7 @@ class AxiDrawClass( inkex.Effect ):
 	
 	def penRaise( self ):
 		self.virtualPenUp = True  # Virtual pen keeps track of state for resuming plotting.
-		if ( not self.resumeMode) and (not self.penUp):	# skip if pen is already up, or if we're resuming.
+		if ( not self.resumeMode) and (self.penUp != True):	# skip if pen is already up, or if we're resuming.
 			if (self.LayerOverridePenDownHeight):
 				penDownPos = self.LayerPenDownPosition
 			else:	
@@ -2001,6 +2032,7 @@ class AxiDrawClass( inkex.Effect ):
 					if self.options.mode != "manual":
 						time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
 			self.penUp = True
+		self.pathDataPenUp = -1
 
 	def penLower( self ):
 		self.virtualPenUp = False  # Virtual pen keeps track of state for resuming plotting.
@@ -2017,7 +2049,6 @@ class AxiDrawClass( inkex.Effect ):
 				vTime += self.options.penLowerDelay	
 				if (vTime < 0): #Do not allow negative delay times
 					vTime = 0
-					
 				if self.options.previewOnly:
 					self.ptEstimate += vTime
 				else:
@@ -2026,6 +2057,7 @@ class AxiDrawClass( inkex.Effect ):
 						if self.options.mode != "manual":
 							time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
 				self.penUp = False
+		self.pathDataPenUp = -1
 
 	def ServoSetupWrapper( self ):
 		# Assert what the defined "up" and "down" positions of the servo motor should be,
