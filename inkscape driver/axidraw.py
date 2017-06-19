@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.5.4, dated June 12, 2017.
+# Version 1.5.5, dated June 18, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -1440,6 +1440,8 @@ class AxiDrawClass( inkex.Effect ):
 			or inches per second (for velocity).
 		'''	
 
+		self.PauseResumeCheck()
+			
 # 		spewSegmentDebugData = False
 		spewSegmentDebugData = self.spewDebugdata
 
@@ -1547,38 +1549,6 @@ class AxiDrawClass( inkex.Effect ):
 
 		#time slices: Slice travel into intervals that are (say) 30 ms long.
 		timeSlice = axidraw_conf.TimeSlice	#Default slice intervals
-
-
-		if self.options.previewOnly:
-			strButton = ['0']
-		else:
-			strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
-			
-		if (self.debugPause > 0):
-			if ((self.nodeCount == self.debugPause) and (self.options.mode == "plot")):
-				strButton = ['1']	# simulate pause button press at given node
-			
-		if strButton[0] == '1': #button pressed
-			self.svgNodeCount = self.nodeCount;
-			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPosX
-			self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPosY
-			self.penRaise()
-			inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
-			inkex.errormsg( 'Use the "resume" feature to continue.' )
-			self.bStopped = True
-			return	 # Note: This segment is not plotted.
-
-		self.nodeCount += 1		# This whole segment move counts as ONE pause/resume node in our plot
-		
-		if self.resumeMode:
-			if ( self.nodeCount >= (self.nodeTarget)):
-				self.resumeMode = False
-				if self.spewDebugdata:
-					inkex.errormsg( '\nRESUMING PLOT at node : ' + str(self.nodeCount) )				
-					inkex.errormsg( '\nself.virtualPenUp : ' + str(self.virtualPenUp) )				
-					inkex.errormsg( '\nself.penUp : ' + str(self.penUp) )				
-				if ( not self.virtualPenUp ):	# This is the point where we switch from virtual to real pen
-					self.penLower()	
 
 		# Declare arrays:
 		# These are _normally_ 4-byte integers, but could (theoretically) be 2-byte integers on some systems.
@@ -1971,6 +1941,46 @@ class AxiDrawClass( inkex.Effect ):
 					#if spewSegmentDebugData:			
 					#	inkex.errormsg( '\nfCurrX,fCurrY (x = %1.2f, y = %1.2f) ' % (self.fCurrX, self.fCurrY))
 
+	def PauseResumeCheck (self):
+		# Pause & Resume functionality is managed here, called (for example) while planning 
+		# a segment to plot. First check to see if the pause button has been pressed.
+		# Increment the node counter.
+		# Resume drawing if we were in resume mode and supposed to resume at this node.
+		
+		if self.bStopped:
+			return	# We have _already_ halted the plot due to a button press. No need to proceed.
+			
+		if self.options.previewOnly:
+			strButton = ['0']
+		else:
+			strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
+			
+		if (self.debugPause > 0):
+			if ((self.nodeCount == self.debugPause) and (self.options.mode == "plot")):
+				strButton = ['1']	# simulate pause button press at given node
+			
+		if strButton[0] == '1': #button pressed
+			self.svgNodeCount = self.nodeCount;
+			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPosX
+			self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPosY
+			self.penRaise()
+			inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
+			inkex.errormsg( 'Use the "resume" feature to continue.' )
+			self.bStopped = True
+			return # Note: This segment is not plotted.
+
+		self.nodeCount += 1		# This whole segment move counts as ONE pause/resume node in our plot
+		
+		if self.resumeMode:
+			if ( self.nodeCount >= (self.nodeTarget)):
+				self.resumeMode = False
+				if self.spewDebugdata:
+					inkex.errormsg( '\nRESUMING PLOT at node : ' + str(self.nodeCount) )				
+					inkex.errormsg( '\nself.virtualPenUp : ' + str(self.virtualPenUp) )				
+					inkex.errormsg( '\nself.penUp : ' + str(self.penUp) )				
+				if ( not self.virtualPenUp ):	# This is the point where we switch from virtual to real pen
+					self.penLower()	
+
 	def EnableMotors( self ):
 		''' 
 		Enable motors, set native motor resolution, and set speed scales.
@@ -2003,13 +2013,7 @@ class AxiDrawClass( inkex.Effect ):
 			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0
 		if (self.options.constSpeed):
 			self.PenDownSpeed = self.PenDownSpeed / 3
-		
-		TestArray = array('i')	#signed integer
-		if (TestArray.itemsize < 4):
-			inkex.errormsg( 'Internal array data length error. Please contact technical support.' )
-			# This is being run on a system that has a shorter length for a signed integer
-			# than we are expecting. If anyone ever comes across such a system, we need to know!
-	
+
 	def penRaise( self ):
 		self.virtualPenUp = True  # Virtual pen keeps track of state for resuming plotting.
 		if ( not self.resumeMode) and (self.penUp != True):	# skip if pen is already up, or if we're resuming.
