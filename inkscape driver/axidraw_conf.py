@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.5.2, dated March 7, 2017.
+# Version 1.5.6, dated June 21, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -81,8 +81,8 @@ adjusted in everyday use. That said, proceed with caution, and keep a backup cop
 #Page size values typically do not need to be changed. They primarily affect viewpoint and centering.
 #Measured in page pixelssteps.  Default printable area for AxiDraw is 300 x 218 mm
 
-PageWidthIn = 11.81		# Default page width in inches 	300 mm = about 11.81 inches
-PageHeightIn = 8.58		# Default page height in inches 	218 mm = about 8.58 inches
+PageWidthIn = 11.81		# Default page width in inches		300 mm = about 11.81 inches
+PageHeightIn = 8.58		# Default page height in inches		218 mm = about 8.58 inches
 
 
 #Machine resolution: Used in converting drawing size to motor steps.
@@ -95,10 +95,10 @@ StartPosX = 0			#parking position, in pixels. Default: 0
 StartPosY = 0			#parking position, in pixels. Default: 0
 
 
-#Acceleration rates and motion-control time slices:
-AccelTime = .2			#Seconds of acceleration to reach full speed WITH PEN DOWN
-AccelTimePU = .5		#Seconds of acceleration to reach full speed WITH PEN UP.
-AccelTimePUHR = .15		#Seconds of acceleration to reach full speed WITH PEN UP in slower high-res mode.
+#Acceleration periods and motion-control time slices:
+AccelTime = .2			#Seconds to reach full speed WITH PEN DOWN
+AccelTimePU = .25		#Seconds to reach full speed WITH PEN UP.
+AccelTimePUHR = .15		#Seconds to reach full speed WITH PEN UP in slower high-res mode. (Max speed is lower, so less time.)
 
 TimeSlice = 0.025		#Interval, in seconds, of when to update the motors.
 

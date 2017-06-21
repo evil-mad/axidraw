@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.5.5, dated June 18, 2017.
+# Version 1.5.6, dated June 21, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -28,7 +28,6 @@ sys.path.append('lib')
 import inkex
 from simpletransform import *
 import simplepath
-
 from math import sqrt
 from array import *
 import gettext
@@ -36,10 +35,9 @@ import serial
 import string
 import time
 
-import ebb_serial	# Requires plotink v 0.7	 https://github.com/evil-mad/plotink
+import ebb_serial	# Requires plotink v 0.8	 https://github.com/evil-mad/plotink
 import ebb_motion
 import plot_utils
-
 import axidraw_conf	#Some settings can be changed here.
 
 try:
@@ -55,7 +53,7 @@ class AxiDrawClass( inkex.Effect ):
 
 	def __init__( self ):
 		inkex.Effect.__init__( self )
-		self.versionString = "AxiDraw Control - Version 1.5.5, dated 2017-06-18"
+		self.versionString = "AxiDraw Control - Version 1.5.6, dated 2017-06-21"
 		self.spewDebugdata = False
 		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
@@ -107,8 +105,8 @@ class AxiDrawClass( inkex.Effect ):
 		self.LayerPenDownPosition = -1
 		self.LayerPenDownSpeed = -1
 
-		self.penUpDistance = 0.0
-		self.penDownDistance = 0.0
+		self.penUpDistSteps = 0.0
+		self.penDownDistSteps = 0.0
 		
 		#Values read from file:
 		self.svgLayer_Old = int( 0 )
@@ -164,7 +162,8 @@ class AxiDrawClass( inkex.Effect ):
 		self.pathDataPU = []	# pen-up path data for preview layers
 		self.pathDataPD = []	# pen-down path data for preview layers
 		self.pathDataPenUp = -1	# A value of -1 indicates an indeterminate state- requiring new "M" in path.
-
+		self.PreviewScaleFactor = 1.0 # Allow scaling in case of non-viewbox rendering
+		
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
@@ -420,9 +419,9 @@ class AxiDrawClass( inkex.Effect ):
 			return
 
 		self.DocUnits = self.getDocumentUnit()
-		userUnitsWidth = self.unittouu("1in")
-		self.DocUnitScaleFactor = self.uutounit(userUnitsWidth, self.DocUnits)	# For preview only
-
+		userUnitsWidth = plot_utils.unitsToUserUnits("1in")
+		self.DocUnitScaleFactor = plot_utils.userUnitToUnits(userUnitsWidth, self.DocUnits)
+		
 		if not self.options.previewOnly:
 			self.options.previewType = 0	# Only render previews if we are in preview mode.
 			if self.serialPort is None:
@@ -461,23 +460,24 @@ class AxiDrawClass( inkex.Effect ):
 				return
 
 		# Viewbox handling
-		# Also ignores the preserveAspectRatio attribute
+		# Ignores translations and the preserveAspectRatio attribute
+
 		viewbox = self.svg.get( 'viewBox' )
 		if viewbox:
 			vinfo = viewbox.strip().replace( ',', ' ' ).split( ' ' )
 			Offset0 = -float(vinfo[0])
 			Offset1 = -float(vinfo[1])
-			
 			if ( vinfo[2] != 0 ) and ( vinfo[3] != 0 ):
+				# TODO: Handle a wide range of viewBox formats and values
 				sx = self.svgWidth / float( vinfo[2] )
 				sy = self.svgHeight / float( vinfo[3] )
-		else:	
+		else:
 			# Handle case of no viewbox provided. 
-			# This can happen with imported documents in Inkscape.	
 			sx = 1.0 / float( plot_utils.pxPerInch)
 			sy = sx	
 			Offset0 = 0.0
-			Offset1 = 0.0
+			Offset1 = 0.0		
+
 		self.svgTransform = parseTransform( 'scale(%f,%f) translate(%f,%f)' % (sx, sy,Offset0, Offset1))
 
 		self.ServoSetup()
@@ -548,8 +548,8 @@ class AxiDrawClass( inkex.Effect ):
 				elapsed_time = time.time() - self.start_time
 				m, s = divmod(elapsed_time, 60)
 				h, m = divmod(m, 60)
-				downDist = 0.0254 * self.penDownDistance / (self.stepsPerInch * sqrt(2))
-				totDist = 0.0254 * downDist + self.penUpDistance / (self.stepsPerInch * sqrt(2))
+				downDist = 0.0254 * self.penDownDistSteps / (self.stepsPerInch * sqrt(2))
+				totDist = downDist + (0.0254 * self.penUpDistSteps / (self.stepsPerInch * sqrt(2)))
 				if self.options.previewOnly:
 					inkex.errormsg("Length of path to draw: %1.2f m." % downDist)
 					inkex.errormsg("Total movement distance: %1.2f m." % totDist)
@@ -966,7 +966,8 @@ class AxiDrawClass( inkex.Effect ):
 		
 		Secondary function: Parse characters following the layer number (if any) to see if
 		there is a "+H" or "+S" escape code, that indicates that overrides the pen-down
-		height or speed for the given layer.
+		height or speed for the given layer. We also check for the "%" leading character,
+		which indicates a layer that should be skipped.
 		"""
 
 		# Look at layer name.  Sample first character, then first two, and
@@ -1141,9 +1142,10 @@ class AxiDrawClass( inkex.Effect ):
 
 		#check page size limits:
 		if (self.ignoreLimits == False):
+			tolerance = 1 / self.stepsPerInch	#Truncate up to 1 step at boundaries without throwing an error. 
 			for xy in inputPath:
-				xy[0], xBounded = plot_utils.checkLimits( xy[0], self.xBoundsMin, self.xBoundsMax )
-				xy[1], yBounded = plot_utils.checkLimits( xy[1], self.yBoundsMin, self.yBoundsMax )
+				xy[0], xBounded = plot_utils.checkLimits( xy[0], self.xBoundsMin, self.xBoundsMax, tolerance )
+				xy[1], yBounded = plot_utils.checkLimits( xy[1], self.yBoundsMin, self.yBoundsMax, tolerance )
 				if (xBounded or yBounded):
 					self.warnOutOfBounds = True
 
@@ -1473,34 +1475,34 @@ class AxiDrawClass( inkex.Effect ):
 		if ( self.fCurrX is None ):
 			return
 
-		#check page size limits:
-		if (self.ignoreLimits == False):
-			xDest, xBounded = plot_utils.checkLimits( xDest, self.xBoundsMin, self.xBoundsMax )
-			yDest, yBounded = plot_utils.checkLimits( yDest, self.yBoundsMin, self.yBoundsMax )
+		if (self.ignoreLimits == False):	#check page size limits:
+			tolerance = 1 / self.stepsPerInch	#Truncate up to 1 step at boundaries without throwing an error. 
+			xDest, xBounded = plot_utils.checkLimits( xDest, self.xBoundsMin, self.xBoundsMax, tolerance )
+			yDest, yBounded = plot_utils.checkLimits( yDest, self.yBoundsMin, self.yBoundsMax, tolerance )
 			if (xBounded or yBounded):
 				self.warnOutOfBounds = True
 
 		# Distances to move, in motor-step units
-		xMovementIdeal = self.stepsPerInch * ( xDest - self.fCurrX )	
-		yMovementIdeal = self.stepsPerInch * ( yDest - self.fCurrY )
+		xMovementSteps = self.stepsPerInch * ( xDest - self.fCurrX )	
+		yMovementSteps = self.stepsPerInch * ( yDest - self.fCurrY )
 
 		# Velocity inputs, in motor-step units
-		initialVel =  Vi * self.stepsPerInch		#Translate from "inches per second"
-		finalVel = Vf * self.stepsPerInch		#Translate from "inches per second"
+		Vi_StepsPerSec =  Vi * self.stepsPerInch		#Translate from "inches per second"
+		Vf_StepsPerSec = Vf * self.stepsPerInch		#Translate from "inches per second"
 
 		# Look at distance to move along 45-degree axes, for native motor steps:
-		motorSteps1 = int (round(xMovementIdeal + yMovementIdeal)) # Number of native motor steps required, Axis 1
-		motorSteps2 = int (round(xMovementIdeal - yMovementIdeal)) # Number of native motor steps required, Axis 2
+		motorSteps1 = int (round(xMovementSteps + yMovementSteps)) # Number of native motor steps required, Axis 1
+		motorSteps2 = int (round(xMovementSteps - yMovementSteps)) # Number of native motor steps required, Axis 2
 
-		plotDistance = plot_utils.distance( motorSteps1, motorSteps2 )
-		if (plotDistance < 1.0): #if total movement is less than one step, skip this movement.
+		plotDistanceSteps = plot_utils.distance( motorSteps1, motorSteps2 )
+		if (plotDistanceSteps < 1.0): #if total movement is less than one step, skip this movement.
 			return
 
 		if (self.options.reportTime): #Also keep track of distance:
 			if self.penUp:
-				self.penUpDistance = self.penUpDistance + plotDistance
+				self.penUpDistSteps = self.penUpDistSteps + plotDistanceSteps
 			else:
-				self.penDownDistance = self.penDownDistance + plotDistance
+				self.penDownDistSteps = self.penDownDistSteps + plotDistanceSteps
 
 		# Maximum travel speeds:
 		# & acceleration/deceleration rate: (Maximum speed) / (time to reach that speed)
@@ -1512,40 +1514,39 @@ class AxiDrawClass( inkex.Effect ):
 			else:
 				accelRate = speedLimit / axidraw_conf.AccelTimePU	
 			
-			if plotDistance < (self.stepsPerInch * axidraw_conf.ShortThreshold):
+			if plotDistanceSteps < (self.stepsPerInch * axidraw_conf.ShortThreshold):
 				accelRate = speedLimit / axidraw_conf.AccelTime	
 				speedLimit = self.PenDownSpeed
 		else:		
 			speedLimit = self.PenDownSpeed
 			accelRate = speedLimit / axidraw_conf.AccelTime	
 			
-		if (initialVel > speedLimit):
-			initialVel = speedLimit
-		if (finalVel > speedLimit):
-			finalVel = speedLimit
+		if (Vi_StepsPerSec > speedLimit):
+			Vi_StepsPerSec = speedLimit
+		if (Vf_StepsPerSec > speedLimit):
+			Vf_StepsPerSec = speedLimit
 
 		#Times to reach maximum speed, from our initial velocity 
 		# vMax = vi + a*t  =>  t = (vMax - vi)/a
 		# vf = vMax - a*t   =>  t = -(vf - vMax)/a = (vMax - vf)/a
 		# -- These are _maximum_ values. We often do not have enough time/space to reach full speed.
 
-		tAccelMax = (speedLimit - initialVel) / accelRate
-		tDecelMax = (speedLimit - finalVel) / accelRate	
+		tAccelMax = (speedLimit - Vi_StepsPerSec) / accelRate
+		tDecelMax = (speedLimit - Vf_StepsPerSec) / accelRate	
 
 		if spewSegmentDebugData:
 			inkex.errormsg( '\naccelRate: ' + str(accelRate) )
 			inkex.errormsg( 'speedLimit: ' + str(speedLimit) )
-			inkex.errormsg( 'initialVel: ' + str(initialVel) )
-			inkex.errormsg( 'finalVel: ' + str(finalVel) )
+			inkex.errormsg( 'Vi_StepsPerSec: ' + str(Vi_StepsPerSec) )
+			inkex.errormsg( 'Vf_StepsPerSec: ' + str(Vf_StepsPerSec) )
 			inkex.errormsg( 'tAccelMax: ' + str(tAccelMax) )
 			inkex.errormsg( 'tDecelMax: ' + str(tDecelMax) )
 
-	
-		#Distance that is required to reach full speed, from our start at speed initialVel:
+		#Distance that is required to reach full speed, from our start at speed Vi_StepsPerSec:
 		# distance = vi * t + (1/2) a t^2
-		accelDistMax = ( initialVel * tAccelMax ) + ( 0.5 * accelRate * tAccelMax * tAccelMax )
+		accelDistMax = ( Vi_StepsPerSec * tAccelMax ) + ( 0.5 * accelRate * tAccelMax * tAccelMax )
 		# Use the same model for deceleration distance; modeling it with backwards motion:
-		decelDistMax = ( finalVel * tDecelMax ) + ( 0.5 * accelRate * tDecelMax * tDecelMax )
+		decelDistMax = ( Vf_StepsPerSec * tDecelMax ) + ( 0.5 * accelRate * tDecelMax * tDecelMax )
 
 		#time slices: Slice travel into intervals that are (say) 30 ms long.
 		timeSlice = axidraw_conf.TimeSlice	#Default slice intervals
@@ -1562,7 +1563,7 @@ class AxiDrawClass( inkex.Effect ):
 
 		timeElapsed = 0.0		
 		position = 0.0
-		velocity = initialVel
+		velocity = Vi_StepsPerSec
 		
 		'''
 		
@@ -1575,15 +1576,15 @@ class AxiDrawClass( inkex.Effect ):
 			We will get to full speed, with an opportunity to "coast" at full speed
 			in the middle.
 			
-		Case 2: 'Linear velocity ramp'
-			For small enough moves -- say less than 10 intervals (typ 500 ms),
-			we do not have significant time to ramp the speed up and down.
-			Instead, perform only a simple speed ramp between initial and final.
-			
-		Case 3: 'Triangle'
+		Case 2: 'Triangle'
 			Segment length is not long enough to reach full speed.
 			Accelerate from initial velocity to a local maximum speed,
 			then decelerate from that point to the final velocity.
+
+		Case 3: 'Linear velocity ramp'
+			For small enough moves -- say less than 10 intervals (typ 500 ms),
+			we do not have significant time to ramp the speed up and down.
+			Instead, perform only a simple speed ramp between initial and final.
 
 		Case 4: 'Constant velocity'
 			Use a single, constant velocity for all pen-down movements.
@@ -1598,9 +1599,9 @@ class AxiDrawClass( inkex.Effect ):
 		'''
 
 		if (ConstantVelMode == False) or ( self.penUp ):	#Allow accel when pen is up.		
-			if (plotDistance > (accelDistMax + decelDistMax + timeSlice * speedLimit)):
+			if (plotDistanceSteps > (accelDistMax + decelDistMax + timeSlice * speedLimit)):
 				''' 
-				#Case 1: 'Trapezoid'
+				Case 1: 'Trapezoid'
 				'''
 			
 				if spewSegmentDebugData:
@@ -1613,7 +1614,7 @@ class AxiDrawClass( inkex.Effect ):
 				if (intervals > 0):			
 					timePerInterval = tAccelMax / intervals			
 	
-					velocityStepSize = (speedMax - initialVel)/(intervals + 1.0)	
+					velocityStepSize = (speedMax - Vi_StepsPerSec)/(intervals + 1.0)	
 					# For six time intervals of acceleration, first interval is at velocity (max/7)
 					# 6th (last) time interval is at 6*max/7
 					# after this interval, we are at full speed.
@@ -1628,7 +1629,7 @@ class AxiDrawClass( inkex.Effect ):
 						inkex.errormsg( 'Accel intervals: '+str(intervals))
 							
 				#Add a center "coasting" speed interval IF there is time for it.
-				coastingDistance = plotDistance - (accelDistMax + decelDistMax)	
+				coastingDistance = plotDistanceSteps - (accelDistMax + decelDistMax)	
 								
 				if (coastingDistance > (timeSlice * speedMax)):
 					# There is enough time for (at least) one interval at full cruising speed.
@@ -1645,7 +1646,7 @@ class AxiDrawClass( inkex.Effect ):
 				
 				if (intervals > 0):	
 					timePerInterval = tDecelMax / intervals			
-					velocityStepSize = (speedMax - finalVel)/(intervals + 1.0)	
+					velocityStepSize = (speedMax - Vf_StepsPerSec)/(intervals + 1.0)	
 	
 					for index in xrange(0, intervals):		#Calculate deceleration phase
 						velocity -= velocityStepSize
@@ -1658,7 +1659,7 @@ class AxiDrawClass( inkex.Effect ):
 
 			else:
 				''' 
-				#Case 3: 'Triangle' 
+				Case 2: 'Triangle' 
 				
 				We will _not_ reach full cruising speed, but let's go as fast as we can!
 				
@@ -1674,7 +1675,7 @@ class AxiDrawClass( inkex.Effect ):
 				(This does assume that the segment requested is self consistent, and planned 
 				with respect to our acceleration requirements.)
 				
-				In a more detail, with short notation Vi = initialVel, Vf = finalVel, 
+				In a more detail, with short notation Vi = Vi_StepsPerSec, Vf = Vf_StepsPerSec, 
 					Amax = accelRate, Dv = (Vf - Vi)
 				
 				(i) We accelerate from Vi, at Amax to some maximum velocity Vmax.
@@ -1698,13 +1699,13 @@ class AxiDrawClass( inkex.Effect ):
 					Xd = Vf * Td + (1/2) Amax * Td^2
 					
 					Thus, the total distance covered during interval Ta + Td is given by:
-					plotDistance = Xa + Xd = Vi * Ta + (1/2) Amax * Ta^2 + Vf * Td + (1/2) Amax * Td^2
+					plotDistanceSteps = Xa + Xd = Vi * Ta + (1/2) Amax * Ta^2 + Vf * Td + (1/2) Amax * Td^2
 
 				(vi) Now substituting in Td = Ta - (Dv / Amax), we find:
-					Amax * Ta^2 + 2 * Vi * Ta + ( Vi^2 - Vf^2 )/( 2 * Amax ) - plotDistance = 0
+					Amax * Ta^2 + 2 * Vi * Ta + ( Vi^2 - Vf^2 )/( 2 * Amax ) - plotDistanceSteps = 0
 					
 					Solving this quadratic equation for Ta, we find:
-					Ta = ( sqrt(2 * Vi^2 + 2 * Vf^2 + 4 * Amax * plotDistance) - 2 * Vi ) / ( 2 * Amax )
+					Ta = ( sqrt(2 * Vi^2 + 2 * Vf^2 + 4 * Amax * plotDistanceSteps) - 2 * Vi ) / ( 2 * Amax )
 					
 					[We pick the positive root in the quadratic formula, since Ta must be positive.]
 				
@@ -1713,15 +1714,15 @@ class AxiDrawClass( inkex.Effect ):
 				
 				if spewSegmentDebugData:	
 					inkex.errormsg( '\nType 3: Triangle' )	
-				Ta = ( sqrt(2 * initialVel * initialVel + 2 * finalVel * finalVel + 4 * accelRate * plotDistance) 
-					- 2 * initialVel ) / ( 2 * accelRate )
+				Ta = ( sqrt(2 * Vi_StepsPerSec * Vi_StepsPerSec + 2 * Vf_StepsPerSec * Vf_StepsPerSec + 4 * accelRate * plotDistanceSteps) 
+					- 2 * Vi_StepsPerSec ) / ( 2 * accelRate )
 					
 				if (Ta < 0) :
 					Ta = 0
 					if spewSegmentDebugData:	
 						inkex.errormsg( 'Warning: Negative transit time computed.') #Should not happen. :)
 
-				Vmax = initialVel + accelRate * Ta
+				Vmax = Vi_StepsPerSec + accelRate * Ta
 				if spewSegmentDebugData:	
 					inkex.errormsg( 'Vmax: '+str(Vmax))
 
@@ -1729,7 +1730,7 @@ class AxiDrawClass( inkex.Effect ):
 
 				if (intervals == 0):
 					Ta = 0
-				Td = Ta - (finalVel - initialVel) / accelRate
+				Td = Ta - (Vf_StepsPerSec - Vi_StepsPerSec) / accelRate
 				Dintervals = int(math.floor(Td / timeSlice))	# Number of intervals during acceleration
 
 				if ((intervals + Dintervals) > 4):
@@ -1738,7 +1739,7 @@ class AxiDrawClass( inkex.Effect ):
 							inkex.errormsg( 'Triangle intervals UP: '+str(intervals))
 	
 						timePerInterval = Ta / intervals			
-						velocityStepSize = (Vmax - initialVel)/(intervals + 1.0)	
+						velocityStepSize = (Vmax - Vi_StepsPerSec)/(intervals + 1.0)	
 						# For six time intervals of acceleration, first interval is at velocity (max/7)
 						# 6th (last) time interval is at 6*max/7
 						# after this interval, we are at full speed.
@@ -1758,7 +1759,7 @@ class AxiDrawClass( inkex.Effect ):
 							inkex.errormsg( 'Triangle intervals Down: '+str(intervals))
 		
 						timePerInterval = Td / Dintervals			
-						velocityStepSize = (Vmax - finalVel)/(Dintervals + 1.0)	
+						velocityStepSize = (Vmax - Vf_StepsPerSec)/(Dintervals + 1.0)	
 						# For six time intervals of acceleration, first interval is at velocity (max/7)
 						# 6th (last) time interval is at 6*max/7
 						# after this interval, we are at full speed.
@@ -1774,7 +1775,7 @@ class AxiDrawClass( inkex.Effect ):
 							inkex.errormsg( 'Note: Skipping decel phase in triangle.')
 				else:	
 					''' 
-					#Case 2: 'Linear or constant velocity changes' 
+					Case 3: 'Linear or constant velocity changes' 
 					
 					Picked for segments that are shorter than 6 time slices. 
 					Linear velocity interpolation between two endpoints.
@@ -1792,10 +1793,10 @@ class AxiDrawClass( inkex.Effect ):
 					# Combining these (with same t) gives: 2 a x = (vf^2 - vi^2)  => a = (vf^2 - vi^2)/2x
 					# So long as this 'a' is less than accelRate, we can linearly interpolate in velocity.
 
-					initialVel = ( Vmax + initialVel) / 2  	#Boost initial speed for this segment
-					velocity = initialVel					#Boost initial speed for this segment
+					Vi_StepsPerSec = ( Vmax + Vi_StepsPerSec) / 2  	#Boost initial speed for this segment
+					velocity = Vi_StepsPerSec					#Boost initial speed for this segment
 
-					localAccel = (finalVel * finalVel - initialVel * initialVel)/ (2.0 * plotDistance)
+					localAccel = (Vf_StepsPerSec * Vf_StepsPerSec - Vi_StepsPerSec * Vi_StepsPerSec)/ (2.0 * plotDistanceSteps)
 					
 					if (localAccel > accelRate):
 						localAccel = accelRate
@@ -1805,12 +1806,12 @@ class AxiDrawClass( inkex.Effect ):
 						#Initial velocity = final velocity -> Skip to constant velocity routine.
 						ConstantVelMode = True
 					else:	
-						tSegment = (finalVel - initialVel) / localAccel		
+						tSegment = (Vf_StepsPerSec - Vi_StepsPerSec) / localAccel		
 							
 					intervals = int(math.floor(tSegment / timeSlice))	# Number of intervals during deceleration
 					if (intervals > 1):
 						timePerInterval = tSegment / intervals			
-						velocityStepSize = (finalVel - initialVel)/(intervals + 1.0)										
+						velocityStepSize = (Vf_StepsPerSec - Vi_StepsPerSec)/(intervals + 1.0)										
 						# For six time intervals of acceleration, first interval is at velocity (max/7)
 						# 6th (last) time interval is at 6*max/7
 						# after this interval, we are at full speed.
@@ -1823,12 +1824,12 @@ class AxiDrawClass( inkex.Effect ):
 							distArray.append(position)		#Estimated distance along direction of travel				
 					else:
 						#Short segment; Not enough time for multiple segments at different velocities. 
-						initialVel = Vmax #These are _slow_ segments-- use fastest possible interpretation.
+						Vi_StepsPerSec = Vmax #These are _slow_ segments-- use fastest possible interpretation.
 						ConstantVelMode = True
 
 		if (ConstantVelMode):
 			'''
-			#Case 4: 'Constant Velocity mode'
+			Case 4: 'Constant Velocity mode'
 			'''
 			if spewSegmentDebugData:	
 				inkex.errormsg( '-> [Constant Velocity Mode Segment]'+ '\n')	
@@ -1836,22 +1837,22 @@ class AxiDrawClass( inkex.Effect ):
 			
 			if (self.options.constSpeed and not self.penUp):
 				velocity = self.PenDownSpeed 	#Constant pen-down speed		
-			elif (finalVel > initialVel):
-				velocity = finalVel
-			elif (initialVel > finalVel):
-				velocity = initialVel	
-			elif (initialVel > 0):	#Allow case of two are equal, but nonzero	
-				velocity = initialVel	
+			elif (Vf_StepsPerSec > Vi_StepsPerSec):
+				velocity = Vf_StepsPerSec
+			elif (Vi_StepsPerSec > Vf_StepsPerSec):
+				velocity = Vi_StepsPerSec	
+			elif (Vi_StepsPerSec > 0):	#Allow case of two are equal, but nonzero	
+				velocity = Vi_StepsPerSec	
 			else: #Both endpoints are equal to zero.	
 				velocity = self.PenDownSpeed /10
 
 			if spewSegmentDebugData:	
 				inkex.errormsg( 'velocity: '+str(velocity))
 					
-			timeElapsed = plotDistance / velocity
+			timeElapsed = plotDistanceSteps / velocity
 			durationArray.append(int(round(timeElapsed * 1000.0)))
-			distArray.append(plotDistance)		#Estimated distance along direction of travel
-			position += plotDistance
+			distArray.append(plotDistanceSteps)		#Estimated distance along direction of travel
+			position += plotDistanceSteps
 			
 		''' 
 		The time & distance motion arrays for this path segment are now computed.
@@ -1861,7 +1862,7 @@ class AxiDrawClass( inkex.Effect ):
 		'''
 		
 		if spewSegmentDebugData:	
-			inkex.errormsg( 'position/plotDistance: '+str(position/plotDistance))
+			inkex.errormsg( 'position/plotDistanceSteps: '+str(position/plotDistanceSteps))
 
 		for index in xrange (0, len(distArray) ):
 			#Scale our trajectory to the "actual" travel distance that we need:
@@ -1917,13 +1918,13 @@ class AxiDrawClass( inkex.Effect ):
 									if (self.pathDataPenUp != 1):
 										self.pathDataPU.append("M%0.3f %0.3f" % (xOldt, yOldt) )
 										self.pathDataPenUp = 1	# Reset pen state indicator
-									self.pathDataPU.append(" %0.3f %0.3f" % (xNewt, yNewt) )
+									self.pathDataPU.append(" %0.3f %0.3f" % ( xNewt, yNewt) )
 							else:
 								if ((self.options.previewType == 1) or (self.options.previewType == 3)): #If 1 or 3, show pen-down movement
 									if (self.pathDataPenUp != 0):
-										self.pathDataPD.append("M%0.3f %0.3f" % (xOldt, yOldt) )
+										self.pathDataPD.append("M%0.3f %0.3f" % ( xOldt, yOldt) )
 										self.pathDataPenUp = 0 # Reset pen state indicator
-									self.pathDataPD.append(" %0.3f %0.3f" % (xNewt, yNewt) )
+									self.pathDataPD.append(" %0.3f %0.3f" % ( xNewt,  yNewt) )
 					else:
 						ebb_motion.doXYMove( self.serialPort, moveSteps2, moveSteps1, moveTime )
 						if (moveTime > 50):
@@ -2002,15 +2003,15 @@ class AxiDrawClass( inkex.Effect ):
 		if ( self.options.resolution == 1 ):
 			if not (self.options.previewOnly):
 				ebb_motion.sendEnableMotors(self.serialPort, 1) # 16X microstepping
-			self.stepsPerInch = float( axidraw_conf.DPI_16X)						
-			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 110.0
-			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0
+			self.stepsPerInch = float( axidraw_conf.DPI_16X)
+			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 110.0		#steps/second
+			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0 #steps/second
 		elif ( self.options.resolution == 2 ):
 			if not (self.options.previewOnly):
 				ebb_motion.sendEnableMotors(self.serialPort, 2) # 8X microstepping
 			self.stepsPerInch = float( axidraw_conf.DPI_16X / 2.0 )  
-			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 220.0
-			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0
+			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 220.0		#steps/second
+			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0	#steps/second
 		if (self.options.constSpeed):
 			self.PenDownSpeed = self.PenDownSpeed / 3
 
