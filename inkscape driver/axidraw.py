@@ -55,7 +55,7 @@ class AxiDrawClass( inkex.Effect ):
 
 	def __init__( self ):
 		inkex.Effect.__init__( self )
-		self.versionString = "AxiDraw Control - Version 1.5.4, dated 2017-06-12"
+		self.versionString = "AxiDraw Control - Version 1.5.5, dated 2017-06-18"
 		self.spewDebugdata = False
 		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
