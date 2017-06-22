@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.5.6, dated June 21, 2017.
+# Version 1.5.7, dated June 22, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -53,7 +53,7 @@ class AxiDrawClass( inkex.Effect ):
 
 	def __init__( self ):
 		inkex.Effect.__init__( self )
-		self.versionString = "AxiDraw Control - Version 1.5.6, dated 2017-06-21"
+		self.versionString = "AxiDraw Control - Version 1.5.7, dated 2017-06-22"
 		self.spewDebugdata = False
 		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
@@ -104,6 +104,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.LayerOverridePenDownHeight = False
 		self.LayerPenDownPosition = -1
 		self.LayerPenDownSpeed = -1
+		self.sCurrentLayerName = ''
 
 		self.penUpDistSteps = 0.0
 		self.penDownDistSteps = 0.0
@@ -595,11 +596,13 @@ class AxiDrawClass( inkex.Effect ):
 
 			if node.tag == inkex.addNS( 'g', 'svg' ) or node.tag == 'g':
 
+				oldLayerName = self.sCurrentLayerName
 				if ( node.get( inkex.addNS( 'groupmode', 'inkscape' ) ) == 'layer' ): 
 					self.sCurrentLayerName = node.get( inkex.addNS( 'label', 'inkscape' ) )
 					self.DoWePlotLayer(self.sCurrentLayerName )
 					self.penRaise()
-				self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )		
+				self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )
+				self.sCurrentLayerName = oldLayerName	# Recall saved layer name after plotting deeper layer
 
 			elif node.tag == inkex.addNS( 'use', 'svg' ) or node.tag == 'use':
 
@@ -906,9 +909,13 @@ class AxiDrawClass( inkex.Effect ):
 				elif (node.tag == inkex.addNS( 'text', 'svg' ) or node.tag == 'text' or
 					node.tag == inkex.addNS( 'flowRoot', 'svg' ) or node.tag == 'flowRoot'):
 					if ('text' not in self.warnings) and (self.plotCurrentLayer):
-						inkex.errormsg( gettext.gettext( 'Note: This file contains some plain text, found in a \nlayer named: "' + 
-							self.sCurrentLayerName + '" .\n' +
-							'Please convert your text into paths before drawing,  \n' +
+						if (self.sCurrentLayerName == ''):
+							tempText = '.'
+						else:
+							tempText = ', found in a \nlayer named: "' + self.sCurrentLayerName + '" .'
+						inkex.errormsg( gettext.gettext( 'Note: This file contains some plain text' +
+							tempText +
+							'\nPlease convert your text into paths before drawing,  \n' +
 							'using Path > Object to Path. \n' +
 							'You can also create new text by using Hershey Text,\n' +
 							'located in the menu at Extensions > Render.' ) )
@@ -916,8 +923,12 @@ class AxiDrawClass( inkex.Effect ):
 					continue
 				elif node.tag == inkex.addNS( 'image', 'svg' ) or node.tag == 'image':
 					if ('image' not in self.warnings) and (self.plotCurrentLayer):
-						inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
-						self.sCurrentLayerName + '" unable to draw bitmap images; ' +
+						if (self.sCurrentLayerName == ''):
+							tempText = ''
+						else:
+							tempText = ' in layer "' + self.sCurrentLayerName + '"'
+						inkex.errormsg( gettext.gettext( 'Warning:' + tempText + 
+						' unable to draw bitmap images; ' +
 						'Please convert images to line art before drawing. ' +
 						' Consider using the Path > Trace bitmap tool. ' ) )
 						self.warnings['image'] = 1
