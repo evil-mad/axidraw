@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.5.6, dated June 21, 2017.
+# Version 1.5.8, dated June 25, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -86,29 +86,32 @@ PageHeightIn = 8.58		# Default page height in inches		218 mm = about 8.58 inches
 
 
 #Machine resolution: Used in converting drawing size to motor steps.
-DPI_16X = 2032			#DPI ("dots per inch") @ 16X microstepping.  Standard value: 2032, or 80 steps per mm.  
+DPI_16X = 2032			# DPI ("dots per inch") @ 16X microstepping. Standard value: 2032, or 80 steps per mm. 
+						# This is an exact number, but note that it refers to derived distance along X/Y directions.
+						# The "true" resolution along the native axes (Motor 1, Motor 2) is actually higher than this,
+						# at 2032 * sqrt(2) steps per inch, or about 2873.7 steps/inch.
 
-SpeedScale = 24950		#Maximum (110%) speed, in steps per second. 
+SpeedScale = 24950		# Maximum (110%) speed, in steps per second. 
 						# Note that 25 kHz is the absolute maximum speed (steps per second) for the EBB.
 
-StartPosX = 0			#parking position, in pixels. Default: 0
-StartPosY = 0			#parking position, in pixels. Default: 0
+StartPosX = 0			# Parking position, in pixels. Default: 0
+StartPosY = 0			# Parking position, in pixels. Default: 0
 
 
 #Acceleration periods and motion-control time slices:
-AccelTime = .2			#Seconds to reach full speed WITH PEN DOWN
-AccelTimePU = .25		#Seconds to reach full speed WITH PEN UP.
-AccelTimePUHR = .15		#Seconds to reach full speed WITH PEN UP in slower high-res mode. (Max speed is lower, so less time.)
+AccelTime = .2			# Seconds to reach full speed WITH PEN DOWN
+AccelTimePU = .25		# Seconds to reach full speed WITH PEN UP.
+AccelTimePUHR = .15		# Seconds to reach full speed WITH PEN UP in slower high-res mode. (Max speed is lower, so less time.)
 
-TimeSlice = 0.025		#Interval, in seconds, of when to update the motors.
+TimeSlice = 0.025		# Interval, in seconds, of when to update the motors.
 
 #Short-move pen-up distance threshold, below which we use the faster pen-down acceleration rate:
-ShortThreshold = 1.0	#Distance Threshold (inches)
+ShortThreshold = 1.0	# Distance Threshold (inches)
 
 #Skip pen-up moves shorter than this distance, when possible:
-MinGap = 0.010			#Distance Threshold (inches)
+MinGap = 0.010			# Distance Threshold (inches)
 
 # Servo Setup:
-ServoMax = 28000		#Highest allowed position; "100%" on the scale
-ServoMin = 7500			#Lowest allowed position; "0%" on the scale
+ServoMax = 28000		# Highest allowed position; "100%" on the scale
+ServoMin = 7500			# Lowest allowed position; "0%" on the scale
 
