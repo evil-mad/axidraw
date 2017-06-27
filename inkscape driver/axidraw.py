@@ -1256,12 +1256,12 @@ class AxiDrawClass( inkex.Effect ):
 				trimmedPath.append([tmpX,tmpY])		# Selected, usable portions of inputPath.
 
 				if spewTrajectoryDebugData:
- 					inkex.errormsg( '\nSegment: inputPath[%1.0f] -> inputPath[%1.0f]' %(lastIndex,i))
- 					inkex.errormsg( 'Destination: x: %1.3f,  y: %1.3f. Move distance: %1.3f' %(tmpX,tmpY,tmpDist))
+					inkex.errormsg( '\nSegment: inputPath[%1.0f] -> inputPath[%1.0f]' %(lastIndex,i))
+					inkex.errormsg( 'Destination: x: %1.3f,  y: %1.3f. Move distance: %1.3f' %(tmpX,tmpY,tmpDist))
 				lastIndex = i
 			elif spewTrajectoryDebugData:
 				inkex.errormsg( '\nSegment: inputPath[%1.0f] -> inputPath[%1.0f] is zero length!' %(lastIndex,i))
- 				inkex.errormsg( '  x: %1.3f,  y: %1.3f, distance: %1.3f' %(inputPath[i][0],inputPath[i][1],tmpDist))
+				inkex.errormsg( '  x: %1.3f,  y: %1.3f, distance: %1.3f' %(inputPath[i][0],inputPath[i][1],tmpDist))
 
 		TrajLength = len(TrajDists)
 	
