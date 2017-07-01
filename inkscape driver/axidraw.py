@@ -1275,7 +1275,7 @@ class AxiDrawClass( inkex.Effect ):
 		if (TrajLength < 3):
 			if spewTrajectoryDebugData:
 				inkex.errormsg( '\nDrawing straight line, not a curve.')
-			self.plotSegmentWithVelocity( trimmedPath[lastIndex][0], trimmedPath[lastIndex][1], 0, 0)
+			self.plotSegmentWithVelocity( trimmedPath[0][0], trimmedPath[0][1], 0, 0)
 			return
 
 		if spewTrajectoryDebugData:
