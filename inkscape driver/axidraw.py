@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.5.8, dated June 25, 2017.
+# Version 1.5.9, dated August 9, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -28,7 +28,7 @@ sys.path.append('lib')
 import inkex
 from simpletransform import *
 import simplepath
-from math import sqrt
+import math
 from array import *
 import gettext
 import serial
@@ -53,7 +53,7 @@ class AxiDrawClass( inkex.Effect ):
 
 	def __init__( self ):
 		inkex.Effect.__init__( self )
-		self.versionString = "AxiDraw Control - Version 1.5.8, dated 2017-06-25"
+		self.versionString = "AxiDraw Control - Version 1.5.9, dated 2017-08-09"
 		self.spewDebugdata = False
 		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
@@ -144,12 +144,17 @@ class AxiDrawClass( inkex.Effect ):
 		
 		self.svgTransform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
 		
-		self.stepsPerInch = 0 # must be set to a nonzero value before plotting.
-		self.PenDownSpeed = axidraw_conf.PenDownSpeed * axidraw_conf.SpeedScale #Default speed when pen is down		
-		self.penUpSpeed = 0.75 * axidraw_conf.SpeedScale #Default speed when pen is down	
+		self.stepsPerInch = 0 # must be set to a nonzero value before plotting.  Steps along native motor axis.
+		self.stepsPerInchXY = self.stepsPerInch		# Steps along XY axes
+		
+		self.PenDownSpeed = axidraw_conf.PenDownSpeed * axidraw_conf.SpeedScale / 110.0 #Default XY speed when pen is down		
+		self.penUpSpeed = axidraw_conf.PenUpSpeed * axidraw_conf.SpeedScale / 110.0 #Default XY speed when pen is down	
+
+
 
 		self.DocUnits = "in"
 		self.DocUnitScaleFactor = 1
+		self.sq2 = math.sqrt(2.0)
 
 		# So that we only generate a warning once for each
 		# unsupported SVG element, we use a dictionary to track
@@ -167,7 +172,9 @@ class AxiDrawClass( inkex.Effect ):
 		
 		self.velDataPlot = False
 		self.velDataTime = 0
-		self.velDataChart = []	# Velocity visualization, for preview of velocity vs time
+		self.velDataChart1 = []	# Velocity visualization, for preview of velocity vs time Motor 1
+		self.velDataChart2 = []	# Velocity visualization, for preview of velocity vs time Motor 2
+		self.velDataChartT = []	# Velocity visualization, for preview of velocity vs time Total V
 
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
@@ -219,7 +226,7 @@ class AxiDrawClass( inkex.Effect ):
 			self.plotCurrentLayer = True
 			self.svgNodeCount = 0
 			self.svgLastPath = 0
-			self.svgLayer = 12345;  # indicate (to resume routine) that we are plotting all layers.
+			self.svgLayer = 12345  # indicate (to resume routine) that we are plotting all layers.
 			self.plotDocument()
 
 		elif self.options.mode == "resume":
@@ -244,7 +251,7 @@ class AxiDrawClass( inkex.Effect ):
 			self.plotCurrentLayer = False
 			self.LayersFoundToPlot = False
 			self.svgLastPath = 0
-			self.svgNodeCount = 0;
+			self.svgNodeCount = 0
 			self.svgLayer = self.options.layerNumber
 			self.plotDocument()
 
@@ -407,20 +414,31 @@ class AxiDrawClass( inkex.Effect ):
 			fY = self.fCurrY + nDeltaY   #       New position is not saved, and may interfere with (e.g.,) resuming plots.
 			self.plotSegmentWithVelocity( fX, fY, 0, 0)
 
+	def updateVCharts( self, v1, v2, vT):		
+		#Update velocity charts, using some appropriate scaling for X and Y display.
+		self.velDataChart1.append(" %0.3f %0.3f" % (self.velDataTime/1000.0, 8.5 - v1/10.0) )
+		self.velDataChart2.append(" %0.3f %0.3f" % (self.velDataTime/1000.0, 8.5 - v2/10.0) )
+		self.velDataChartT.append(" %0.3f %0.3f" % (self.velDataTime/1000.0, 8.5 - vT/10.0) )
+
+	def vChartMoveTo( self):		
+		#Use a moveto statement
+		self.velDataChart1.append("M")
+		self.velDataChart2.append("M")
+		self.velDataChartT.append("M")
+
+
 	def plotDocument( self ):
 		# Plot the actual SVG document, if so selected in the interface
 		# parse the svg data as a series of line segments and send each segment to be plotted
 		
 		if (not self.getDocProps()):
-			# Cannot handle the document's dimensions!!!
-			inkex.errormsg( gettext.gettext(
-			'This document does not have valid dimensions.\r' +
-			'The document dimensions must be in either' +
-			'millimeters (mm) or inches (in).\r\r'	+			
-			'Consider starting with the "Letter landscape" or ' +
-			'the "A4 landscape" template.\r\r' +
-			'Document dimensions may also be set in Inkscape,\r' +
-			'using File > Document Properties.') )
+			# Error: This document appears to have inappropriate (or missing) dimensions.
+			inkex.errormsg( gettext.gettext('This document does not have valid dimensions.\r'))
+			inkex.errormsg( gettext.gettext('The document dimensions must be in either millimeters (mm) or inches (in).\r\r'))
+			inkex.errormsg( gettext.gettext('Consider starting with the Letter landscape or '))
+			inkex.errormsg( gettext.gettext('the A4 landscape template.\r\r'))
+			inkex.errormsg( gettext.gettext('Document dimensions may also be set in Inkscape,\r'))
+			inkex.errormsg( gettext.gettext('using File > Document Properties.'))
 			return
 
 		self.DocUnits = self.getDocumentUnit()
@@ -429,6 +447,7 @@ class AxiDrawClass( inkex.Effect ):
 		
 		if not self.options.previewOnly:
 			self.options.previewType = 0	# Only render previews if we are in preview mode.
+			velDataPlot = False
 			if self.serialPort is None:
 				return
 			unused = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
@@ -542,16 +561,33 @@ class AxiDrawClass( inkex.Effect ):
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 				if ((self.options.previewType > 0) and self.velDataPlot):	# Preview enabled & do velocity Plot
-					self.velDataChart.insert(0, "M") 
-					style = { 'stroke': 'black', 'stroke-width': strokeWidthConverted, 'fill': 'none' } 
+					self.velDataChart1.insert(0, "M") 
+					self.velDataChart2.insert(0, "M") 
+					self.velDataChartT.insert(0, "M") 
+					
+					style = { 'stroke': 'black', 'stroke-width': 0.2 * strokeWidthConverted, 'fill': 'none' } 
 					path_attrs = {
 						'style': simplestyle.formatStyle( style ),
-						'd': " ".join(self.velDataChart),
-						inkex.addNS( 'desc', nsPrefix ): "pen-down drawing" }
+						'd': " ".join(self.velDataChartT),
+						inkex.addNS( 'desc', nsPrefix ): "Total V" }
 					PDpath = inkex.etree.SubElement(self.previewLayer,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
+					style = { 'stroke': 'red', 'stroke-width': 0.2 * strokeWidthConverted, 'fill': 'none' } 
+					path_attrs = {
+						'style': simplestyle.formatStyle( style ),
+						'd': " ".join(self.velDataChart1),
+						inkex.addNS( 'desc', nsPrefix ): "Motor 1 V" }
+					PDpath = inkex.etree.SubElement(self.previewLayer,
+						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
+					style = { 'stroke': 'green', 'stroke-width': 0.2 * strokeWidthConverted, 'fill': 'none' } 
+					path_attrs = {
+						'style': simplestyle.formatStyle( style ),
+						'd': " ".join(self.velDataChart2),
+						inkex.addNS( 'desc', nsPrefix ): "Motor 2 V" }
+					PDpath = inkex.etree.SubElement(self.previewLayer,
+						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 			if (self.options.reportTime):
 				if self.options.previewOnly:
@@ -565,8 +601,6 @@ class AxiDrawClass( inkex.Effect ):
 				elapsed_time = time.time() - self.start_time
 				m, s = divmod(elapsed_time, 60)
 				h, m = divmod(m, 60)
-# 				downDist = 0.0254 * self.penDownDistSteps / (self.stepsPerInch * sqrt(2))
-# 				totDist = downDist + (0.0254 * self.penUpDistSteps / (self.stepsPerInch * sqrt(2)))
 				downDist = 0.0254 * self.penDownDistSteps / (self.stepsPerInch)
 				totDist = downDist + (0.0254 * self.penUpDistSteps / (self.stepsPerInch))
 				if self.options.previewOnly:
@@ -819,7 +853,7 @@ class AxiDrawClass( inkex.Effect ):
 						for i in range( 1, len( pa ) ):
 							d += " L " + pa[i]
 						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
-						newpath.set( 'd', d );
+						newpath.set( 'd', d )
 						s = node.get( 'style' )
 						if s:
 							newpath.set( 'style', s )
@@ -863,7 +897,7 @@ class AxiDrawClass( inkex.Effect ):
 							d += " L " + pa[i]
 						d += " Z"
 						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
-						newpath.set( 'd', d );
+						newpath.set( 'd', d )
 						s = node.get( 'style' )
 						if s:
 							newpath.set( 'style', s )
@@ -924,7 +958,7 @@ class AxiDrawClass( inkex.Effect ):
 								'A %f,%f ' % ( rx, ry ) + \
 								'0 1 0 %f,%f' % ( x1, cy )
 							newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
-							newpath.set( 'd', d );
+							newpath.set( 'd', d )
 							s = node.get( 'style' )
 							if s:
 								newpath.set( 'style', s )
@@ -954,12 +988,11 @@ class AxiDrawClass( inkex.Effect ):
 							tempText = '.'
 						else:
 							tempText = ', found in a \nlayer named: "' + self.sCurrentLayerName + '" .'
-						inkex.errormsg( gettext.gettext( 'Note: This file contains some plain text' +
-							tempText +
-							'\nPlease convert your text into paths before drawing,  \n' +
-							'using Path > Object to Path. \n' +
-							'You can also create new text by using Hershey Text,\n' +
-							'located in the menu at Extensions > Render.' ) )
+						inkex.errormsg( gettext.gettext( 'Note: This file contains some plain text' + tempText))
+						inkex.errormsg( gettext.gettext( 'Please convert your text into paths before drawing,'))
+						inkex.errormsg( gettext.gettext( 'using Path > Object to Path. '))
+						inkex.errormsg( gettext.gettext( 'You can also create new text by using Hershey Text,' ))
+						inkex.errormsg( gettext.gettext( 'located in the menu at Extensions > Render.' ))
 						self.warnings['text'] = 1
 					continue
 				elif node.tag == inkex.addNS( 'image', 'svg' ) or node.tag == 'image':
@@ -968,10 +1001,10 @@ class AxiDrawClass( inkex.Effect ):
 							tempText = ''
 						else:
 							tempText = ' in layer "' + self.sCurrentLayerName + '"'
-						inkex.errormsg( gettext.gettext( 'Warning:' + tempText + 
-						' unable to draw bitmap images; ' +
-						'Please convert images to line art before drawing. ' +
-						' Consider using the Path > Trace bitmap tool. ' ) )
+						inkex.errormsg( gettext.gettext( 'Warning:' + tempText))
+						inkex.errormsg( gettext.gettext( 'unable to draw bitmap images; ' ))
+						inkex.errormsg( gettext.gettext( 'Please convert images to line art before drawing. ' ))
+						inkex.errormsg( gettext.gettext( 'Consider using the Path > Trace bitmap tool. ' ))
 						self.warnings['image'] = 1
 					continue
 				elif node.tag == inkex.addNS( 'pattern', 'svg' ) or node.tag == 'pattern':
@@ -1156,7 +1189,7 @@ class AxiDrawClass( inkex.Effect ):
 						if nIndex == 0:
 							if (plot_utils.distance(fX - self.fCurrX,fY - self.fCurrY) > axidraw_conf.MinGap):
 								self.penRaise()
-								self.plotSegmentWithVelocity( fX, fY, 0, 0)	# Pen up straight move, still at endpoints
+								self.plotSegmentWithVelocity( fX, fY, 0, 0)	# Pen up straight move, zero velocity at endpoints
 						elif nIndex == 1:
 							self.penLower() 
 						nIndex += 1
@@ -1173,12 +1206,15 @@ class AxiDrawClass( inkex.Effect ):
 		'''
 		Plan the trajectory for a full path, accounting for linear acceleration.
 		Inputs: Ordered (x,y) pairs to cover.
-		Output: A list of segments to plot, of the form (Xfinal, Yfinal, Vinitial, Vfinal)
+		Old output: A list of segments to plot, of the form (Xfinal, Yfinal, Vinitial, Vfinal)
+		New output: A list of segments to plot, of the form (Xfinal, Yfinal, Vix, Viy, Vfx,Vfy)
 
-		Note: Native motor axes are Motor 1, Motor 2.
-				Motor1Steps = xSteps + ySteps
-				Motor2Steps = xSteps - ysteps
-			
+		Note: Native motor axes are Motor 1, Motor 2:
+
+		motorSteps1 = ( xMovementSteps + yMovementSteps ) / sqrt(2) # Number of native motor steps required, Axis 1
+		motorSteps2 = ( xMovementSteps - yMovementSteps ) / sqrt(2) # Number of native motor steps required, Axis 2
+
+		
 		Important note: This routine uses *inch* units (inches, inches/second, etc.). 
 		'''
 		
@@ -1194,10 +1230,10 @@ class AxiDrawClass( inkex.Effect ):
 
 		#check page size limits:
 		if (self.ignoreLimits == False):
-			tolerance = 1 / self.stepsPerInch	#Truncate up to 1 step at boundaries without throwing an error. 
+			tolerance = 2 / self.stepsPerInchXY	#Truncate up to 2 steps at boundaries without throwing an error. 
 			for xy in inputPath:
-				xy[0], xBounded = plot_utils.checkLimits( xy[0], self.xBoundsMin, self.xBoundsMax, tolerance )
-				xy[1], yBounded = plot_utils.checkLimits( xy[1], self.yBoundsMin, self.yBoundsMax, tolerance )
+				xy[0], xBounded = plot_utils.checkLimitsTol( xy[0], self.xBoundsMin, self.xBoundsMax, tolerance )
+				xy[1], yBounded = plot_utils.checkLimitsTol( xy[1], self.yBoundsMin, self.yBoundsMax, tolerance )
 				if (xBounded or yBounded):
 					self.warnOutOfBounds = True
 
@@ -1219,18 +1255,20 @@ class AxiDrawClass( inkex.Effect ):
 
 		#Absolute maximum and minimum speeds allowed: 
 
-		#Values such as PenUpSpeed are in units of _steps per second_.  
+		#Values such as PenUpSpeed are in units of _steps per second_ along native axes
 		# However, to simplify our kinematic calculations, 
 		# we will switch into inches per second. 
 
 		# Maximum travel speed
 		if ( self.penUp ):	
-			speedLimit = self.penUpSpeed  / self.stepsPerInch	# Units of speedLimit: inches/second
+			speedLimit = self.penUpSpeed  / self.stepsPerInchXY	# Units of speedLimit: inches/second
 		else:		
-			speedLimit = self.PenDownSpeed  / self.stepsPerInch
+			speedLimit = self.PenDownSpeed  / self.stepsPerInchXY
 
 		TrajDists = array('f')	 #float, Segment length (distance) when arriving at the junction
-		TrajVels = array('f')	 #float, Velocity when arriving at the junction
+		TrajVels = array('f')	 #float, Velocity (_speed_, really) when arriving at the junction
+
+		
 		TrajVectors = []		#Array that will hold normalized unit vectors along each segment
 
 		trimmedPath = []		#Array that will hold usable segments of inputPath
@@ -1238,18 +1276,22 @@ class AxiDrawClass( inkex.Effect ):
 		TrajDists.append(0.0)	#First value, at time t = 0
 		TrajVels.append(0.0)	#First value, at time t = 0
 
-		minDist = 1.0 / self.stepsPerInch	# do not allow moves of less than 1 step.
+		minDist = 1.0 / self.stepsPerInchXY	# do not allow moves of less than 1 step.
 
 		lastIndex = 0
 		for i in xrange(1, TrajLength):
-			#Distance per segment:
-			tmpDist = plot_utils.distance(inputPath[i][0] - inputPath[lastIndex][0], inputPath[i][1] - inputPath[lastIndex][1])
+			#Construct basic arrays of position and distances, skipping zero-length segments.
+		
+			#Distance per segment:	
+			tmpDistX = inputPath[i][0] - inputPath[lastIndex][0]
+			tmpDistY = inputPath[i][1] - inputPath[lastIndex][1]
+			
+			tmpDist = plot_utils.distance(tmpDistX, tmpDistY)
 			
 			if (tmpDist >= minDist):
 				TrajDists.append(tmpDist)
-				tmpX = (inputPath[i][0] - inputPath[lastIndex][0]) / tmpDist
-				tmpY = (inputPath[i][1] - inputPath[lastIndex][1]) / tmpDist
-				TrajVectors.append([tmpX,tmpY])		#Normalized unit vectors for computing cosine factor
+
+				TrajVectors.append([tmpDistX / tmpDist,tmpDistY / tmpDist])		#Normalized unit vectors for computing cosine factor
 				
 				tmpX = inputPath[i][0]
 				tmpY = inputPath[i][1]
@@ -1260,7 +1302,7 @@ class AxiDrawClass( inkex.Effect ):
 					inkex.errormsg( 'Destination: x: %1.3f,  y: %1.3f. Move distance: %1.3f' %(tmpX,tmpY,tmpDist))
 				lastIndex = i
 			elif spewTrajectoryDebugData:
-				inkex.errormsg( '\nSegment: inputPath[%1.0f] -> inputPath[%1.0f] is zero length!' %(lastIndex,i))
+				inkex.errormsg( '\nSegment: inputPath[%1.0f] -> inputPath[%1.0f] is zero (or near zero); skipping!' %(lastIndex,i))
 				inkex.errormsg( '  x: %1.3f,  y: %1.3f, distance: %1.3f' %(inputPath[i][0],inputPath[i][1],tmpDist))
 
 		TrajLength = len(TrajDists)
@@ -1335,13 +1377,16 @@ class AxiDrawClass( inkex.Effect ):
 		
 		(A) For the first point, V(i = 0) = 0.
 
-		(B) For the last point point, Vi = 0 as well.
+		(B) For the last point point, V = 0 as well.
 		
 		(C) If the length of the segment is greater than the distance 
 		required to reach full speed, then the vertex velocity may be as 
 		high as the maximum speed.
 		
-		(D) However, if the length of the segment is less than the total distance
+		Note that we must actually check not the total *speed* but the acceleration
+		along the two native motor axes.
+		
+		(D) If not; if the length of the segment is less than the total distance
 		required to get to full speed, then the velocity at that vertex
 		is limited by to the value that can be reached from the initial
 		starting velocity, in the distance given.
@@ -1377,6 +1422,11 @@ class AxiDrawClass( inkex.Effect ):
 		
 		for i in xrange(1, TrajLength - 1):
 			Dcurrent = TrajDists[i]		# Length of the segment leading up to this vertex
+
+# 			DcurrentX = TrajDists[i]		# Length of the segment leading up to this vertex
+# 			DcurrentX = TrajDists[i]		# Length of the segment leading up to this vertex
+
+			
 			VPrevExit = TrajVels[i-1]	# Velocity when leaving previous vertex
 
 			'''
@@ -1421,18 +1471,12 @@ class AxiDrawClass( inkex.Effect ):
 			a sign inversion. [cos(pi - theta) = - cos(theta)]
 			'''
 			
-			cosineFactor = - plot_utils.dotProductXY(TrajVectors[i - 1],TrajVectors[i]) 
+			cosineFactor = plot_utils.dotProductXY(TrajVectors[i - 1],TrajVectors[i]) 
 
-			if spewTrajectoryDebugData:
-				CosinePrintArray.append(cosineFactor) 
-
-			rootFactor = sqrt((1 - cosineFactor)/2)
-			denominator =  1 - rootFactor
-			if (denominator > 0.0001):
-				Rfactor = (delta * rootFactor) / denominator
-			else:	
-				Rfactor = 100000
-			VjunctionMax = sqrt(accelRate * Rfactor)
+			if (cosineFactor < 0):
+				VjunctionMax = 0
+			else:
+				VjunctionMax = speedLimit * 0.1 + 0.9 * cosineFactor 
 			
 			if (VcurrentMax > VjunctionMax):
 				VcurrentMax = VjunctionMax
@@ -1492,10 +1536,10 @@ class AxiDrawClass( inkex.Effect ):
 # 				inkex.errormsg( 'TrajVels[i]: %1.3f' %(TrajVels[i]))
 # 				inkex.errormsg( 'TrajVels[i+1]: %1.3f\n' %(TrajVels[i+1]))
 
-		for i in xrange(0, TrajLength - 1):			
+		for i in xrange(0, TrajLength - 1):		
 			self.plotSegmentWithVelocity( trimmedPath[i][0] , trimmedPath[i][1] ,TrajVels[i] , TrajVels[i+1])
 
-	def plotSegmentWithVelocity( self, xDest, yDest, Vi, Vf  ):
+	def plotSegmentWithVelocity( self, xDest, yDest, Vi, Vf ):
 		''' 
 		Control the serial port to command the machine to draw
 		a straight line segment, with basic acceleration support. 
@@ -1513,11 +1557,15 @@ class AxiDrawClass( inkex.Effect ):
 		
 		Inputs are expected be in units of inches (for distance) 
 			or inches per second (for velocity).
+			
+		Previous input: A list of segments to plot, of the form (Xfinal, Yfinal, Vinitial, Vfinal)
+		New input: A list of segments to plot, of the form (Xfinal, Yfinal, Vix, Viy, Vfx,Vfy)	
+			
 		'''	
-
+		
 		self.PauseResumeCheck()
 			
-# 		spewSegmentDebugData = False
+		spewSegmentDebugData = False
 		spewSegmentDebugData = self.spewDebugdata
 
 		if spewSegmentDebugData:
@@ -1549,23 +1597,27 @@ class AxiDrawClass( inkex.Effect ):
 			return
 
 		if (self.ignoreLimits == False):	#check page size limits:
-			tolerance = 1 / self.stepsPerInch	#Truncate up to 1 step at boundaries without throwing an error. 
-			xDest, xBounded = plot_utils.checkLimits( xDest, self.xBoundsMin, self.xBoundsMax, tolerance )
-			yDest, yBounded = plot_utils.checkLimits( yDest, self.yBoundsMin, self.yBoundsMax, tolerance )
+			tolerance = 1 / self.stepsPerInchXY	#Truncate up to 1 step at boundaries without throwing an error. 
+			xDest, xBounded = plot_utils.checkLimitsTol( xDest, self.xBoundsMin, self.xBoundsMax, tolerance )
+			yDest, yBounded = plot_utils.checkLimitsTol( yDest, self.yBoundsMin, self.yBoundsMax, tolerance )
 			if (xBounded or yBounded):
 				self.warnOutOfBounds = True
 
-		# Distances to move, in motor-step units
-		xMovementSteps = self.stepsPerInch * ( xDest - self.fCurrX )	
-		yMovementSteps = self.stepsPerInch * ( yDest - self.fCurrY )
 
-		# Velocity inputs, in motor-step units
-		Vi_StepsPerSec =  Vi * self.stepsPerInch		#Translate from "inches per second"
+		deltaXinches =  xDest - self.fCurrX
+		deltaYinches =  yDest - self.fCurrY
+
+		# Velocity inputs, in motor-step units.  Recall that self.stepsPerInch is in motor-step units
+		
+		Vi_StepsPerSec = Vi * self.stepsPerInch		#Translate from "inches per second"
 		Vf_StepsPerSec = Vf * self.stepsPerInch		#Translate from "inches per second"
 
+		# self.stepsPerInch = float( axidraw_conf.DPI_16X * self.sq2)
+
 		# Look at distance to move along 45-degree axes, for native motor steps:
-		motorSteps1 = int( round( ( xMovementSteps + yMovementSteps ) / sqrt(2) ) ) # Number of native motor steps required, Axis 1
-		motorSteps2 = int( round( ( xMovementSteps - yMovementSteps ) / sqrt(2) ) ) # Number of native motor steps required, Axis 2
+		# Recall that stepsPerInch gives  _native motor steps_ per inch of travel along native axes.
+		motorSteps1 = int( round( self.stepsPerInch * ( deltaXinches + deltaYinches ) / self.sq2 ) ) # Number of native motor steps required, Axis 1
+		motorSteps2 = int( round( self.stepsPerInch * ( deltaXinches - deltaYinches ) / self.sq2 ) ) # Number of native motor steps required, Axis 2
 
 		plotDistanceSteps = plot_utils.distance( motorSteps1, motorSteps2 )
 		if (plotDistanceSteps < 1.0): #if total movement is less than one step, skip this movement.
@@ -1573,8 +1625,8 @@ class AxiDrawClass( inkex.Effect ):
 
 
 		if spewSegmentDebugData:
-			inkex.errormsg( '\nxMovementSteps: ' + str(xMovementSteps) )
-			inkex.errormsg( 'yMovementSteps: ' + str(yMovementSteps) )
+			inkex.errormsg( '\n deltaYinches: ' + str(deltaXinches) )
+			inkex.errormsg( 'deltaYinches: ' + str(deltaYinches) )
 			inkex.errormsg( 'motorSteps1: ' + str(motorSteps1) )
 			inkex.errormsg( 'motorSteps2: ' + str(motorSteps2) )
 			inkex.errormsg( 'plotDistanceSteps: ' + str(plotDistanceSteps) )
@@ -1795,7 +1847,7 @@ class AxiDrawClass( inkex.Effect ):
 				
 				if spewSegmentDebugData:	
 					inkex.errormsg( '\nType 2: Triangle' )	
-				Ta = ( sqrt(2 * Vi_StepsPerSec * Vi_StepsPerSec + 2 * Vf_StepsPerSec * Vf_StepsPerSec + 4 * accelRate * plotDistanceSteps) 
+				Ta = ( math.sqrt(2 * Vi_StepsPerSec * Vi_StepsPerSec + 2 * Vf_StepsPerSec * Vf_StepsPerSec + 4 * accelRate * plotDistanceSteps) 
 					- 2 * Vi_StepsPerSec ) / ( 2 * accelRate )
 					
 				if (Ta < 0) :
@@ -1837,7 +1889,7 @@ class AxiDrawClass( inkex.Effect ):
 
 					if (Dintervals > 0):
 						if spewSegmentDebugData:	
-							inkex.errormsg( 'Triangle intervals Down: '+str(intervals))
+							inkex.errormsg( 'Triangle intervals Down: '+str(Dintervals))
 		
 						timePerInterval = Td / Dintervals			
 						velocityStepSize = (Vmax - Vf_StepsPerSec)/(Dintervals + 1.0)	
@@ -1913,7 +1965,7 @@ class AxiDrawClass( inkex.Effect ):
 			Case 4: 'Constant Velocity mode'
 			'''
 			if spewSegmentDebugData:	
-				inkex.errormsg( '-> [Type 4: Constant Velocity Mode Segment]'+ '\n')	
+				inkex.errormsg( '-> [Constant Velocity Mode Segment]'+ '\n')	
 			#Single segment with constant velocity.
 			
 			if (self.options.constSpeed and not self.penUp):
@@ -1972,8 +2024,8 @@ class AxiDrawClass( inkex.Effect ):
 			prevMotor1 += moveSteps1
 			prevMotor2 += moveSteps2
 
-			xSteps = (moveSteps1 + moveSteps2)/sqrt(2.0)	# Result will be a float.
-			ySteps = (moveSteps1 - moveSteps2)/sqrt(2.0)	
+			xSteps = (moveSteps1 + moveSteps2) / self.sq2	# Result will be a float.
+			ySteps = (moveSteps1 - moveSteps2) / self.sq2	
 
 			if ((moveSteps1 != 0) or (moveSteps2 != 0)): # if at least one motor step is required for this move.
 				if (not self.resumeMode) and (not self.bStopped):
@@ -1986,10 +2038,13 @@ class AxiDrawClass( inkex.Effect ):
 						if (self.options.previewType > 0):		# Generate preview paths
 						
 							if (self.velDataPlot):
-								velocityLocal = plot_utils.distance( moveSteps1, moveSteps2) / float(moveTime)
-								self.velDataChart.append(" %0.3f %0.3f" % (self.velDataTime/1000.0, 8.5 - velocityLocal/10.0) )
-								self.velDataTime += moveTime;
-								self.velDataChart.append(" %0.3f %0.3f" % (self.velDataTime/1000.0, 8.5 - velocityLocal/10.0) )
+# 								inkex.errormsg( 'Updating velDataPlotChart from within PlotSegment')
+								velocityLocal1 = moveSteps1 / float(moveTime)
+								velocityLocal2 = moveSteps2 / float(moveTime)
+								velocityLocal =  plot_utils.distance( moveSteps1, moveSteps2 ) / float(moveTime)
+								self.updateVCharts( velocityLocal1, velocityLocal2, velocityLocal)
+								self.velDataTime += moveTime
+								self.updateVCharts( velocityLocal1, velocityLocal2, velocityLocal)
 							if (self.printPortrait):
 								xNewt = self.DocUnitScaleFactor * (self.svgWidth - fNewY)
 								yNewt = self.DocUnitScaleFactor * fNewX
@@ -2018,6 +2073,12 @@ class AxiDrawClass( inkex.Effect ):
 							if self.options.mode != "manual":
 								time.sleep(float(moveTime - 10)/1000.0)  #pause before issuing next command
 
+					if ((moveSteps1 / moveTime) > 25):
+						inkex.errormsg( 'Motor 1 error: ({}, {}), in {} ms'.format(moveSteps1,moveSteps2,moveTime))
+					if ((moveSteps2 / moveTime) > 25):
+						inkex.errormsg( 'Motor 2 error: ({}, {}), in {} ms'.format(moveSteps1,moveSteps2,moveTime))
+
+
 					if spewSegmentDebugData:
 						inkex.errormsg( 'XY move:({}, {}), in {} ms'.format(moveSteps1,moveSteps2,moveTime))
 						inkex.errormsg( 'fNew(X,Y) :({:.2}, {:.2})'.format(fNewX,fNewY))
@@ -2029,7 +2090,7 @@ class AxiDrawClass( inkex.Effect ):
 					self.svgLastKnownPosY = self.fCurrY - axidraw_conf.StartPosY	
 					#if spewSegmentDebugData:			
 					#	inkex.errormsg( '\nfCurrX,fCurrY (x = %1.2f, y = %1.2f) ' % (self.fCurrX, self.fCurrY))
-					
+
 	def PauseResumeCheck (self):
 		# Pause & Resume functionality is managed here, called (for example) while planning 
 		# a segment to plot. First check to see if the pause button has been pressed.
@@ -2049,7 +2110,7 @@ class AxiDrawClass( inkex.Effect ):
 				strButton = ['1']	# simulate pause button press at given node
 			
 		if strButton[0] == '1': #button pressed
-			self.svgNodeCount = self.nodeCount;
+			self.svgNodeCount = self.nodeCount
 			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPosX
 			self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPosY
 			self.penRaise()
@@ -2091,15 +2152,17 @@ class AxiDrawClass( inkex.Effect ):
 		if ( self.options.resolution == 1 ):
 			if not (self.options.previewOnly):
 				ebb_motion.sendEnableMotors(self.serialPort, 1) # 16X microstepping
-			self.stepsPerInch = float( axidraw_conf.DPI_16X * sqrt(2))	# Resolution along native motor axes (not XY)
-			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 110.0		#steps/second
-			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0 #steps/second
+			self.stepsPerInch = float( axidraw_conf.DPI_16X * self.sq2)	# Resolution along native motor axes (not XY)
+			self.stepsPerInchXY = float( axidraw_conf.DPI_16X) # Resolution along XY Axes
+			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 110.0		#steps/second along native axis
+			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0 #steps/second along native axis
 		elif ( self.options.resolution == 2 ):
 			if not (self.options.previewOnly):
 				ebb_motion.sendEnableMotors(self.serialPort, 2) # 8X microstepping
-			self.stepsPerInch = float( axidraw_conf.DPI_16X * sqrt(2) / 2.0 )	# Resolution along native motor axes (not XY)
-			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 220.0		#steps/second
-			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0	#steps/second
+			self.stepsPerInch = float( axidraw_conf.DPI_16X * self.sq2 / 2.0 )	# Resolution along native motor axes (not XY)
+			self.stepsPerInchXY = float( axidraw_conf.DPI_16X / 2.0 )	# Resolution along XY (not native) axes
+			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedScale / 220.0		#steps/second along native axis
+			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedScale / 110.0	#steps/second along native axis
 		if (self.options.constSpeed):
 			self.PenDownSpeed = self.PenDownSpeed / 3
 
@@ -2118,7 +2181,9 @@ class AxiDrawClass( inkex.Effect ):
 			if (vTime < 0): #Do not allow negative delay times
 				vTime = 0
 			if self.options.previewOnly:
-				self.ptEstimate += vTime
+				self.updateVCharts( 0, 0, 0)
+				self.velDataTime += vTime
+				self.updateVCharts( 0, 0, 0)
 			else:
 				ebb_motion.sendPenUp(self.serialPort, vTime )
 				if (vTime > 50):
@@ -2143,7 +2208,9 @@ class AxiDrawClass( inkex.Effect ):
 				if (vTime < 0): #Do not allow negative delay times
 					vTime = 0
 				if self.options.previewOnly:
-					self.ptEstimate += vTime
+					self.updateVCharts( 0, 0, 0)
+					self.velDataTime += vTime
+					self.updateVCharts( 0, 0, 0)
 				else:
 					ebb_motion.sendPenDown(self.serialPort, vTime )	
 					if (vTime > 50):
@@ -2183,10 +2250,10 @@ class AxiDrawClass( inkex.Effect ):
 			servo_slope = float(servo_range) / 100.0
 			
 			intTemp = int(round(axidraw_conf.ServoMin + servo_slope * self.options.penUpPosition))
-			ebb_motion.setPenUpPos(self.serialPort, intTemp);
+			ebb_motion.setPenUpPos(self.serialPort, intTemp)
 
 			intTemp = int(round(axidraw_conf.ServoMin + servo_slope * penDownPos))
-			ebb_motion.setPenDownPos(self.serialPort, intTemp);
+			ebb_motion.setPenDownPos(self.serialPort, intTemp)
 	
 			''' Servo speed units are in units of %/second, referring to the
 				percentages above.  The EBB takes speeds in units of 1/(12 MHz) steps
@@ -2197,10 +2264,10 @@ class AxiDrawClass( inkex.Effect ):
 				Rounding this to 5 steps/24 ms is sufficient.		'''
 			
 			intTemp = 5 * self.options.penLiftRate
-			ebb_motion.setPenUpRate(self.serialPort, intTemp);
+			ebb_motion.setPenUpRate(self.serialPort, intTemp)
 	
 			intTemp = 5 * self.options.penLowerRate
-			ebb_motion.setPenDownRate(self.serialPort, intTemp);
+			ebb_motion.setPenDownRate(self.serialPort, intTemp)
 
 	def getDocProps( self ):
 		'''

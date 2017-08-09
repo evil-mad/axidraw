@@ -87,7 +87,7 @@ PageHeightIn = 8.58		# Default page height in inches		218 mm = about 8.58 inches
 
 #Machine resolution: Used in converting drawing size to motor steps.
 DPI_16X = 2032			# DPI ("dots per inch") @ 16X microstepping. Standard value: 2032, or 80 steps per mm. 
-						# This is an exact number, but note that it refers to derived distance along X/Y directions.
+						# This is an exact value, but note that it refers to the derived distance along the X or Y axes.
 						# The "true" resolution along the native axes (Motor 1, Motor 2) is actually higher than this,
 						# at 2032 * sqrt(2) steps per inch, or about 2873.7 steps/inch.
 
@@ -103,7 +103,7 @@ AccelTime = .2			# Seconds to reach full speed WITH PEN DOWN
 AccelTimePU = .25		# Seconds to reach full speed WITH PEN UP.
 AccelTimePUHR = .15		# Seconds to reach full speed WITH PEN UP in slower high-res mode. (Max speed is lower, so less time.)
 
-TimeSlice = 0.025		# Interval, in seconds, of when to update the motors.
+TimeSlice = 0.025		# Interval, in seconds, of when to update the motors. Default: TimeSlice = 0.025
 
 #Short-move pen-up distance threshold, below which we use the faster pen-down acceleration rate:
 ShortThreshold = 1.0	# Distance Threshold (inches)
