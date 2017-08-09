@@ -416,9 +416,10 @@ class AxiDrawClass( inkex.Effect ):
 
 	def updateVCharts( self, v1, v2, vT):		
 		#Update velocity charts, using some appropriate scaling for X and Y display.
-		self.velDataChart1.append(" %0.3f %0.3f" % (self.velDataTime/1000.0, 8.5 - v1/10.0) )
-		self.velDataChart2.append(" %0.3f %0.3f" % (self.velDataTime/1000.0, 8.5 - v2/10.0) )
-		self.velDataChartT.append(" %0.3f %0.3f" % (self.velDataTime/1000.0, 8.5 - vT/10.0) )
+		tempTime = self.DocUnitScaleFactor * self.velDataTime/1000.0
+		self.velDataChart1.append(" %0.3f %0.3f" % (tempTime, 8.5 - self.DocUnitScaleFactor * v1/10.0) )
+		self.velDataChart2.append(" %0.3f %0.3f" % (tempTime, 8.5 - self.DocUnitScaleFactor * v2/10.0) )
+		self.velDataChartT.append(" %0.3f %0.3f" % (tempTime, 8.5 - self.DocUnitScaleFactor * vT/10.0) )
 
 	def vChartMoveTo( self):		
 		#Use a moveto statement
@@ -495,6 +496,8 @@ class AxiDrawClass( inkex.Effect ):
 				# TODO: Handle a wide range of viewBox formats and values
 				sx = self.svgWidth / float( vinfo[2] )
 				sy = self.svgHeight / float( vinfo[3] )
+				self.DocUnitScaleFactor = 1.0 / sx # Scale preview to viewbox
+
 		else:
 			# Handle case of no viewbox provided. 
 			sx = 1.0 / float( plot_utils.pxPerInch)
@@ -565,7 +568,7 @@ class AxiDrawClass( inkex.Effect ):
 					self.velDataChart2.insert(0, "M") 
 					self.velDataChartT.insert(0, "M") 
 					
-					style = { 'stroke': 'black', 'stroke-width': 0.2 * strokeWidthConverted, 'fill': 'none' } 
+					style = { 'stroke': 'black', 'stroke-width': strokeWidthConverted, 'fill': 'none' } 
 					path_attrs = {
 						'style': simplestyle.formatStyle( style ),
 						'd': " ".join(self.velDataChartT),
@@ -573,7 +576,7 @@ class AxiDrawClass( inkex.Effect ):
 					PDpath = inkex.etree.SubElement(self.previewLayer,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
-					style = { 'stroke': 'red', 'stroke-width': 0.2 * strokeWidthConverted, 'fill': 'none' } 
+					style = { 'stroke': 'red', 'stroke-width': strokeWidthConverted, 'fill': 'none' } 
 					path_attrs = {
 						'style': simplestyle.formatStyle( style ),
 						'd': " ".join(self.velDataChart1),
@@ -581,7 +584,7 @@ class AxiDrawClass( inkex.Effect ):
 					PDpath = inkex.etree.SubElement(self.previewLayer,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
-					style = { 'stroke': 'green', 'stroke-width': 0.2 * strokeWidthConverted, 'fill': 'none' } 
+					style = { 'stroke': 'green', 'stroke-width': strokeWidthConverted, 'fill': 'none' } 
 					path_attrs = {
 						'style': simplestyle.formatStyle( style ),
 						'd': " ".join(self.velDataChart2),
@@ -2038,7 +2041,6 @@ class AxiDrawClass( inkex.Effect ):
 						if (self.options.previewType > 0):		# Generate preview paths
 						
 							if (self.velDataPlot):
-# 								inkex.errormsg( 'Updating velDataPlotChart from within PlotSegment')
 								velocityLocal1 = moveSteps1 / float(moveTime)
 								velocityLocal2 = moveSteps2 / float(moveTime)
 								velocityLocal =  plot_utils.distance( moveSteps1, moveSteps2 ) / float(moveTime)
