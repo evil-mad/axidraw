@@ -1794,7 +1794,7 @@ class AxiDrawClass( inkex.Effect ):
 				'''
 				
 				if spewSegmentDebugData:	
-					inkex.errormsg( '\nType 3: Triangle' )	
+					inkex.errormsg( '\nType 2: Triangle' )	
 				Ta = ( sqrt(2 * Vi_StepsPerSec * Vi_StepsPerSec + 2 * Vf_StepsPerSec * Vf_StepsPerSec + 4 * accelRate * plotDistanceSteps) 
 					- 2 * Vi_StepsPerSec ) / ( 2 * accelRate )
 					
@@ -1869,7 +1869,7 @@ class AxiDrawClass( inkex.Effect ):
 					'''
 					
 					if spewSegmentDebugData:								
-						inkex.errormsg( 'Type 2: Linear'+ '\n')	
+						inkex.errormsg( 'Type 3: Linear'+ '\n')	
 					# xFinal = vi * t  + (1/2) a * t^2, and vFinal = vi + a * t 
 					# Combining these (with same t) gives: 2 a x = (vf^2 - vi^2)  => a = (vf^2 - vi^2)/2x
 					# So long as this 'a' is less than accelRate, we can linearly interpolate in velocity.
@@ -1913,7 +1913,7 @@ class AxiDrawClass( inkex.Effect ):
 			Case 4: 'Constant Velocity mode'
 			'''
 			if spewSegmentDebugData:	
-				inkex.errormsg( '-> [Constant Velocity Mode Segment]'+ '\n')	
+				inkex.errormsg( '-> [Type 4: Constant Velocity Mode Segment]'+ '\n')	
 			#Single segment with constant velocity.
 			
 			if (self.options.constSpeed and not self.penUp):
