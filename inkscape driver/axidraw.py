@@ -1628,7 +1628,7 @@ class AxiDrawClass( inkex.Effect ):
 
 
 		if spewSegmentDebugData:
-			inkex.errormsg( '\n deltaYinches: ' + str(deltaXinches) )
+			inkex.errormsg( '\ndeltaYinches: ' + str(deltaXinches) )
 			inkex.errormsg( 'deltaYinches: ' + str(deltaYinches) )
 			inkex.errormsg( 'motorSteps1: ' + str(motorSteps1) )
 			inkex.errormsg( 'motorSteps2: ' + str(motorSteps2) )
@@ -1850,23 +1850,34 @@ class AxiDrawClass( inkex.Effect ):
 				
 				if spewSegmentDebugData:	
 					inkex.errormsg( '\nType 2: Triangle' )	
-				Ta = ( math.sqrt(2 * Vi_StepsPerSec * Vi_StepsPerSec + 2 * Vf_StepsPerSec * Vf_StepsPerSec + 4 * accelRate * plotDistanceSteps) 
-					- 2 * Vi_StepsPerSec ) / ( 2 * accelRate )
+
+				if (plotDistanceSteps >=  0.9 * (accelDistMax + decelDistMax)):
+					accelRateLocal = 0.9 * ((accelDistMax + decelDistMax) / plotDistanceSteps) * accelRate
+					if spewSegmentDebugData:	
+						inkex.errormsg( 'accelRateLocal changed')
+				else:
+# 					inkex.errormsg( 'Vmax unchanged: ')
+					accelRateLocal = accelRate
+
+				Ta = ( math.sqrt(2 * Vi_StepsPerSec * Vi_StepsPerSec + 2 * Vf_StepsPerSec * Vf_StepsPerSec + 4 * accelRateLocal * plotDistanceSteps) 
+					- 2 * Vi_StepsPerSec ) / ( 2 * accelRateLocal )
 					
 				if (Ta < 0) :
 					Ta = 0
 					if spewSegmentDebugData:	
-						inkex.errormsg( 'Warning: Negative transit time computed.') #Should not happen. :)
+						inkex.errormsg( 'Warning: Negative transit time computed.') # Should not happen. :)
 
-				Vmax = Vi_StepsPerSec + accelRate * Ta
+				Vmax = Vi_StepsPerSec + accelRateLocal * Ta
 				if spewSegmentDebugData:	
 					inkex.errormsg( 'Vmax: '+str(Vmax))
+
+
 
 				intervals = int(math.floor(Ta / timeSlice))	# Number of intervals during acceleration
 
 				if (intervals == 0):
 					Ta = 0
-				Td = Ta - (Vf_StepsPerSec - Vi_StepsPerSec) / accelRate
+				Td = Ta - (Vf_StepsPerSec - Vi_StepsPerSec) / accelRateLocal
 				Dintervals = int(math.floor(Td / timeSlice))	# Number of intervals during acceleration
 
 				if ((intervals + Dintervals) > 4):
@@ -2075,11 +2086,10 @@ class AxiDrawClass( inkex.Effect ):
 							if self.options.mode != "manual":
 								time.sleep(float(moveTime - 10)/1000.0)  #pause before issuing next command
 
-					if ((moveSteps1 / moveTime) > 25):
-						inkex.errormsg( 'Motor 1 error: ({}, {}), in {} ms'.format(moveSteps1,moveSteps2,moveTime))
-					if ((moveSteps2 / moveTime) > 25):
-						inkex.errormsg( 'Motor 2 error: ({}, {}), in {} ms'.format(moveSteps1,moveSteps2,moveTime))
-
+# 					if ((moveSteps1 / moveTime) >= 25.0):
+# 						inkex.errormsg( 'Motor 1 error: ({}, {}), in {} ms'.format(moveSteps1,moveSteps2,moveTime))
+# 					if ((moveSteps2 / moveTime) >= 25.0):
+# 						inkex.errormsg( 'Motor 2 error: ({}, {}), in {} ms'.format(moveSteps1,moveSteps2,moveTime))
 
 					if spewSegmentDebugData:
 						inkex.errormsg( 'XY move:({}, {}), in {} ms'.format(moveSteps1,moveSteps2,moveTime))
