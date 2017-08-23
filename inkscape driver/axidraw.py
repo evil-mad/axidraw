@@ -1161,6 +1161,10 @@ class AxiDrawClass( inkex.Effect ):
 			if len( simplepath.parsePath( d ) ) == 0:
 				inkex.errormsg( 'path length is zero, will not be plotting this path.')
 
+		if (len(d) > 3000):			# Raise pen when computing extremely long paths.
+			if (self.penUp != True):	# skip if pen is already up
+				self.penRaise()
+
 		if len( simplepath.parsePath( d ) ) == 0:
 			return
 
