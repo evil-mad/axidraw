@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.5.9, dated August 9, 2017.
+# Version 1.5.10, dated October 20, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -1860,28 +1860,28 @@ class AxiDrawClass( inkex.Effect ):
 					if spewSegmentDebugData:	
 						inkex.errormsg( 'accelRateLocal changed')
 				else:
-# 					inkex.errormsg( 'Vmax unchanged: ')
 					accelRateLocal = accelRate
 
-				Ta = ( math.sqrt(2 * Vi_StepsPerSec * Vi_StepsPerSec + 2 * Vf_StepsPerSec * Vf_StepsPerSec + 4 * accelRateLocal * plotDistanceSteps) 
-					- 2 * Vi_StepsPerSec ) / ( 2 * accelRateLocal )
-					
-				if (Ta < 0) :
+				if (accelRateLocal > 0): # Handle edge cases including when we are already at maximum speed
+					Ta = ( math.sqrt(2 * Vi_StepsPerSec * Vi_StepsPerSec + 2 * Vf_StepsPerSec * Vf_StepsPerSec + 4 * accelRateLocal * plotDistanceSteps) 
+						- 2 * Vi_StepsPerSec ) / ( 2 * accelRateLocal )
+				else:
 					Ta = 0
-					if spewSegmentDebugData:	
-						inkex.errormsg( 'Warning: Negative transit time computed.') # Should not happen. :)
 
 				Vmax = Vi_StepsPerSec + accelRateLocal * Ta
 				if spewSegmentDebugData:	
 					inkex.errormsg( 'Vmax: '+str(Vmax))
 
-
-
 				intervals = int(math.floor(Ta / timeSlice))	# Number of intervals during acceleration
 
 				if (intervals == 0):
 					Ta = 0
-				Td = Ta - (Vf_StepsPerSec - Vi_StepsPerSec) / accelRateLocal
+
+				if (accelRateLocal > 0):  # Handle edge cases including when we are already at maximum speed
+					Td = Ta - (Vf_StepsPerSec - Vi_StepsPerSec) / accelRateLocal
+				else:
+					Td = 0	
+					
 				Dintervals = int(math.floor(Td / timeSlice))	# Number of intervals during acceleration
 
 				if ((intervals + Dintervals) > 4):
@@ -1953,30 +1953,31 @@ class AxiDrawClass( inkex.Effect ):
 						localAccel = accelRate
 					elif (localAccel < -accelRate):
 						localAccel = -accelRate
+						
 					if (localAccel == 0):
 						#Initial velocity = final velocity -> Skip to constant velocity routine.
 						ConstantVelMode = True
 					else:	
 						tSegment = (Vf_StepsPerSec - Vi_StepsPerSec) / localAccel		
 							
-					intervals = int(math.floor(tSegment / timeSlice))	# Number of intervals during deceleration
-					if (intervals > 1):
-						timePerInterval = tSegment / intervals			
-						velocityStepSize = (Vf_StepsPerSec - Vi_StepsPerSec)/(intervals + 1.0)										
-						# For six time intervals of acceleration, first interval is at velocity (max/7)
-						# 6th (last) time interval is at 6*max/7
-						# after this interval, we are at full speed.
-						
-						for index in xrange(0, intervals):		#Calculate acceleration phase
-							velocity += velocityStepSize
-							timeElapsed += timePerInterval
-							position += velocity * timePerInterval
-							durationArray.append(int(round(timeElapsed * 1000.0)))
-							distArray.append(position)		#Estimated distance along direction of travel				
-					else:
-						#Short segment; Not enough time for multiple segments at different velocities. 
-						Vi_StepsPerSec = Vmax #These are _slow_ segments-- use fastest possible interpretation.
-						ConstantVelMode = True
+						intervals = int(math.floor(tSegment / timeSlice))	# Number of intervals during deceleration
+						if (intervals > 1):
+							timePerInterval = tSegment / intervals			
+							velocityStepSize = (Vf_StepsPerSec - Vi_StepsPerSec)/(intervals + 1.0)										
+							# For six time intervals of acceleration, first interval is at velocity (max/7)
+							# 6th (last) time interval is at 6*max/7
+							# after this interval, we are at full speed.
+							
+							for index in xrange(0, intervals):		#Calculate acceleration phase
+								velocity += velocityStepSize
+								timeElapsed += timePerInterval
+								position += velocity * timePerInterval
+								durationArray.append(int(round(timeElapsed * 1000.0)))
+								distArray.append(position)		#Estimated distance along direction of travel				
+						else:
+							#Short segment; Not enough time for multiple segments at different velocities. 
+							Vi_StepsPerSec = Vmax #These are _slow_ segments-- use fastest possible interpretation.
+							ConstantVelMode = True
 
 		if (ConstantVelMode):
 			'''
