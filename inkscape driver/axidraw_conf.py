@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.5.10, dated October 20, 2017.
+# Version 1.6.0, dated October 20, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -26,13 +26,17 @@ If you are operating the AxiDraw in "standalone" mode, that is, outside
  AxiDraw Control dialog -- are ignored when called via the command line.)
  Best practice is to adjust and test settings from within the Inkscape
  GUI, before 
+ 
+ 
 '''
 
-PenUpPos = 60			# Default pen-up position
-PenDownPos = 40			# Default pen-down position
+PenUpPos = 60			# Default pen-up position (%).		Range: 0 - 100 %
+PenDownPos = 40			# Default pen-down position (%).	Range: 0 - 100 %
 
-PenUpSpeed = 75
-PenDownSpeed = 25
+PenUpSpeed = 75			# Default pen-up speed (%). 		Range: 1 - 110 %
+PenDownSpeed = 25		# Default pen-down speed (%). 		Range: 1 - 110 %
+
+accelFactor = 75		# Acceleration factor (%).			Range: 1 - 100 %
 
 penLowerDelay = 0		# added delay (ms) for the pen to go down before the next move
 penLiftDelay = 0		# added delay (ms) for the pen to go up before the next move
@@ -51,13 +55,18 @@ previewType = 0			# When in preview mode, render preview layers?
 						# 1: Render only pen-down movement
 						# 2: Render only pen-up movement
 						# 3: Render all movement
-						
-resolution = 1			# Resolution: Either 1 for 2032 DPI, or value 2 for 1016 DPI
-
-smoothness = 10.0		# Curve smoothing (default: 10.0)
-cornering = 10.0		# Cornering speed factor (default: 10.0)
 
 DefaultLayer = 1		# Default inkscape layer, when plotting in "layers" mode
+
+copiesOfDocument = 1	# Copies to plot while in Plot mode
+copiesOfLayer = 1		# Copies to plot while in Layer mode
+copyDelay = 15			# Seconds to delay between copies when plotting multiple copies.
+
+resolution = 1			# Resolution: Either 1 for (coarser) low resolution, or value 2 for (smoother, slightly slower) high resolution mode.
+
+						# Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
+						# Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
+						# not along the XY axes of the machine. This parameter chooses 8X or 16X microstepping on the motors.
 
 
 '''
@@ -65,16 +74,22 @@ Additional user-adjustable control parameters:
 
 These parameters are adjustable only from the command line, and are not
 visible from within the Inkscape GUI.
+
 '''
 
-fileOutput = False		# If True: Output updated contents of SVG on stdout. 
+smoothness = 10.0		# Curve smoothing (default: 10.0)
 
+cornering = 10.0		# Cornering speed factor (default: 10.0)
+
+
+fileOutput = False		# If True: Output updated contents of SVG on stdout. 
 
 
 '''
 Secondary control parameters:
 
-Values below this point have been carefully chosen, and generally do not need to be 
+Values below this point are configured only in this file, not through the user interface(s).
+Please note that these values have been carefully chosen, and generally do not need to be 
 adjusted in everyday use. That said, proceed with caution, and keep a backup copy.
 '''
 
@@ -85,33 +100,48 @@ PageWidthIn = 11.81		# Default page width in inches		300 mm = about 11.81 inches
 PageHeightIn = 8.58		# Default page height in inches		218 mm = about 8.58 inches
 
 
-#Machine resolution: Used in converting drawing size to motor steps.
-DPI_16X = 2032			# DPI ("dots per inch") @ 16X microstepping. Standard value: 2032, or 80 steps per mm. 
-						# This is an exact value, but note that it refers to the derived distance along the X or Y axes.
-						# The "true" resolution along the native axes (Motor 1, Motor 2) is actually higher than this,
-						# at 2032 * sqrt(2) steps per inch, or about 2873.7 steps/inch.
+NativeResFactor = 1016.0	# Motor resolution calculation factor, steps per inch, and used in conversions. Default: 1016.0
+							# Note that resolution is defined along native (not X or Y) axes.
+							# Resolution is NativeResFactor * sqrt(2) steps per inch in Low Resolution  (Approx 1437 steps per inch)
+							#       and 2 * NativeResFactor * sqrt(2) steps per inch in High Resolution (Appxox 2874 steps per inch)
 
-SpeedScale = 24950		# Maximum (110%) speed, in steps per second. 
-						# Note that 25 kHz is the absolute maximum speed (steps per second) for the EBB.
+MaxStepRate = 24.995	# Maximum allowed motor step rate, in steps per millisecond. 
+						# Note that 25 kHz is the absolute maximum step rate for the EBB.
+						# Movement commands faster than this are ignored; may result in a crash (loss of position control).
+						# We use a conservative value, to help prevent errors due to rounding.
+						# This value is normally used _for speed limit checking only_.
 
+SpeedLimXY_LR = 11.000	# Maximum XY speed allowed when in Low Resolution mode, in inches per second.  Default: 17.3958 Max: 17.3958
+SpeedLimXY_HR = 8.6979	# Maximum XY speed allowed when in High Resolution mode, in inches per second. Default: 8.6979, Max: 8.6979
+						# Do not increase these values above Max; they are derived from MaxStepRate and the resolution.
+
+MaxStepDist_LR = 0.000696	# Maximum distance covered by 1 step in Low Res mode, rounded up, in inches. ~1/(1016 sqrt(2))
+MaxStepDist_HR = 0.000348	# Maximum distance covered by 1 step in Hi Res mode, rounded up, in inches.  ~1/(2032 sqrt(2))
+							# In planning trajectories, we skip movements shorter than these distances, likely to be < 1 step.
+
+SpeedFactorConst = 0.25	# When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.3
+						# A slower speed is used, since we have to accelerate "instantly".
+						
 StartPosX = 0			# Parking position, in pixels. Default: 0
 StartPosY = 0			# Parking position, in pixels. Default: 0
 
+# Acceleration & Deceleration rates:
+AccelRate = 40.0		# Standard acceleration rate, inches per second squared	
+AccelRatePU = 60.0		# Pen-up acceleration rate, inches per second squared
 
-#Acceleration periods and motion-control time slices:
-AccelTime = .2			# Seconds to reach full speed WITH PEN DOWN
-AccelTimePU = .25		# Seconds to reach full speed WITH PEN UP.
-AccelTimePUHR = .15		# Seconds to reach full speed WITH PEN UP in slower high-res mode. (Max speed is lower, so less time.)
+TimeSlice = 0.025		# Interval, in seconds, of when to update the motors. Default: TimeSlice = 0.025 (25 ms)
 
-TimeSlice = 0.025		# Interval, in seconds, of when to update the motors. Default: TimeSlice = 0.025
-
-#Short-move pen-up distance threshold, below which we use the faster pen-down acceleration rate:
-ShortThreshold = 1.0	# Distance Threshold (inches)
+#Set a tolerance value, to avoid error messages if a "zero" position rounds to -0.0000010 or something.
+BoundsTolerance = 0.001	# Allow movements outside of declared bounds by this distance, in inches.
 
 #Skip pen-up moves shorter than this distance, when possible:
 MinGap = 0.010			# Distance Threshold (inches)
 
-# Servo Setup:
-ServoMax = 28000		# Highest allowed position; "100%" on the scale
-ServoMin = 7500			# Lowest allowed position; "0%" on the scale
+# Servo motion limits, in units of (1/12 MHz), about 83 ns:
+ServoMax = 25200		# Highest allowed position; "100%" on the scale.	Default value: 25200 units, or 2.1 ms.
+ServoMin = 10800		# Lowest allowed position; "0%" on the scale.		Default value: 10800 units, or 0.9 ms.
+
+# Note that previous versions of this configuration file used a wider range, 7500 - 28000, corresponding to a range of 625 us - 2333 us.
+# The new limiting values are equivalent to 16%, 86% on that prior scale, giving a little less vertical range, but higher resolution.
+# More importantly, it constrains the servo to within the travel ranges that they are typically calibrated, following best practice.
 

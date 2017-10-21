@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
 <_name>AxiDraw Control</_name>
-<id>command.evilmadscientist.axidraw.rev1.5.10</id>
+<id>command.evilmadscientist.axidraw.rev160</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw.py</dependency>
 <dependency type="executable" location="extensions">inkex.py</dependency>
@@ -9,29 +9,34 @@
 
 <page name="plot" _gui-text="Plot">
 <_param indent="1" name="splashpage" type="description" appearance="header">
-Welcome to the AxiDraw interface!
+Welcome to AxiDraw Control!
 </_param>
-<_param indent="2" name="splashpage2" type="description" xml:space="preserve" >
-Press 'Apply' to begin plotting.
+<_param indent="2" name="splashpage2" type="description" xml:space="preserve" >Press 'Apply' to begin plotting.
 
 Or, look in the other tabs to adjust your settings
 and use additional AxiDraw functions.
 
 Need help? Visit http://axidraw.com/docs
 
+
+
 </_param>
+
+<param indent="2" name="copiesOfDocument" type="int" min="0" max="9999"  _gui-text="Copies to Plot:">1</param>	
+<_param name="instructions_plot1" type="description" indent="4" > Tip: Select 0 copies to plot continuously until paused.</_param>
+
 </page>
 
 <page name='setup' _gui-text='Setup'>
 
 <_param name="instructions_setup" type="description" appearance="header">AxiDraw: Basic Setup</_param>
-<param indent="1" name="penUpPosition" type="int" min="0" max="100" appearance="full" 
+<param indent="2" name="penUpPosition" type="int" min="0" max="100" appearance="full" 
 _gui-text="Pen height: UP (%):">60</param>
-<param indent="1" name="penDownPosition" type="int" min="0" max="100" appearance="full"
+<param indent="2" name="penDownPosition" type="int" min="0" max="100" appearance="full"
 _gui-text="Pen height: DOWN, (%):">40</param>
 
 
-<param name="setupType" type="optiongroup" _gui-text="Action on 'Apply':">
+<param name="setupType"  indent="1" type="optiongroup" _gui-text="Action on 'Apply':">
 <_option value="align-mode">Raise pen, turn off motors</_option>	
 <_option value="toggle-pen">Toggle pen between UP, DOWN</_option>
 </param>
@@ -50,25 +55,57 @@ of the pen for writing and drawing.
 <param indent="1" name="penDownSpeed" type="int" min="1" max="110" _gui-text="Writing/Drawing speed (%):">25</param>	
 <param indent="1" name="penUpSpeed" type="int" min="1" max="110" _gui-text="Pen-up movement speed (%):">75</param>
 
+<param indent="1" name="accelFactor" type="optiongroup" appearance="minimal" _gui-text="Acceleration :">
+<_option value="75">Standard</_option>
+<_option value="100">Maximum</_option>
+<_option value="35">Slow</_option>
+<_option value="10">Very slow</_option>
+</param>
+
 <_param name="instructions_timing3" type="description" appearance="header">Pen lift and lowering speeds:</_param>
-<param indent="1" name="penLiftRate" type="int" min="20" max="500" _gui-text="Pen raising speed (%/s):">150</param>
-<param indent="1" name="penLiftDelay" type="int" min="-500" max="500" _gui-text="Added delay after raising pen (ms):">0</param>
-<param indent="1" name="penLowerRate" type="int" min="20" max="500" _gui-text="Pen lowering speed (%/s):">150</param>
-<param indent="1" name="penLowerDelay" type="int" min="-500" max="500" _gui-text="Added delay after lowering pen (ms):">0</param>
 
-<_param indent="2" name="instructions_timing4" type="description" xml:space="preserve">
+<param indent="1" name="penLiftRate" type="optiongroup" appearance="minimal" _gui-text="Pen raising speed :">
+<_option value="150">Standard</_option>
+<_option value="400">Maximum</_option>
+<_option value="100">Slow</_option>
+<_option value="50">Very slow</_option>
+</param>
 
+<param indent="1" name="penLowerRate" type="optiongroup" appearance="minimal" _gui-text="Pen lowering speed :">
+<_option value="150">Standard</_option>
+<_option value="400">Maximum</_option>
+<_option value="100">Slow</_option>
+<_option value="50">Very slow</_option>
+</param>
+
+
+<_param name="instructions_timing4" type="description" appearance="header">Multiple Copies:</_param>
+<param indent="1" name="copyDelay" type="int" min="0" max="3600" appearance="header" _gui-text="Seconds of delay between copies:">15</param>	
+<_param indent="6" name="instructions_timing5" type="description" xml:space="preserve">
 (Press 'Apply' to save settings.)</_param>
 </page>
 
 <page name='options' _gui-text='Options'>
 
 <_param name="instructions_options6" type="description" appearance="header">Advanced Options:</_param>
+
+
 <param indent="1" name="autoRotate" type="boolean" _gui-text="Auto-rotate page when printing">true</param>	
 <param indent="1" name="constSpeed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
-<param indent="1" name="reportTime" type="boolean" _gui-text="Report time elapsed after each drawing">false</param> 
 
-<param indent="1" name="previewOnly" type="boolean" _gui-text="Preview mode: Simulate plotting only">false</param> 
+<param indent="1" name="reportTime" type="boolean" _gui-text="Report time elapsed after each drawing">false</param> 
+<param indent="1" name="penLiftDelay" type="int" min="-500" max="500" _gui-text="Optional delay after raising pen (ms):">0</param>
+<param indent="1" name="penLowerDelay" type="int" min="-500" max="500" _gui-text="Optional delay after lowering pen (ms):">0</param>
+
+<param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
+<_option value="1">~2870 DPI (Slightly Smoother)</_option>
+<_option value="2">~1435 DPI (Slightly Faster)</_option>
+</param>
+
+<_param name="instructions_options7" type="description" appearance="header">Preview mode:</_param>
+
+
+<param indent="1" name="previewOnly" type="boolean" _gui-text="Enable offline preview mode; Simulate plotting only">false</param> 
 <param indent="5" name="previewType" type="optiongroup" appearance="minimal" _gui-text="Preview mode rendering:">
 <_option value="0">None</_option>
 <_option value="1">Pen-down movement</_option>
@@ -76,15 +113,9 @@ of the pen for writing and drawing.
 <_option value="3">All movement</_option>
 </param>
 
-<param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
-<_option value="1">Super (slower) ~2000 DPI</_option>
-<_option value="2">Normal, ~1000 DPI</_option>
-</param>
 
-<param indent="1" name="smoothness" type="float" min=".1" max="100" _gui-text="Curve smoothing (default: 10.0):">10.0</param>
-<param indent="1" name="cornering" type="float" min=".1" max="100" _gui-text="Cornering speed factor (default: 10.0):">10.0</param>
 
-<_param indent="2"  name="instructions_options3" type="description" xml:space="preserve">
+<_param indent="6"  name="instructions_options3" type="description" xml:space="preserve">
 
 (Press 'Apply' to save settings.)</_param>
 </page>
@@ -112,8 +143,7 @@ _gui-text="               Command: ">
 <_option value="strip-data"     >Strip plotter data from file</_option>
 </param>
 
-<param name="WalkDistance" type="float" min="-11" max="11" 
-_gui-text="Walk distance in inches (+ or -):">1.00</param>
+<param name="WalkDistance" indent="1" type="float" min="-11" max="11" _gui-text="Walk distance in inches (+ or -):">1.00</param>
 
 
 <_param  indent="1" name="instructions_manual2" type="description" >
@@ -122,7 +152,7 @@ as requested, without regard to the current
 position. Moving too far or in the wrong direction
 could cause AxiDraw to run into the ends of travel.
 </_param>
-<_param  indent="2" name="instructions_manual3" type="description" xml:space="preserve">
+<_param  indent="6" name="instructions_manual3" type="description" xml:space="preserve">
 Press 'Apply' to execute the command.
 </_param>
 </page>
@@ -132,27 +162,27 @@ Press 'Apply' to execute the command.
 
 <_param name="instructions_resume1" type="description"  appearance="header">Pause and Resume</_param>
 
-<_param indent="1" name="instructions_resume2" type="description"> 
-To pause a plot in progress, press the pause button
-(marked "PRG") on the AxiDraw's "EBB" controller
-board. After pausing, you can change settings or
-perform any manual adjustments that are needed.
+<_param indent="2" name="instructions_resume2" type="description"> 
+To pause a plot in progress, press the pause button on
+the AxiDraw's "EBB" controller board. After pausing,
+you can change settings or perform any manual adjustments
+that are needed.
 
-To resume printing, or to simply cancel and return
-to the Home Corner, press 'Apply' below.   
+To resume printing, or to simply cancel and return to the
+Home Corner, press 'Apply' below.   
 
-Plot progress is stored in the Inkscape file itself.
-If you plan to quit Inkscape and resume later, 
-remember to save the document before quitting.
+Plot progress is stored in the SVG file itself. If you
+plan to quit Inkscape and resume later, remember to save
+the document before quitting.
 
-You can resume directly where you paused, or
-after using the Return to Home Corner command.
+You can resume directly where you paused, or after using
+the Return to Home Corner command.
 </_param>
 
-<param name="resumeType" type="optiongroup" appearance="" _gui-text="Action on 'Apply':">
+<param name="resumeType" type="optiongroup" appearance=""  indent="2" _gui-text="Action on 'Apply':">
 <_option indent="1" value="ResumeNow" >Resume (From Home or Where Paused)</_option>
 <_option indent="1" value="justGoHome">Return to Home Corner (only)</_option>	
-</param>	      
+</param>
 
 </page>		
 
@@ -161,26 +191,28 @@ after using the Return to Home Corner command.
 <_param  indent="1" name="instructions_layer2" type="description" >
 Normally, we plot paths from all layers.  
 
-You can also choose to plot a single layer or group of 
+You can also choose to plot a single layer or group of
 layers, for example to plot only a single color of ink.
 
-Pressing 'Apply' from this frame will plot only layers
-whose names begin with the selected number, which can
-be in the range 0 to 1000.
+Pressing 'Apply' with this tab selected will plot only
+layers whose names begin with the selected number, which
+can be in the range 0 to 1000.
 
 For example, a layer named "5-red" will be printed if
 the number 5 is selected, but a layer named "2-black"
 or "guide lines" will not be.
-
 </_param>
 <param indent="2" name="layerNumber" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
-</page>			
+<param indent="2" name="copiesOfLayer" type="int" min="0" max="9999" appearance="header" _gui-text="Copies to Plot:">1</param>	
+<_param name="instructions_layer1" type="description" indent="4" > Tip: Select 0 copies to plot continuously until paused.</_param>
+
+</page>
+
 
 <page name="Help" _gui-text="*">
 <_param name="instructions_general" type="description"
 xml:space="preserve">
-AxiDraw Control Inkscape extension 
-Version 1.5.10, dated 2017-10-20
+AxiDraw Control    version 1.6.0, dated 2017-10-20
 
 Copyright 2017 Evil Mad Science LLC
 
@@ -193,7 +225,10 @@ EBB Firmware 2.5.1 or newer is recommended.
 
 Known issues:
 * "Cancel" function does not work while plotting.
-(This is due to a known bug in Inkscape.)
+  (This is due to a known bug in Inkscape.)
+  
+  Use the physical pause button -- on the left
+  side of the machine -- to pause a plot.
 </_param>
 <param name="fileOutput" type="boolean" gui-hidden="true">true</param>
 </page>
