@@ -58,7 +58,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
 		self.start_time = time.time()		
-		self.ptEstimate = 0.0	#plot time estimate
+		self.ptEstimate = 0.0	#plot time estimate, milliseconds
 
 		self.OptionParser.add_option( "--mode",	action="store", type="string", dest="mode", default="plot", help="Mode (or GUI tab) selected" )
 		self.OptionParser.add_option( "--penUpPosition", action="store", type="int", dest="penUpPosition", default=axidraw_conf.PenUpPos, help="Position of pen when lifted" )
@@ -252,8 +252,11 @@ class AxiDrawClass( inkex.Effect ):
 				while (timeCounter > 0):	
 					timeCounter = timeCounter - 1
 					if ((self.copiesToPlot != 0) and (self.bStopped == False)):
-						time.sleep(0.100)			# Use short intervals to improve responsiveness
-						self.PauseResumeCheck()		# Detect button press while paused between plots
+						if self.options.previewOnly:
+							self.ptEstimate += 100
+						else:
+							time.sleep(0.100)			# Use short intervals to improve responsiveness
+							self.PauseResumeCheck()		# Detect button press while paused between plots
 
 		elif self.options.mode == "resume":
 			useOldResumeData = False
@@ -293,8 +296,11 @@ class AxiDrawClass( inkex.Effect ):
 				while (timeCounter > 0):	
 					timeCounter = timeCounter - 1
 					if ((self.copiesToPlot != 0) and (self.bStopped == False)):
-						time.sleep(0.100)			# Use short intervals to improve responsiveness
-						self.PauseResumeCheck()		# Detect button press while paused between plots
+						if self.options.previewOnly:
+							self.ptEstimate += 100
+						else:
+							time.sleep(0.100)			# Use short intervals to improve responsiveness
+							self.PauseResumeCheck()		# Detect button press while paused between plots
 
 
 		elif self.options.mode == "setup":
@@ -587,7 +593,7 @@ class AxiDrawClass( inkex.Effect ):
 				strokeWidthConverted = self.uutounit(uuWidth, self.DocUnits)
 				nsPrefix = "plot"
 				if (self.options.previewType > 1):
-					style = { 'stroke': 'blue', 'stroke-width': strokeWidthConverted, 'fill': 'none' } #Pen-up: blue
+					style = { 'stroke': 'red', 'stroke-width': strokeWidthConverted, 'fill': 'none' } #Pen-up: red
 					path_attrs = {
 						'style': simplestyle.formatStyle( style ),
 						'd': " ".join(self.pathDataPU),
@@ -596,7 +602,7 @@ class AxiDrawClass( inkex.Effect ):
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 				if ((self.options.previewType == 1) or (self.options.previewType == 3)):
-					style = { 'stroke': 'red', 'stroke-width': strokeWidthConverted, 'fill': 'none' } #Pen-down: red
+					style = { 'stroke': 'blue', 'stroke-width': strokeWidthConverted, 'fill': 'none' } #Pen-down: blue
 					path_attrs = {
 						'style': simplestyle.formatStyle( style ),
 						'd': " ".join(self.pathDataPD),
@@ -634,31 +640,32 @@ class AxiDrawClass( inkex.Effect ):
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 			if (self.options.reportTime):
-				if self.options.previewOnly:
-					m, s = divmod(self.ptEstimate/1000.0, 60)
+				if (self.copiesToPlot == 0):
+					if self.options.previewOnly:
+						m, s = divmod(self.ptEstimate/1000.0, 60)
+						h, m = divmod(m, 60)
+						if (h > 0):
+							inkex.errormsg("Estimated print time: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
+						else:
+							inkex.errormsg("Estimated print time: %02d:%02d" % (m, s) + " (minutes, seconds)")
+	
+					elapsed_time = time.time() - self.start_time
+					m, s = divmod(elapsed_time, 60)
 					h, m = divmod(m, 60)
-					if (h > 0):
-						inkex.errormsg("Estimated print time: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
+					downDist = 0.0254 * self.penDownTravelInches
+					totDist = downDist + (0.0254 * self.penUpTravelInches)
+					if self.options.previewOnly:
+						inkex.errormsg("Length of path to draw: %1.2f m." % downDist)
+						inkex.errormsg("Total movement distance: %1.2f m." % totDist)
+						if (self.options.previewType > 0):
+							inkex.errormsg("This estimate took: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
 					else:
-						inkex.errormsg("Estimated print time: %02d:%02d" % (m, s) + " (minutes, seconds)")
-
-				elapsed_time = time.time() - self.start_time
-				m, s = divmod(elapsed_time, 60)
-				h, m = divmod(m, 60)
-				downDist = 0.0254 * self.penDownTravelInches
-				totDist = downDist + (0.0254 * self.penUpTravelInches)
-				if self.options.previewOnly:
-					inkex.errormsg("Length of path to draw: %1.2f m." % downDist)
-					inkex.errormsg("Total movement distance: %1.2f m." % totDist)
-					if (self.options.previewType > 0):
-						inkex.errormsg("This estimate took: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
-				else:
-					if (h > 0):
-						inkex.errormsg("Elapsed time: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
-					else:
-						inkex.errormsg("Elapsed time: %02d:%02d" % (m, s) + " (minutes, seconds)")
-					inkex.errormsg("Length of path drawn: %1.2f m." % downDist)
-					inkex.errormsg("Total distance moved: %1.2f m." % totDist)
+						if (h > 0):
+							inkex.errormsg("Elapsed time: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
+						else:
+							inkex.errormsg("Elapsed time: %02d:%02d" % (m, s) + " (minutes, seconds)")
+						inkex.errormsg("Length of path drawn: %1.2f m." % downDist)
+						inkex.errormsg("Total distance moved: %1.2f m." % totDist)
 
 
 		finally:
