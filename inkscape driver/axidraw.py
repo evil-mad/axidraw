@@ -145,6 +145,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.svgPausedPosY = float( 0.0 )	
 		
 		self.PrintInLayersMode = False
+		self.useTagNestLevel = 0
 
 		self.svgWidth = 0 
 		self.svgHeight = 0
@@ -233,7 +234,11 @@ class AxiDrawClass( inkex.Effect ):
 		if self.options.mode == "plot": 
 			self.copiesToPlot = self.options.copiesOfDocument
 			if (self.copiesToPlot == 0):
-				self.copiesToPlot = -1
+				self.copiesToPlot = -1	
+				if self.options.previewOnly:	# Special case: 0 (continuous copies) selected, but running in preview mode.
+					self.copiesToPlot = 1		# In this case, revert back to single copy, since there's no way to terminate.
+												# Otherwise, we enter an endless loop of plotting without a way to cancel. 
+												# (Canceling is initiated through the USB/button press!)
 			while (self.copiesToPlot != 0):
 				self.LayersFoundToPlot = False
 				useOldResumeData = False
@@ -730,7 +735,12 @@ class AxiDrawClass( inkex.Effect ):
 				self.plotCurrentLayer = oldplotCurrentLayer
 				self.sCurrentLayerName = oldLayerName	# Recall saved layer name after plotting deeper layer
 
-						
+			elif node.tag == inkex.addNS( 'symbol', 'svg' ) or node.tag == 'symbol':
+				# A symbol is much like a group, except that it should only be rendered when called within a "use" tag.
+
+				if (self.useTagNestLevel > 0):
+					self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )
+	
 			elif node.tag == inkex.addNS( 'use', 'svg' ) or node.tag == 'use':
 
 				# A <use> element refers to another SVG element via an xlink:href="#blah"
@@ -761,7 +771,9 @@ class AxiDrawClass( inkex.Effect ):
 						else:
 							matNew2 = matNew
 						v = node.get( 'visibility', v )
+						self.useTagNestLevel = self.useTagNestLevel + 1	# Use a number, not a boolean, to keep track of nested "use" elements.
 						self.recursivelyTraverseSvg( refnode, matNew2, parent_visibility=v )
+						self.useTagNestLevel = self.useTagNestLevel - 1
 					else:
 						continue
 				else:
