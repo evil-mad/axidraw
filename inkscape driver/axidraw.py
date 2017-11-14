@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.6.0, dated October 20, 2017.
+# Version 1.6.1, dated November 14, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -251,7 +251,7 @@ class AxiDrawClass( inkex.Effect ):
 				self.delayBetweenCopies = False
 				self.copiesToPlot = self.copiesToPlot - 1
 				self.plotDocument()
-				self.delayBetweenCopies = True
+				self.delayBetweenCopies = True			# Indicate that we are currently delaying between copies
 				
 				timeCounter = 10 * self.options.copyDelay
 				while (timeCounter > 0):	
@@ -269,15 +269,18 @@ class AxiDrawClass( inkex.Effect ):
 			if self.resumeMode:
 				self.plotDocument() 
 			elif ( self.options.resumeType == "justGoHome" ):
-				self.plotDocument()
-				self.svgNodeCount = self.svgNodeCount_Old	# New values to write to file:
-				self.svgLastPath = self.svgLastPath_Old
-				self.svgLastPathNC = self.svgLastPathNC_Old
-				self.svgPausedPosX = self.svgPausedPosX_Old
-				self.svgPausedPosY = self.svgPausedPosY_Old
-				self.svgLayer = self.svgLayer_Old
+				if ((self.svgDataRead == False) or ((self.svgLastKnownPosX_Old == 0) and (self.svgLastKnownPosY_Old == 0))):
+					inkex.errormsg( gettext.gettext( "No resume data found; unable to return to home position." ))
+				else:
+					self.plotDocument()
+					self.svgNodeCount = self.svgNodeCount_Old	# New values to write to file:
+					self.svgLastPath = self.svgLastPath_Old
+					self.svgLastPathNC = self.svgLastPathNC_Old
+					self.svgPausedPosX = self.svgPausedPosX_Old
+					self.svgPausedPosY = self.svgPausedPosY_Old
+					self.svgLayer = self.svgLayer_Old
 			else:
-				inkex.errormsg( gettext.gettext( "There does not seem to be any in-progress plot to resume." ))
+				inkex.errormsg( gettext.gettext( "No in-progress plot data found in file." ))
 
 		elif self.options.mode == "layers":
 			self.copiesToPlot = self.options.copiesOfLayer
@@ -295,7 +298,7 @@ class AxiDrawClass( inkex.Effect ):
 				self.delayBetweenCopies = False
 				self.copiesToPlot = self.copiesToPlot - 1
 				self.plotDocument()
-				self.delayBetweenCopies = True
+				self.delayBetweenCopies = True			# Indicate that we are currently delaying between copies
 				
 				timeCounter = 10 * self.options.copyDelay
 				while (timeCounter > 0):	
@@ -1174,7 +1177,7 @@ class AxiDrawClass( inkex.Effect ):
 			if MaxLength > stringPos + 2:
 				while stringPos <= MaxLength:	
 					EscapeSequence = CurrentLayerName[stringPos:stringPos+2].lower()
-					if (EscapeSequence == "+h") or (EscapeSequence == "+s"):
+					if (EscapeSequence == "+h") or (EscapeSequence == "+s") or (EscapeSequence == "+d"):
 						paramStart = stringPos + 2
 						stringPos = stringPos + 3
 						TempNumString = 'x'
@@ -1197,7 +1200,22 @@ class AxiDrawClass( inkex.Effect ):
 								if ((parameterInt > 0) and (parameterInt <= 100)):
 									self.UseCustomLayerSpeed = True
 									self.LayerPenDownSpeed = parameterInt
+
+							if (EscapeSequence == "+d"):
+								if (parameterInt > 0):
+									# Delay requested before plotting this layer. Delay times are in milliseconds.
+									timeRemaining = float( parameterInt ) / 1000.0	# Convert to seconds
 									
+									while (timeRemaining > 0):	
+										if (timeRemaining < 0.15):
+											time.sleep(timeRemaining)	# Less than 150 ms remaining to be paused. Do it all at once.
+											timeRemaining = 0
+											self.PauseResumeCheck()		# Check if pause button was pressed while we were sleeping
+										else:
+											time.sleep(0.1)				# Use short 100 ms intervals to improve pausing responsiveness
+											timeRemaining = timeRemaining - 0.1
+											self.PauseResumeCheck()		# Check if pause button was pressed while we were sleeping
+					
 						stringPos = paramStart + len(TempNumString)
 					else:
 						break #exit loop. 
@@ -2264,7 +2282,7 @@ class AxiDrawClass( inkex.Effect ):
 			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPosX
 			self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPosY
 			self.penRaise()
-			if (self.delayBetweenCopies == False):
+			if (self.delayBetweenCopies == False):	# Only say this if we're not in the delay between copies.
 				inkex.errormsg( 'Use the "resume" feature to continue.' )
 			self.bStopped = True
 			return # Note: This segment is not plotted.

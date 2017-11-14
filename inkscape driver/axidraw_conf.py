@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.6.0, dated October 20, 2017.
+# Version 1.6.1, dated November 14, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -119,7 +119,7 @@ MaxStepDist_LR = 0.000696	# Maximum distance covered by 1 step in Low Res mode, 
 MaxStepDist_HR = 0.000348	# Maximum distance covered by 1 step in Hi Res mode, rounded up, in inches.  ~1/(2032 sqrt(2))
 							# In planning trajectories, we skip movements shorter than these distances, likely to be < 1 step.
 
-SpeedFactorConst = 0.25	# When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.3
+SpeedFactorConst = 0.5	# When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.3
 						# A slower speed is used, since we have to accelerate "instantly".
 						
 StartPosX = 0			# Parking position, in pixels. Default: 0
