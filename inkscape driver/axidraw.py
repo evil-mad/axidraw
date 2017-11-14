@@ -1190,16 +1190,6 @@ class AxiDrawClass( inkex.Effect ):
 									break
 						if ( str.isdigit( TempNumString ) ):
 							parameterInt = int( float( TempNumString ) )
-					
-							if (EscapeSequence == "+h"):
-								if ((parameterInt >= 0) and (parameterInt <= 100)):
-									self.UseCustomLayerPenHeight = True
-									self.LayerPenDownPosition = parameterInt
-								
-							if (EscapeSequence == "+s"):
-								if ((parameterInt > 0) and (parameterInt <= 100)):
-									self.UseCustomLayerSpeed = True
-									self.LayerPenDownSpeed = parameterInt
 
 							if (EscapeSequence == "+d"):
 								if (parameterInt > 0):
@@ -1215,7 +1205,17 @@ class AxiDrawClass( inkex.Effect ):
 											time.sleep(0.1)				# Use short 100 ms intervals to improve pausing responsiveness
 											timeRemaining = timeRemaining - 0.1
 											self.PauseResumeCheck()		# Check if pause button was pressed while we were sleeping
-					
+											
+							if (EscapeSequence == "+h"):
+								if ((parameterInt >= 0) and (parameterInt <= 100)):
+									self.UseCustomLayerPenHeight = True
+									self.LayerPenDownPosition = parameterInt
+								
+							if (EscapeSequence == "+s"):
+								if ((parameterInt > 0) and (parameterInt <= 100)):
+									self.UseCustomLayerSpeed = True
+									self.LayerPenDownSpeed = parameterInt
+									
 						stringPos = paramStart + len(TempNumString)
 					else:
 						break #exit loop. 
