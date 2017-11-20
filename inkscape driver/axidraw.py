@@ -569,7 +569,7 @@ class AxiDrawClass( inkex.Effect ):
 			# wrap everything in a try so we can for sure close the serial port 
 			self.recursivelyTraverseSvg( self.svg, self.svgTransform )
 			self.penRaise()   #Always end with pen-up
- 
+
 			# return to home after end of normal plot
 			if ( ( not self.bStopped ) and ( self.ptFirst ) ):
 				self.xBoundsMin = axidraw_conf.StartPosX
@@ -2271,12 +2271,16 @@ class AxiDrawClass( inkex.Effect ):
 		try:
 			pauseState = strButton[0]
 		except:
-			inkex.errormsg( '\nUSB Connectivity lost after node number ' + str( self.nodeCount ) + '.' )
+			inkex.errormsg( '\nUSB Connectivity lost.') 
 			pauseState = '2' # Pause the plot; we appear to have lost connectivity.
-					
+			if self.spewDebugdata:
+				inkex.errormsg( '\n (lost after node number : ' + str(self.nodeCount) + ')' )	
+
 		if ((pauseState == '1') and (self.delayBetweenCopies == False)):
-			inkex.errormsg( 'Plot paused by button press after node number ' + str( self.nodeCount ) + '.' )
-		
+			inkex.errormsg( 'Plot paused by button press.')
+			if self.spewDebugdata:
+				inkex.errormsg( '\n (lost after node number : ' + str(self.nodeCount) + ')' )	
+
 		if (pauseState == '1') or (pauseState == '2'):  # Stop plot
 			self.svgNodeCount = self.nodeCount
 			self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPosX
@@ -2343,9 +2347,13 @@ class AxiDrawClass( inkex.Effect ):
 
 
 		if (self.options.constSpeed):
-			self.PenDownSpeed = self.PenDownSpeed * axidraw_conf.SpeedFactorConst	
+			if ( self.options.resolution == 1 ):	# High-resolution ("Super") mode
+				self.PenDownSpeed = self.PenDownSpeed * axidraw_conf.ConstSpeedFactor_LR	
+			else:
+				self.PenDownSpeed = self.PenDownSpeed * axidraw_conf.ConstSpeedFactor_HR	
+
 			# TODO: Re-evaluate this approach. It may be better to allow a higher maximum speed, but
-			#	get to it via a very short (1-2 segment only) acceleration period.
+			#	get to it via a very short (1-2 segment only) acceleration period, rather than truly constant.
 			
 	def penRaise( self ):
 		self.virtualPenUp = True  # Virtual pen keeps track of state for resuming plotting.

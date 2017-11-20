@@ -111,7 +111,7 @@ MaxStepRate = 24.995	# Maximum allowed motor step rate, in steps per millisecond
 						# We use a conservative value, to help prevent errors due to rounding.
 						# This value is normally used _for speed limit checking only_.
 
-SpeedLimXY_LR = 11.000	# Maximum XY speed allowed when in Low Resolution mode, in inches per second.  Default: 17.3958 Max: 17.3958
+SpeedLimXY_LR = 12.000	# Maximum XY speed allowed when in Low Resolution mode, in inches per second.  Default: 12.000 Max: 17.3958
 SpeedLimXY_HR = 8.6979	# Maximum XY speed allowed when in High Resolution mode, in inches per second. Default: 8.6979, Max: 8.6979
 						# Do not increase these values above Max; they are derived from MaxStepRate and the resolution.
 
@@ -119,9 +119,9 @@ MaxStepDist_LR = 0.000696	# Maximum distance covered by 1 step in Low Res mode, 
 MaxStepDist_HR = 0.000348	# Maximum distance covered by 1 step in Hi Res mode, rounded up, in inches.  ~1/(2032 sqrt(2))
 							# In planning trajectories, we skip movements shorter than these distances, likely to be < 1 step.
 
-SpeedFactorConst = 0.5	# When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.3
-						# A slower speed is used, since we have to accelerate "instantly".
-						
+ConstSpeedFactor_LR = 0.5	# When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.5 for Low Res mode
+ConstSpeedFactor_HR = 0.4	# When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.3 for Hi Res mode
+
 StartPosX = 0			# Parking position, in pixels. Default: 0
 StartPosY = 0			# Parking position, in pixels. Default: 0
 
