@@ -23,7 +23,7 @@ will be filled.
 
 Hatched figures will be grouped with their fills.
   </_param>
-  <param name="hatchSpacing" type="float" min="0" max="1000" _gui-text="   Hatch spacing (px)">5.0</param>
+  <param name="hatchSpacing" type="float" min="0" max="1000" _gui-text="   Hatch spacing (px)">3.0</param>
   <param name="hatchAngle" type="float" min="-360" max="360" _gui-text="   Hatch angle (degrees)">45</param>
   <param name="crossHatch" type="boolean" _gui-text="   Crosshatch?">false</param>
 
@@ -31,7 +31,7 @@ Hatched figures will be grouped with their fills.
   <param name="hatchScope" type="float" min="1.1" max="5.0" _gui-text="   Range of end connections (default: 3)">3.0</param>
   <param name="holdBackHatchFromEdges" type="boolean" _gui-text="   Inset fill from edges?">true</param>
   <param name="holdBackSteps" type="float" min="0.1" max="10.0" _gui-text="   Inset distance (px) (default: 1)">1.0</param>
-  <param name="tolerance" type="float" min="0.1" max="100" _gui-text="   Tolerance (default: 5.0)">5.0</param>
+  <param name="tolerance" type="float" min="0.1" max="100" _gui-text="   Tolerance (default: 3.0)">3.0</param>
 
   <param name="footer" type="description" xml:space="preserve">
             (v2.0.1, December 23, 2016)</param>
