@@ -24,14 +24,14 @@ If you are operating the AxiDraw in "standalone" mode, that is, outside
  of the Inkscape context, then please set your preferences here or via
  command-line arguments. (Preferences set within Inkscape -- via the 
  AxiDraw Control dialog -- are ignored when called via the command line.)
- Best practice is to adjust and test settings from within the Inkscape
- GUI, before 
+ Recommended practice is to adjust and test settings from within the
+ Inkscape GUI, before moving to stand-alone (CLI-based) control.
  
  
 '''
 
 PenUpPos = 60			# Default pen-up position (%).		Range: 0 - 100 %
-PenDownPos = 40			# Default pen-down position (%).	Range: 0 - 100 %
+PenDownPos = 30			# Default pen-down position (%).	Range: 0 - 100 %
 
 PenUpSpeed = 75			# Default pen-up speed (%). 		Range: 1 - 110 %
 PenDownSpeed = 25		# Default pen-down speed (%). 		Range: 1 - 110 %
