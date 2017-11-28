@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
 <_name>AxiDraw Control</_name>
-<id>command.evilmadscientist.axidraw.rev161</id>
+<id>command.evilmadscientist.axidraw.rev162</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw.py</dependency>
 <dependency type="executable" location="extensions">inkex.py</dependency>
@@ -33,7 +33,7 @@ Need help? Visit http://axidraw.com/docs
 <param indent="2" name="penUpPosition" type="int" min="0" max="100" appearance="full" 
 _gui-text="Pen height: UP (%):">60</param>
 <param indent="2" name="penDownPosition" type="int" min="0" max="100" appearance="full"
-_gui-text="Pen height: DOWN, (%):">40</param>
+_gui-text="Pen height: DOWN, (%):">30</param>
 
 
 <param name="setupType"  indent="1" type="optiongroup" _gui-text="Action on 'Apply':">
@@ -212,7 +212,7 @@ or "guide lines" will not be.
 <page name="Help" _gui-text="*">
 <_param name="instructions_general" type="description"
 xml:space="preserve">
-AxiDraw Control    version 1.6.1, dated 2017-11-14
+AxiDraw Control    version 1.6.2, dated 2017-11-28
 
 Copyright 2017 Evil Mad Science LLC
 

@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.6.1, dated November 14, 2017.
+# Version 1.6.2, dated November 28, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -53,7 +53,7 @@ class AxiDrawClass( inkex.Effect ):
 
 	def __init__( self ):
 		inkex.Effect.__init__( self )
-		self.versionString = "AxiDraw Control - Version 1.6.0, dated 2017-10-20"
+		self.versionString = "AxiDraw Control - Version 1.6.2 dated 2017-11-28"
 		self.spewDebugdata = False
 		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
@@ -2376,6 +2376,7 @@ class AxiDrawClass( inkex.Effect ):
 				self.updateVCharts( 0, 0, 0)
 				self.velDataTime += vTime
 				self.updateVCharts( 0, 0, 0)
+				self.ptEstimate += vTime
 			else:
 				ebb_motion.sendPenUp(self.serialPort, vTime )
 				if (vTime > 50):
@@ -2403,6 +2404,7 @@ class AxiDrawClass( inkex.Effect ):
 					self.updateVCharts( 0, 0, 0)
 					self.velDataTime += vTime
 					self.updateVCharts( 0, 0, 0)
+					self.ptEstimate += vTime
 				else:
 					ebb_motion.sendPenDown(self.serialPort, vTime )	
 					if (vTime > 50):
