@@ -65,8 +65,8 @@ of the pen for writing and drawing.
 <_param name="instructions_timing3" type="description" appearance="header">Pen lift and lowering speeds:</_param>
 
 <param indent="1" name="penLiftRate" type="optiongroup" appearance="minimal" _gui-text="Pen raising speed :">
-<_option value="150">Standard</_option>
 <_option value="400">Maximum</_option>
+<_option value="150">Standard</_option>
 <_option value="100">Slow</_option>
 <_option value="50">Very slow</_option>
 </param>
