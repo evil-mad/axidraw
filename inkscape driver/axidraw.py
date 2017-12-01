@@ -294,12 +294,10 @@ class AxiDrawClass( inkex.Effect ):
 				self.svgLastPath = 0
 				self.svgNodeCount = 0
 				self.svgLayer = self.options.layerNumber
-				
 				self.delayBetweenCopies = False
 				self.copiesToPlot = self.copiesToPlot - 1
 				self.plotDocument()
 				self.delayBetweenCopies = True			# Indicate that we are currently delaying between copies
-				
 				timeCounter = 10 * self.options.copyDelay
 				while (timeCounter > 0):	
 					timeCounter = timeCounter - 1
@@ -309,7 +307,6 @@ class AxiDrawClass( inkex.Effect ):
 						else:
 							time.sleep(0.100)			# Use short intervals to improve responsiveness
 							self.PauseResumeCheck()		# Detect button press while paused between plots
-
 
 		elif self.options.mode == "setup":
 			useOldResumeData = True 
@@ -480,7 +477,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.velDataChart1.append(" %0.3f %0.3f" % (tempTime, 8.5 - self.DocUnitScaleFactor * v1/scaleFactor) )
 		self.velDataChart2.append(" %0.3f %0.3f" % (tempTime, 8.5 - self.DocUnitScaleFactor * v2/scaleFactor) )
 		self.velDataChartT.append(" %0.3f %0.3f" % (tempTime, 8.5 - self.DocUnitScaleFactor * vT/scaleFactor) )
-
 
 	def plotDocument( self ):
 		# Plot the actual SVG document, if so selected in the interface
@@ -675,7 +671,6 @@ class AxiDrawClass( inkex.Effect ):
 						inkex.errormsg("Length of path drawn: %1.2f m." % downDist)
 						inkex.errormsg("Total distance moved: %1.2f m." % totDist)
 
-
 		finally:
 			# We may have had an exception and lost the serial port...
 			pass
@@ -740,9 +735,13 @@ class AxiDrawClass( inkex.Effect ):
 
 			elif node.tag == inkex.addNS( 'symbol', 'svg' ) or node.tag == 'symbol':
 				# A symbol is much like a group, except that it should only be rendered when called within a "use" tag.
-
+				
 				if (self.useTagNestLevel > 0):
 					self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )
+					
+			elif node.tag == inkex.addNS( 'a', 'svg' ) or node.tag == 'a':
+				# An 'a' is much like a group, in that it is a generic container element.
+				self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )
 	
 			elif node.tag == inkex.addNS( 'use', 'svg' ) or node.tag == 'use':
 
@@ -1033,7 +1032,6 @@ class AxiDrawClass( inkex.Effect ):
 							if t:
 								newpath.set( 'transform', t )
 							self.plotPath( newpath, matNew )
-
 				elif node.tag == inkex.addNS( 'metadata', 'svg' ) or node.tag == 'metadata':
 					continue
 				elif node.tag == inkex.addNS( 'defs', 'svg' ) or node.tag == 'defs':
@@ -1077,16 +1075,16 @@ class AxiDrawClass( inkex.Effect ):
 				elif node.tag == inkex.addNS( 'pattern', 'svg' ) or node.tag == 'pattern':
 					continue
 				elif node.tag == inkex.addNS( 'radialGradient', 'svg' ) or node.tag == 'radialGradient':
-					# Similar to pattern
-					continue
+					continue # Similar to pattern
 				elif node.tag == inkex.addNS( 'linearGradient', 'svg' ) or node.tag == 'linearGradient':
-					# Similar in pattern
-					continue
+					continue # Similar in pattern
 				elif node.tag == inkex.addNS( 'style', 'svg' ) or node.tag == 'style':
 					# This is a reference to an external style sheet and not the value
 					# of a style attribute to be inherited by child elements
 					continue
 				elif node.tag == inkex.addNS( 'cursor', 'svg' ) or node.tag == 'cursor':
+					continue
+				elif node.tag == inkex.addNS( 'font', 'svg' ) or node.tag == 'font':
 					continue
 				elif node.tag == inkex.addNS( 'color-profile', 'svg' ) or node.tag == 'color-profile':
 					# Gamma curves, color temp, etc. are not relevant to single color output
@@ -1101,9 +1099,13 @@ class AxiDrawClass( inkex.Effect ):
 				else:
 					if (str( node.tag ) not in self.warnings) and (self.plotCurrentLayer):
 						t = str( node.tag ).split( '}' )
-						inkex.errormsg( gettext.gettext( 'Warning: in layer "' + 
-							self.sCurrentLayerName + '" unable to draw <' + str( t[-1] ) +
-							'> object, please convert it to a path first.' ) )
+						if self.sCurrentLayerName == "":
+							layerDescription = "found in file. "
+						else:
+							layerDescription = 'in layer "' + self.sCurrentLayerName + '".'
+						
+						inkex.errormsg( 'Warning: unable to plot' + '<' +  str( t[-1]) + '> object')
+						inkex.errormsg( layerDescription + 'Please convert it to a path first.' )
 						self.warnings[str( node.tag )] = 1
 					continue
 
@@ -2140,7 +2142,6 @@ class AxiDrawClass( inkex.Effect ):
 		of sending the output commands to the motors.
 		'''
 
-		
 		if spewSegmentDebugData:	
 			inkex.errormsg( 'position/segmentLengthInches: '+str(position/segmentLengthInches))
 
