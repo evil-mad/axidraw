@@ -88,7 +88,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--copiesOfLayer", action="store", type="int", dest="copiesOfLayer", default=axidraw_conf.copiesOfLayer, help="Copies to plot while in Layer mode" )
 		self.OptionParser.add_option( "--copyDelay", action="store", type="int", dest="copyDelay", default=axidraw_conf.copyDelay, help="Seconds to delay between copies." )
 
-
 		self.DocUnits = "in"
 		self.DocUnitScaleFactor = 1
 		self.sq2 = math.sqrt(2.0)
@@ -117,12 +116,8 @@ class AxiDrawClass( inkex.Effect ):
 		self.sCurrentLayerName = ''
 		self.copiesToPlot = 1
 		self.delayBetweenCopies = False	# Not currently delaying between copies
-		
 
-		self.penUpTravelInches = 0.0
-		self.penDownTravelInches = 0.0
-		
-		#Values read from file:
+		#Values to be read from file:
 		self.svgLayer_Old = int( 0 )
 		self.svgNodeCount_Old = int( 0 )
 		self.svgDataRead_Old = False
@@ -132,17 +127,20 @@ class AxiDrawClass( inkex.Effect ):
 		self.svgLastKnownPosY_Old = float( 0.0 )
 		self.svgPausedPosX_Old = float( 0.0 )
 		self.svgPausedPosY_Old = float( 0.0 )	
-		
+		self.svgRandSeed_Old = float( 0.0 )	
+				
 		#New values to write to file:
 		self.svgLayer = int( 0 )
 		self.svgNodeCount = int( 0 )
 		self.svgDataRead = False
+		self.svgDataWritten = False
 		self.svgLastPath = int( 0 )
 		self.svgLastPathNC = int( 0 )
 		self.svgLastKnownPosX = float( 0.0 )
 		self.svgLastKnownPosY = float( 0.0 )
 		self.svgPausedPosX = float( 0.0 )
 		self.svgPausedPosY = float( 0.0 )	
+		self.svgRandSeed = float( 0.0 )	
 		
 		self.PrintInLayersMode = False
 		self.useTagNestLevel = 0
@@ -167,9 +165,8 @@ class AxiDrawClass( inkex.Effect ):
 		self.warnings = {}
 		self.warnOutOfBounds = False
 
-		self.previewLayer = inkex.etree.Element(inkex.addNS( 'g', 'svg' ))
-		self.previewSLD = inkex.etree.SubElement( self.previewLayer, inkex.addNS( 'g', 'svg' ) )
-		self.previewSLU = inkex.etree.SubElement( self.previewLayer, inkex.addNS( 'g', 'svg' ) )
+		self.penUpTravelInches = 0.0
+		self.penDownTravelInches = 0.0
 		self.pathDataPU = []	# pen-up path data for preview layers
 		self.pathDataPD = []	# pen-down path data for preview layers
 		self.pathDataPenUp = -1	# A value of -1 indicates an indeterminate state- requiring new "M" in path.
@@ -180,7 +177,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.velDataChart1 = []	# Velocity visualization, for preview of velocity vs time Motor 1
 		self.velDataChart2 = []	# Velocity visualization, for preview of velocity vs time Motor 2
 		self.velDataChartT = []	# Velocity visualization, for preview of velocity vs time Total V
-
 
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
@@ -242,6 +238,8 @@ class AxiDrawClass( inkex.Effect ):
 			while (self.copiesToPlot != 0):
 				self.LayersFoundToPlot = False
 				useOldResumeData = False
+				self.svgRandSeed =  round(time.time() * 100)/100	# New random seed for new plot
+			
 				self.PrintInLayersMode = False
 				self.plotCurrentLayer = True
 				self.svgNodeCount = 0
@@ -273,12 +271,13 @@ class AxiDrawClass( inkex.Effect ):
 					inkex.errormsg( gettext.gettext( "No resume data found; unable to return to home position." ))
 				else:
 					self.plotDocument()
-					self.svgNodeCount = self.svgNodeCount_Old	# New values to write to file:
+					self.svgNodeCount = self.svgNodeCount_Old	# Write old values back to file, to resume later.
 					self.svgLastPath = self.svgLastPath_Old
 					self.svgLastPathNC = self.svgLastPathNC_Old
 					self.svgPausedPosX = self.svgPausedPosX_Old
 					self.svgPausedPosY = self.svgPausedPosY_Old
 					self.svgLayer = self.svgLayer_Old
+					self.svgRandSeed = self.svgRandSeed_Old
 			else:
 				inkex.errormsg( gettext.gettext( "No in-progress plot data found in file." ))
 
@@ -288,6 +287,7 @@ class AxiDrawClass( inkex.Effect ):
 				self.copiesToPlot = -1
 			while (self.copiesToPlot != 0):
 				useOldResumeData = False 
+				self.svgRandSeed = time.time()	# New random seed for new plot
 				self.PrintInLayersMode = True
 				self.plotCurrentLayer = False
 				self.LayersFoundToPlot = False
@@ -317,7 +317,6 @@ class AxiDrawClass( inkex.Effect ):
 			self.manualCommand()
 
 		if not (useOldResumeData):
-			self.svgDataRead = False
 			self.UpdateSVGWCBData( self.svg )
 		if self.serialPort is not None:
 			if not ((self.options.mode == "manual") and (self.options.manualType == "bootload")):
@@ -348,24 +347,15 @@ class AxiDrawClass( inkex.Effect ):
 				self.fSpeed = self.PenDownSpeed 
 				self.fCurrX = self.svgLastKnownPosX_Old + axidraw_conf.StartPosX
 				self.fCurrY = self.svgLastKnownPosY_Old + axidraw_conf.StartPosY
+				self.svgRandSeed = self.svgRandSeed_Old #Use old random seed value
 				if self.spewDebugdata:
 					inkex.errormsg( 'Entering resume mode at layer:  ' + str(self.svgLayer) )
 
 	def CheckSVGforWCBData( self ):
 		self.svgDataRead = False
 		self.recursiveWCBDataScan( self.svg )
-		if self.options.fileOutput:
-			if ( not self.svgDataRead ): #if there is no WCB data, add some:
-				WCBlayer = inkex.etree.SubElement( self.svg, 'WCB' )
-				WCBlayer.set( 'layer', str( 0 ) )
-				WCBlayer.set( 'node', str( 0 ) )			#node paused at, if saved in paused state
-				WCBlayer.set( 'lastpath', str( 0 ) )		#Last path number that has been fully painted
-				WCBlayer.set( 'lastpathnc', str( 0 ) )		#Node count as of finishing last path.
-				WCBlayer.set( 'lastknownposx', str( 0 ) )  #Last known position of carriage
-				WCBlayer.set( 'lastknownposy', str( 0 ) )
-				WCBlayer.set( 'pausedposx', str( 0 ) )	   #The position of the carriage when "pause" was pressed.
-				WCBlayer.set( 'pausedposy', str( 0 ) )
-						
+		# If data is not found, we'll add a "WCB" object in UpdateSVGWCBData.
+
 	def recursiveWCBDataScan( self, aNodeList ):
 		if ( not self.svgDataRead ):
 			for node in aNodeList:
@@ -381,6 +371,7 @@ class AxiDrawClass( inkex.Effect ):
 						self.svgLastKnownPosY_Old = float( node.get( 'lastknownposy' ) ) 
 						self.svgPausedPosX_Old = float( node.get( 'pausedposx' ) )
 						self.svgPausedPosY_Old = float( node.get( 'pausedposy' ) ) 
+						self.svgRandSeed_Old = float( node.get( 'randseed' ) ) 
 						self.svgDataRead = True
 					except:
 						pass
@@ -388,6 +379,9 @@ class AxiDrawClass( inkex.Effect ):
 	def UpdateSVGWCBData( self, aNodeList ):
 		if self.options.fileOutput:
 			if ( not self.svgDataRead ):
+				WCBdata = inkex.etree.SubElement( self.svg, 'WCB' )
+				self.svgDataRead = True # Ensure that we don't keep adding WCB elements
+		if ( not self.svgDataWritten ):
 				for node in aNodeList:
 					if node.tag == 'svg':
 						self.UpdateSVGWCBData( node )
@@ -400,8 +394,9 @@ class AxiDrawClass( inkex.Effect ):
 						node.set( 'lastknownposy', str( (self.svgLastKnownPosY ) ) )
 						node.set( 'pausedposx', str( (self.svgPausedPosX) ) )
 						node.set( 'pausedposy', str( (self.svgPausedPosY) ) )
-						self.svgDataRead = True
-					 
+						node.set( 'randseed', str( (self.svgRandSeed) ) )
+						self.svgDataWritten = True
+
 	def setupCommand( self ):
 		"""Execute commands from the "setup" mode"""
 
@@ -495,44 +490,24 @@ class AxiDrawClass( inkex.Effect ):
 		self.DocUnits = self.getDocumentUnit()
 		userUnitsWidth = plot_utils.unitsToUserUnits("1in")
 		self.DocUnitScaleFactor = plot_utils.userUnitToUnits(userUnitsWidth, self.DocUnits)
+
+		if self.options.mode == "resume":
+			if ( self.options.resumeType == "justGoHome" ):
+				fX = axidraw_conf.StartPosX
+				fY = axidraw_conf.StartPosY 
+				self.plotSegmentWithVelocity(fX, fY, 0, 0)
+				return
 		
+		# Modifications to SVG -- including re-ordering and text substitution may be made at this point, and will not be preserved.
+
+
+
 		if not self.options.previewOnly:
 			self.options.previewType = 0	# Only render previews if we are in preview mode.
 			velDataPlot = False
 			if self.serialPort is None:
 				return
 			unused = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
-			
-		if self.options.previewOnly:
-			# Remove old preview layers, whenever preview mode is enabled
-			for node in self.svg:
-				if node.tag == inkex.addNS( 'g', 'svg' ) or node.tag == 'g':
-					if ( node.get( inkex.addNS( 'groupmode', 'inkscape' ) ) == 'layer' ): 
-						LayerName = node.get( inkex.addNS( 'label', 'inkscape' ) )
-						if LayerName == '% Preview':
-							self.svg.remove( node )
-
-			self.previewLayer.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
-			self.previewLayer.set( inkex.addNS( 'label', 'inkscape' ), '% Preview' )
-			self.previewSLD.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
-			self.previewSLD.set( inkex.addNS( 'label', 'inkscape' ), '% Pen-down drawing' )
-			self.previewSLU.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
-			self.previewSLU.set( inkex.addNS( 'label', 'inkscape' ), '% Pen-up transit' )
-			self.svg.append( self.previewLayer )
-
-		if self.options.mode == "resume":
-			if self.resumeMode:
-				fX = self.svgPausedPosX_Old + axidraw_conf.StartPosX
-				fY = self.svgPausedPosY_Old + axidraw_conf.StartPosY
-				self.resumeMode = False
-				self.plotSegmentWithVelocity(fX, fY, 0, 0) # pen-up move to starting point
-				self.resumeMode = True
-				self.nodeCount = 0
-			elif ( self.options.resumeType == "justGoHome" ):
-				fX = axidraw_conf.StartPosX
-				fY = axidraw_conf.StartPosY 
-				self.plotSegmentWithVelocity(fX, fY, 0, 0)
-				return
 
 		# Viewbox handling
 		# Ignores translations and the preserveAspectRatio attribute
@@ -557,13 +532,24 @@ class AxiDrawClass( inkex.Effect ):
 
 		self.svgTransform = parseTransform( 'scale(%f,%f) translate(%f,%f)' % (sx, sy,Offset0, Offset1))
 
-		self.ServoSetup()
-		self.penRaise() 
-		self.EnableMotors() #Set plotting resolution
+
+		# wrap everything in a try so we can be sure to close the serial port 
 
 		try:
-			# wrap everything in a try so we can for sure close the serial port 
-			self.recursivelyTraverseSvg( self.svg, self.svgTransform )
+			self.ServoSetup()
+			self.penRaise() 
+			self.EnableMotors() #Set plotting resolution
+			
+			if self.options.mode == "resume":
+				if self.resumeMode:
+					fX = self.svgPausedPosX_Old + axidraw_conf.StartPosX
+					fY = self.svgPausedPosY_Old + axidraw_conf.StartPosY
+					self.resumeMode = False
+					self.plotSegmentWithVelocity(fX, fY, 0, 0) # pen-up move to starting point
+					self.resumeMode = True
+					self.nodeCount = 0
+		
+			self.recursivelyTraverseSvg( self.svg, self.svgTransform )	# Call the recursive routine to plot the document
 			self.penRaise()   #Always end with pen-up
 
 			# return to home after end of normal plot
@@ -574,9 +560,21 @@ class AxiDrawClass( inkex.Effect ):
 				fY = self.ptFirst[1] 
 				self.nodeCount = self.nodeTarget
 				self.plotSegmentWithVelocity( fX, fY, 0, 0)
-				
+
+			# Revert back to original SVG document, prior to adding preview layers.
+			#  No changes to the SVG document prior to this point will be saved.
+			#
+			#  Doing so allows us to use routines that alter the SVG
+			#  prior to this point -- e.g., plot re-ordering for speed 
+			#  or font substitutions.
+			
+			self.document = copy.deepcopy(self.original_document)
+			self.svg  = self.document.getroot()
+
 			if ( not self.bStopped ): 
 				if (self.options.mode == "plot") or (self.options.mode == "layers") or (self.options.mode == "resume"):
+					# Clear saved plot data from the SVG file,
+					# IF we have _successfully completed_ a normal plot from the plot, layer, or resume mode.
 					self.svgLayer = 0
 					self.svgNodeCount = 0
 					self.svgLastPath = 0
@@ -585,30 +583,53 @@ class AxiDrawClass( inkex.Effect ):
 					self.svgLastKnownPosY = 0
 					self.svgPausedPosX = 0
 					self.svgPausedPosY = 0
-					#Clear saved position data from the SVG file,
-					#  IF we have completed a normal plot from the plot, layer, or resume mode.
+					self.svgRandSeed = 0
+					
 			if (self.warnOutOfBounds):
 				inkex.errormsg( gettext.gettext( 'Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help!' ) )
 
+			if self.options.previewOnly:
+				# Remove old preview layers, whenever preview mode is enabled
+				for node in self.svg:
+					if node.tag == inkex.addNS( 'g', 'svg' ) or node.tag == 'g':
+						if ( node.get( inkex.addNS( 'groupmode', 'inkscape' ) ) == 'layer' ): 
+							LayerName = node.get( inkex.addNS( 'label', 'inkscape' ) )
+							if LayerName == '% Preview':
+								self.svg.remove( node )
+
 			if (self.options.previewType > 0): # Render preview. Only possible when in preview mode.
+				self.previewLayer = inkex.etree.Element(inkex.addNS( 'g', 'svg' ))
+				self.previewSLU = inkex.etree.SubElement( self.previewLayer, inkex.addNS( 'g', 'svg' ) )
+				self.previewSLD = inkex.etree.SubElement( self.previewLayer, inkex.addNS( 'g', 'svg' ) )
+
+				self.previewLayer.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
+				self.previewLayer.set( inkex.addNS( 'label', 'inkscape' ), '% Preview' )
+				self.previewSLD.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
+				self.previewSLD.set( inkex.addNS( 'label', 'inkscape' ), '% Pen-down drawing' )
+				self.previewSLU.set( inkex.addNS('groupmode', 'inkscape' ), 'layer' )
+				self.previewSLU.set( inkex.addNS( 'label', 'inkscape' ), '% Pen-up transit' )
+				self.svg.append( self.previewLayer )
+
 				strokeWidth = "0.2mm"	# Adjust this here, in your preferred units.
 				uuWidth = self.unittouu(strokeWidth)	#TODO: Change over to use unitsToUserUnits routine from plot_utils
 
-				strokeWidthConverted = self.uutounit(uuWidth, self.DocUnits)
+				# 	Converted stroke width is given by self.uutounit(uuWidth, self.DocUnits):
+				pStyle = {'stroke-width':self.uutounit(uuWidth, self.DocUnits),'fill':'none','stroke-linejoin':'round','stroke-linecap':'round'}
+				
 				nsPrefix = "plot"
 				if (self.options.previewType > 1):
-					style = { 'stroke': 'red', 'stroke-width': strokeWidthConverted, 'fill': 'none' } #Pen-up: red
+					pStyle.update({'stroke': 'red'})
 					path_attrs = {
-						'style': simplestyle.formatStyle( style ),
+						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.pathDataPU),
 						inkex.addNS( 'desc', nsPrefix ): "pen-up transit" }
 					PUpath = inkex.etree.SubElement( self.previewSLU,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 				if ((self.options.previewType == 1) or (self.options.previewType == 3)):
-					style = { 'stroke': 'blue', 'stroke-width': strokeWidthConverted, 'fill': 'none' } #Pen-down: blue
+					pStyle.update({'stroke': 'blue'})
 					path_attrs = {
-						'style': simplestyle.formatStyle( style ),
+						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.pathDataPD),
 						inkex.addNS( 'desc', nsPrefix ): "pen-down drawing" }
 					PDpath = inkex.etree.SubElement( self.previewSLD,
@@ -619,25 +640,25 @@ class AxiDrawClass( inkex.Effect ):
 					self.velDataChart2.insert(0, "M") 
 					self.velDataChartT.insert(0, "M") 
 					
-					style = { 'stroke': 'black', 'stroke-width': strokeWidthConverted, 'fill': 'none' } 
+					pStyle.update({'stroke': 'black'})
 					path_attrs = {
-						'style': simplestyle.formatStyle( style ),
+						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.velDataChartT),
 						inkex.addNS( 'desc', nsPrefix ): "Total V" }
 					PDpath = inkex.etree.SubElement(self.previewLayer,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
-					style = { 'stroke': 'red', 'stroke-width': strokeWidthConverted, 'fill': 'none' } 
+					pStyle.update({'stroke': 'red'})
 					path_attrs = {
-						'style': simplestyle.formatStyle( style ),
+						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.velDataChart1),
 						inkex.addNS( 'desc', nsPrefix ): "Motor 1 V" }
 					PDpath = inkex.etree.SubElement(self.previewLayer,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
-					style = { 'stroke': 'green', 'stroke-width': strokeWidthConverted, 'fill': 'none' } 
+					pStyle.update({'stroke': 'green'})
 					path_attrs = {
-						'style': simplestyle.formatStyle( style ),
+						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.velDataChart2),
 						inkex.addNS( 'desc', nsPrefix ): "Motor 2 V" }
 					PDpath = inkex.etree.SubElement(self.previewLayer,
@@ -824,8 +845,9 @@ class AxiDrawClass( inkex.Effect ):
 						doWePlotThisPath = True
 					if (doWePlotThisPath):
 						self.pathcount += 1
-						# Create a path with the outline of the rectangle
+						# Create (but do not add to SVG) a path with the outline of the rectangle
 						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
+						
 						x = float( node.get( 'x' ) )
 						y = float( node.get( 'y' ) )
 						w = float( node.get( 'width' ) )
@@ -867,7 +889,7 @@ class AxiDrawClass( inkex.Effect ):
 						doWePlotThisPath = True
 					if (doWePlotThisPath):
 						self.pathcount += 1
-						# Create a path to contain the line
+						# Create (but do not add to SVG) a path to contain the line
 						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
 						x1 = float( node.get( 'x1' ) )
 						y1 = float( node.get( 'y1' ) )
@@ -918,6 +940,7 @@ class AxiDrawClass( inkex.Effect ):
 						d = "M " + pa[0]
 						for i in range( 1, len( pa ) ):
 							d += " L " + pa[i]
+						#Create (but do not add to SVG) a path to represent the polyline
 						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
 						newpath.set( 'd', d )
 						s = node.get( 'style' )
@@ -962,6 +985,7 @@ class AxiDrawClass( inkex.Effect ):
 						for i in xrange( 1, len( pa ) ):
 							d += " L " + pa[i]
 						d += " Z"
+						#Create (but do not add to SVG) a path to represent the polygon
 						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
 						newpath.set( 'd', d )
 						s = node.get( 'style' )
@@ -1023,6 +1047,7 @@ class AxiDrawClass( inkex.Effect ):
 								'0 1 0 %f,%f ' % ( x2, cy ) + \
 								'A %f,%f ' % ( rx, ry ) + \
 								'0 1 0 %f,%f' % ( x1, cy )
+							#Create (but do not add to SVG) a path to represent the circle or ellipse
 							newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
 							newpath.set( 'd', d )
 							s = node.get( 'style' )
