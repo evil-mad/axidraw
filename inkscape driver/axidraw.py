@@ -492,6 +492,13 @@ class AxiDrawClass( inkex.Effect ):
 		userUnitsWidth = plot_utils.unitsToUserUnits("1in")
 		self.DocUnitScaleFactor = plot_utils.userUnitToUnits(userUnitsWidth, self.DocUnits)
 
+		if not self.options.previewOnly:
+			self.options.previewType = 0	# Only render previews if we are in preview mode.
+			velDataPlot = False
+			if self.serialPort is None:
+				return
+			unused = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
+
 		if self.options.mode == "resume":
 			if ( self.options.resumeType == "justGoHome" ):
 				fX = axidraw_conf.StartPosX
@@ -500,13 +507,6 @@ class AxiDrawClass( inkex.Effect ):
 				return
 		
 		# Modifications to SVG -- including re-ordering and text substitution may be made at this point, and will not be preserved.
-
-		if not self.options.previewOnly:
-			self.options.previewType = 0	# Only render previews if we are in preview mode.
-			velDataPlot = False
-			if self.serialPort is None:
-				return
-			unused = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
 
 		# Viewbox handling
 		# Ignores translations and the preserveAspectRatio attribute
