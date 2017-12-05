@@ -35,9 +35,10 @@ import serial
 import string
 import time
 
-import ebb_serial	# Requires plotink v 0.9	 https://github.com/evil-mad/plotink
-import ebb_motion
-import plot_utils
+import ebb_serial	# Requires v 0.9 in plotink:	 https://github.com/evil-mad/plotink
+import ebb_motion	# Requires v 0.11 in plotink
+import plot_utils	# Requires v 0.9 in plotink
+
 import axidraw_conf	#Some settings can be changed here.
 
 try:
@@ -339,7 +340,7 @@ class AxiDrawClass( inkex.Effect ):
 			if ( self.svgNodeCount_Old > 0 ):
 				self.nodeTarget = self.svgNodeCount_Old
 				self.svgLayer = self.svgLayer_Old
-				self.ServoSetup()
+				self.ServoSetupWrapper()
 				self.penRaise() 
 				self.EnableMotors() #Set plotting resolution  
 				if self.options.resumeType == "ResumeNow":
@@ -500,8 +501,6 @@ class AxiDrawClass( inkex.Effect ):
 		
 		# Modifications to SVG -- including re-ordering and text substitution may be made at this point, and will not be preserved.
 
-
-
 		if not self.options.previewOnly:
 			self.options.previewType = 0	# Only render previews if we are in preview mode.
 			velDataPlot = False
@@ -522,7 +521,6 @@ class AxiDrawClass( inkex.Effect ):
 				sx = self.svgWidth / float( vinfo[2] )
 				sy = self.svgHeight / float( vinfo[3] )
 				self.DocUnitScaleFactor = 1.0 / sx # Scale preview to viewbox
-
 		else:
 			# Handle case of no viewbox provided. 
 			sx = 1.0 / float( plot_utils.pxPerInch)
@@ -534,9 +532,8 @@ class AxiDrawClass( inkex.Effect ):
 
 
 		# wrap everything in a try so we can be sure to close the serial port 
-
 		try:
-			self.ServoSetup()
+			self.ServoSetupWrapper()
 			self.penRaise() 
 			self.EnableMotors() #Set plotting resolution
 			
@@ -1250,7 +1247,8 @@ class AxiDrawClass( inkex.Effect ):
 			if (self.LayerPenDownSpeed != oldSpeed):
 				self.EnableMotors()	#Set speed value variables for this layer.
 			if (self.LayerPenDownPosition != oldPenDown):
-				self.ServoSetup()	#Set pen height value variables for this layer.
+				self.ServoSetup()	# Set pen down height for this layer. 
+									# This new value will be used when we next lower the pen. (It's up between layers.)
 
 	def plotPath( self, path, matTransform ):
 		'''
@@ -2406,7 +2404,7 @@ class AxiDrawClass( inkex.Effect ):
 			else:
 				ebb_motion.sendPenUp(self.serialPort, vTime )
 				if (vTime > 50):
-					if self.options.mode != "manual":
+					if ((self.options.mode != "manual") and (self.options.mode != "setup")):
 						time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
 			self.penUp = True
 		self.pathDataPenUp = -1
@@ -2443,21 +2441,42 @@ class AxiDrawClass( inkex.Effect ):
 		# Utility wrapper for self.ServoSetup.
 		#
 		# 1. Configure servo up & down positions and lifting/lowering speeds.
-		# 2. If we're not in preview mode, query EBB to learn if we're in the up or down state.
+		# 2. Query EBB to learn if we're in the up or down state.
 		#
-		# This wrapper is used in the manual and setup modes, for pen raising/lowering.
+		# This wrapper is used in the manual, setup, and various plot modes, for initial pen raising/lowering.
 		
-		self.ServoSetup()
+		self.ServoSetup()	# Pre-stage the pen up and pen down positions
 		if self.options.previewOnly:
-			self.penUp = True			#A fine assumption when in preview mode
-			self.virtualPenUp = True		
-		else:
-			if ebb_motion.QueryPenUp( self.serialPort ):
-				self.penUp = True
-				self.virtualPenUp = True
-			else:
-				self.penUp = False
+			self.penUp = True			# A fine assumption when in preview mode
+			self.virtualPenUp = True	#
+		else: 	# Need to figure out if we're in the pen-up or pen-down state... or neither!
+			if (ebb_motion.queryEBBLV( self.serialPort ) == 0):
+			
+				# When the EBB is reset, it goes to its default "pen up" position, for which
+				# QueryPenUp will tell us that the EBB believes it is in the pen-up position.
+				# However, its actual position is the default, not the pen-up position that
+				# we've requested. 
+				#
+				# To fix this, we can manually command the pen to either the pen-up or pen-down
+				# position, as requested. HOWEVER, that may take as much as five seconds in the 
+				# very slowest pen-movement speeds, and we want to skip that delay if the pen
+				# were actually already in the right place, for example if we're plotting right
+				# after raising the pen, or plotting twice in a row.
+				#
+				# Solution: Use an otherwise unused EBB firmware variable (EBBLV), which is 
+				# set to zero upon reset. If we set that value to be nonzero, and later find that
+				# it's still nonzero, we can safely skip extra pen-up/pen-down movements.
+				
+				self.penUp = None
 				self.virtualPenUp = False
+				ebb_motion.setEBBLV(self.serialPort, 100)	# Set the EBBLV to value of 100.
+			else: # It looks like the EEBLV has already been set; we can trust the value from QueryPenUp:
+				if ebb_motion.QueryPenUp( self.serialPort ):
+					self.penUp = True
+					self.virtualPenUp = True
+				else:
+					self.penUp = False
+					self.virtualPenUp = False
 		
 	def ServoSetup( self ):
 		''' Pen position units range from 0% to 100%, which correspond to
@@ -2493,7 +2512,6 @@ class AxiDrawClass( inkex.Effect ):
 	
 			intTemp = 5 * self.options.penLowerRate
 			ebb_motion.setPenDownRate(self.serialPort, intTemp)
-
 
 	def getDocProps( self ):
 		'''
