@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.6.2, dated November 28, 2017.
+# Version 1.6.3, dated December 4, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -54,12 +54,7 @@ class AxiDrawClass( inkex.Effect ):
 
 	def __init__( self ):
 		inkex.Effect.__init__( self )
-		self.versionString = "AxiDraw Control - Version 1.6.2 dated 2017-11-28"
-		self.spewDebugdata = False
-		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
-		self.start_time = time.time()		
-		self.ptEstimate = 0.0	#plot time estimate, milliseconds
 
 		self.OptionParser.add_option( "--mode",	action="store", type="string", dest="mode", default="plot", help="Mode (or GUI tab) selected" )
 		self.OptionParser.add_option( "--penUpPosition", action="store", type="int", dest="penUpPosition", default=axidraw_conf.PenUpPos, help="Position of pen when lifted" )
@@ -89,6 +84,16 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--copiesOfLayer", action="store", type="int", dest="copiesOfLayer", default=axidraw_conf.copiesOfLayer, help="Copies to plot while in Layer mode" )
 		self.OptionParser.add_option( "--copyDelay", action="store", type="int", dest="copyDelay", default=axidraw_conf.copyDelay, help="Seconds to delay between copies." )
 
+	def effect( self ):
+		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
+
+		self.versionString = "AxiDraw Control - Version 1.6.3 dated 2017-12-04"
+		self.spewDebugdata = False
+		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
+
+		self.start_time = time.time()		
+		self.ptEstimate = 0.0	#plot time estimate, milliseconds
+		
 		self.DocUnits = "in"
 		self.DocUnitScaleFactor = 1
 		self.sq2 = math.sqrt(2.0)
@@ -179,8 +184,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.velDataChart2 = []	# Velocity visualization, for preview of velocity vs time Motor 2
 		self.velDataChartT = []	# Velocity visualization, for preview of velocity vs time Total V
 
-	def effect( self ):
-		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
+
 
 		skipSerial = False
 		if self.options.previewOnly:
@@ -2469,7 +2473,7 @@ class AxiDrawClass( inkex.Effect ):
 				
 				self.penUp = None
 				self.virtualPenUp = False
-				ebb_motion.setEBBLV(self.serialPort, 100)	# Set the EBBLV to value of 100.
+				ebb_motion.setEBBLV(self.serialPort, 127)	# Set the EBBLV to value of 127.
 			else: # It looks like the EEBLV has already been set; we can trust the value from QueryPenUp:
 				if ebb_motion.QueryPenUp( self.serialPort ):
 					self.penUp = True
