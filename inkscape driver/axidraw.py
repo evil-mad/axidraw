@@ -72,7 +72,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--reportTime", action="store", type="inkbool", dest="reportTime", default=axidraw_conf.reportTime, help="Report time elapsed" )
 		self.OptionParser.add_option( "--resolution", action="store", type="int", dest="resolution", default=axidraw_conf.resolution, help="Resolution factor" )	
 		self.OptionParser.add_option( "--smoothness", action="store", type="float", dest="smoothness", default=axidraw_conf.smoothness, help="Smoothness of curves" )
-		self.OptionParser.add_option( "--cornering", action="store", type="float", dest="cornering", default=axidraw_conf.smoothness, help="Cornering speed factor" )
+		self.OptionParser.add_option( "--cornering", action="store", type="float", dest="cornering", default=axidraw_conf.cornering, help="Cornering speed factor" )
 		self.OptionParser.add_option( "--manualType", action="store", type="string", dest="manualType", default="version-check", help="The active option when Apply was pressed" )
 		self.OptionParser.add_option( "--WalkDistance", action="store", type="float", dest="WalkDistance", default=1, help="Distance for manual walk" )
 		self.OptionParser.add_option( "--resumeType", action="store", type="string", dest="resumeType", default="ResumeNow", help="The active option when Apply was pressed" )
