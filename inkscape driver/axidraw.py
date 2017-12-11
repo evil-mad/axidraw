@@ -251,7 +251,7 @@ class AxiDrawClass( inkex.Effect ):
 				self.svgLastPath = 0
 				self.svgLayer = 12345  # indicate (to resume routine) that we are plotting all layers.
 
-				self.delayBetweenCopies = False
+				self.delayBetweenCopies = False			# Indicate that we are not currently delaying between copies
 				self.copiesToPlot = self.copiesToPlot - 1
 				self.plotDocument()
 				self.delayBetweenCopies = True			# Indicate that we are currently delaying between copies
@@ -259,7 +259,7 @@ class AxiDrawClass( inkex.Effect ):
 				timeCounter = 10 * self.options.copyDelay
 				while (timeCounter > 0):	
 					timeCounter = timeCounter - 1
-					if ((self.copiesToPlot != 0) and (self.bStopped == False)):
+					if ((self.copiesToPlot != 0) and (self.bStopped == False)):	# Delay if we're between copies, not after the last or paused.
 						if self.options.previewOnly:
 							self.ptEstimate += 100
 						else:
@@ -290,6 +290,8 @@ class AxiDrawClass( inkex.Effect ):
 			self.copiesToPlot = self.options.copiesOfLayer
 			if (self.copiesToPlot == 0):
 				self.copiesToPlot = -1
+				if self.options.previewOnly:	# Special case: 0 (continuous copies) selected, but running in preview mode.
+					self.copiesToPlot = 1		# In this case, revert back to single copy, since there's no way to terminate.
 			while (self.copiesToPlot != 0):
 				useOldResumeData = False 
 				self.svgRandSeed = time.time()	# New random seed for new plot
