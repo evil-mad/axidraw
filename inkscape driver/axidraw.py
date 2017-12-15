@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.6.3, dated December 4, 2017.
+# Version 1.6.4, dated December 13, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -57,8 +57,8 @@ class AxiDrawClass( inkex.Effect ):
 
 
 		self.OptionParser.add_option( "--mode",	action="store", type="string", dest="mode", default="plot", help="Mode (or GUI tab) selected" )
-		self.OptionParser.add_option( "--penUpPosition", action="store", type="int", dest="penUpPosition", default=axidraw_conf.PenUpPos, help="Position of pen when lifted" )
-		self.OptionParser.add_option( "--penDownPosition", action="store", type="int", dest="penDownPosition", default=axidraw_conf.PenDownPos, help="Position of pen for painting" )	
+		self.OptionParser.add_option( "--penUpPosition", action="store", type="int", dest="penUpPosition", default=axidraw_conf.penUpPosition, help="Height of pen when lifted" )
+		self.OptionParser.add_option( "--penDownPosition", action="store", type="int", dest="penDownPosition", default=axidraw_conf.penDownPosition, help="Height of pen when lowered" )	
 		self.OptionParser.add_option( "--setupType", action="store", type="string", dest="setupType", default="align-mode", help="The setup option selected" )
 		self.OptionParser.add_option( "--penDownSpeed", action="store", type="int", dest="penDownSpeed", default=axidraw_conf.PenDownSpeed, help="Speed (step/sec) while pen is down" )
 		self.OptionParser.add_option( "--penUpSpeed", action="store", type="int", dest="penUpSpeed", default=axidraw_conf.PenUpSpeed, help="Rapid speed (percent) while pen is up" )
@@ -83,11 +83,12 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--copiesOfDocument", action="store", type="int", dest="copiesOfDocument", default=axidraw_conf.copiesOfDocument, help="Copies to plot while in Plot mode" )
 		self.OptionParser.add_option( "--copiesOfLayer", action="store", type="int", dest="copiesOfLayer", default=axidraw_conf.copiesOfLayer, help="Copies to plot while in Layer mode" )
 		self.OptionParser.add_option( "--copyDelay", action="store", type="int", dest="copyDelay", default=axidraw_conf.copyDelay, help="Seconds to delay between copies." )
+		self.OptionParser.add_option( "--port", action="store", type="string", dest="port", default=None, help="Serial port to use" )
 
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.6.3 dated 2017-12-04"
+		self.versionString = "AxiDraw Control - Version 1.6.4, dated December 13, 2017."
 		self.spewDebugdata = False
 		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
@@ -126,14 +127,15 @@ class AxiDrawClass( inkex.Effect ):
 		#Values to be read from file:
 		self.svgLayer_Old = int( 0 )
 		self.svgNodeCount_Old = int( 0 )
-		self.svgDataRead_Old = False
 		self.svgLastPath_Old = int( 0 )
 		self.svgLastPathNC_Old = int( 0 )
 		self.svgLastKnownPosX_Old = float( 0.0 )
 		self.svgLastKnownPosY_Old = float( 0.0 )
 		self.svgPausedPosX_Old = float( 0.0 )
 		self.svgPausedPosY_Old = float( 0.0 )	
-		self.svgRandSeed_Old = float( 0.0 )	
+		self.svgRandSeed_Old = float( 1.0 )	
+		self.svgRow_Old = float( 1.0 )
+
 				
 		#New values to write to file:
 		self.svgLayer = int( 0 )
@@ -146,7 +148,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.svgLastKnownPosY = float( 0.0 )
 		self.svgPausedPosX = float( 0.0 )
 		self.svgPausedPosY = float( 0.0 )	
-		self.svgRandSeed = float( 0.0 )	
+		self.svgRandSeed = float( 1.0 )	
 		
 		self.PrintInLayersMode = False
 		self.useTagNestLevel = 0
@@ -220,14 +222,18 @@ class AxiDrawClass( inkex.Effect ):
 				return
 
 		if skipSerial == False:
-			self.serialPort = ebb_serial.openPort()
+			if self.options.port is None:
+				self.serialPort = ebb_serial.openPort()
+			else:
+				self.serialPort = self.options.port
 			if self.serialPort is None:
 				inkex.errormsg( gettext.gettext( "Failed to connect to AxiDraw. :(" ))
 				return
 				
 		self.svg = self.document.getroot()
-		self.CheckSVGforWCBData()
-		useOldResumeData = True	
+		self.ReadWCBdata(self.svg)
+
+		ResumeDataNeedsUpdating = False	
 
 		if (self.options.copyDelay < 0):
 			self.options.copyDelay = 0
@@ -242,7 +248,7 @@ class AxiDrawClass( inkex.Effect ):
 												# (Canceling is initiated through the USB/button press!)
 			while (self.copiesToPlot != 0):
 				self.LayersFoundToPlot = False
-				useOldResumeData = False
+				ResumeDataNeedsUpdating = True
 				self.svgRandSeed =  round(time.time() * 100)/100	# New random seed for new plot
 			
 				self.PrintInLayersMode = False
@@ -267,7 +273,7 @@ class AxiDrawClass( inkex.Effect ):
 							self.PauseResumeCheck()		# Detect button press while paused between plots
 
 		elif self.options.mode == "resume":
-			useOldResumeData = False
+			ResumeDataNeedsUpdating = True
 			self.resumePlotSetup()
 			if self.resumeMode:
 				self.plotDocument() 
@@ -293,7 +299,7 @@ class AxiDrawClass( inkex.Effect ):
 				if self.options.previewOnly:	# Special case: 0 (continuous copies) selected, but running in preview mode.
 					self.copiesToPlot = 1		# In this case, revert back to single copy, since there's no way to terminate.
 			while (self.copiesToPlot != 0):
-				useOldResumeData = False 
+				ResumeDataNeedsUpdating = True 
 				self.svgRandSeed = time.time()	# New random seed for new plot
 				self.PrintInLayersMode = True
 				self.plotCurrentLayer = False
@@ -316,19 +322,18 @@ class AxiDrawClass( inkex.Effect ):
 							self.PauseResumeCheck()		# Detect button press while paused between plots
 
 		elif self.options.mode == "setup":
-			useOldResumeData = True 
 			self.setupCommand()
 			
 		elif self.options.mode == "manual":
-			useOldResumeData = True 
 			self.manualCommand()
 
-		if not (useOldResumeData):
+		if ResumeDataNeedsUpdating:
 			self.UpdateSVGWCBData( self.svg )
 		if self.serialPort is not None:
 			if not ((self.options.mode == "manual") and (self.options.manualType == "bootload")):
 				ebb_motion.doTimedPause(self.serialPort, 10) #Pause a moment for underway commands to finish...
-			ebb_serial.closePort(self.serialPort)	
+			if self.options.port is None:	# Do not close serial port if it was opened externally.
+				ebb_serial.closePort(self.serialPort)
 		
 	def resumePlotSetup( self ):
 
@@ -358,30 +363,36 @@ class AxiDrawClass( inkex.Effect ):
 				if self.spewDebugdata:
 					inkex.errormsg( 'Entering resume mode at layer:  ' + str(self.svgLayer) )
 
-	def CheckSVGforWCBData( self ):
+	def ReadWCBdata( self, svgToCheck ):
+		# Read plot progress data, stored in a custom "WCB" XML element
 		self.svgDataRead = False
-		self.recursiveWCBDataScan( self.svg )
-		# If data is not found, we'll add a "WCB" object in UpdateSVGWCBData.
-
-	def recursiveWCBDataScan( self, aNodeList ):
-		if ( not self.svgDataRead ):
-			for node in aNodeList:
-				if node.tag == 'svg':
-					self.recursiveWCBDataScan( node )
-				elif node.tag == inkex.addNS( 'WCB', 'svg' ) or node.tag == 'WCB':
-					try:
-						self.svgLayer_Old = int( node.get( 'layer' ) )
-						self.svgNodeCount_Old = int( node.get( 'node' ) )
-						self.svgLastPath_Old = int( node.get( 'lastpath' ) )
-						self.svgLastPathNC_Old = int( node.get( 'lastpathnc' ) )
-						self.svgLastKnownPosX_Old = float( node.get( 'lastknownposx' ) )
-						self.svgLastKnownPosY_Old = float( node.get( 'lastknownposy' ) ) 
-						self.svgPausedPosX_Old = float( node.get( 'pausedposx' ) )
-						self.svgPausedPosY_Old = float( node.get( 'pausedposy' ) ) 
-						self.svgRandSeed_Old = float( node.get( 'randseed' ) ) 
-						self.svgDataRead = True
-					except:
-						pass
+		wcbNode = None
+		for node in svgToCheck:
+			if node.tag == 'svg':
+				for subNode in svgToCheck:
+					if subNode.tag == inkex.addNS( 'WCB', 'svg' ) or subNode.tag == 'WCB':
+						wcbNode = subNode
+			elif node.tag == inkex.addNS( 'WCB', 'svg' ) or node.tag == 'WCB':
+				wcbNode = node
+		if wcbNode is not None:
+			try:
+				self.svgLayer_Old = int( wcbNode.get( 'layer' ) )
+				self.svgNodeCount_Old = int( wcbNode.get( 'node' ) )
+				self.svgLastPath_Old = int( wcbNode.get( 'lastpath' ) )
+				self.svgLastPathNC_Old = int( wcbNode.get( 'lastpathnc' ) )
+				self.svgLastKnownPosX_Old = float( wcbNode.get( 'lastknownposx' ) )
+				self.svgLastKnownPosY_Old = float( wcbNode.get( 'lastknownposy' ) ) 
+				self.svgPausedPosX_Old = float( wcbNode.get( 'pausedposx' ) )
+				self.svgPausedPosY_Old = float( wcbNode.get( 'pausedposy' ) ) 
+				self.svgDataRead = True
+			except:
+				self.svg.remove( wcbNode ) # An error before this point leaves svgDataRead as False. 
+				# Also remove the node, to prevent adding a duplicate WCB node later.
+			try:
+				self.svgRandSeed_Old = float( wcbNode.get( 'randseed' ) ) 
+				self.svgRow_Old = float( wcbNode.get( 'row' ) ) 
+			except:
+				pass	# No harm done if haven't read these
 
 	def UpdateSVGWCBData( self, aNodeList ):
 		if self.options.fileOutput:
@@ -2534,5 +2545,6 @@ class AxiDrawClass( inkex.Effect ):
 		else:
 			return True
 
-e = AxiDrawClass()
-e.affect()
+if __name__ == '__main__':
+	e = AxiDrawClass()
+	e.affect()

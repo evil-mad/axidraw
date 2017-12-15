@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.6.1, dated November 14, 2017.
+# Version 1.6.4, dated November 14, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -30,8 +30,8 @@ If you are operating the AxiDraw in "standalone" mode, that is, outside
  
 '''
 
-PenUpPos = 60			# Default pen-up position (%).		Range: 0 - 100 %
-PenDownPos = 30			# Default pen-down position (%).	Range: 0 - 100 %
+penUpPosition = 60		# Default pen-up position (%).		Range: 0 - 100 %
+penDownPosition = 30	# Default pen-down position (%).	Range: 0 - 100 %
 
 PenUpSpeed = 75			# Default pen-up speed (%). 		Range: 1 - 110 %
 PenDownSpeed = 25		# Default pen-down speed (%). 		Range: 1 - 110 %
