@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.6.4, dated December 13, 2017.
+# Version 1.6.5, dated December 17, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -22,8 +22,13 @@
 #
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 
+import os
 import sys
+
+libpath = os.path.join('axidraw', 'lib')
+sys.path.append(libpath)
 sys.path.append('lib')
+
 
 import inkex
 from simpletransform import *
@@ -77,7 +82,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--WalkDistance", action="store", type="float", dest="WalkDistance", default=1, help="Distance for manual walk" )
 		self.OptionParser.add_option( "--resumeType", action="store", type="string", dest="resumeType", default="ResumeNow", help="The active option when Apply was pressed" )
 		self.OptionParser.add_option( "--layerNumber", action="store", type="int", dest="layerNumber", default=axidraw_conf.DefaultLayer, help="Selected layer for multilayer plotting" )
-		self.OptionParser.add_option( "--fileOutput", action="store", type="inkbool", dest="fileOutput", default=axidraw_conf.fileOutput, help="Output new contents of SVG on stdout" )
 		self.OptionParser.add_option( "--previewOnly", action="store", type="inkbool", dest="previewOnly", default=axidraw_conf.previewOnly, help="Offline preview. Simulate plotting only." )
 		self.OptionParser.add_option( "--previewType", action="store", type="int", dest="previewType", default=axidraw_conf.previewType, help="Preview mode rendering" )
 		self.OptionParser.add_option( "--copiesOfDocument", action="store", type="int", dest="copiesOfDocument", default=axidraw_conf.copiesOfDocument, help="Copies to plot while in Plot mode" )
@@ -88,7 +92,7 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.6.4, dated December 13, 2017."
+		self.versionString = "AxiDraw Control - Version 1.6.5, dated December 17, 2017."
 		self.spewDebugdata = False
 		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
@@ -97,7 +101,6 @@ class AxiDrawClass( inkex.Effect ):
 		
 		self.DocUnits = "in"
 		self.DocUnitScaleFactor = 1
-		self.sq2 = math.sqrt(2.0)
 
 		self.serialPort = None
 		self.penUp = None  #Initial state of pen is neither up nor down, but _unknown_.
@@ -136,7 +139,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.svgRandSeed_Old = float( 1.0 )	
 		self.svgRow_Old = float( 1.0 )
 
-				
 		#New values to write to file:
 		self.svgLayer = int( 0 )
 		self.svgNodeCount = int( 0 )
@@ -185,8 +187,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.velDataChart1 = []	# Velocity visualization, for preview of velocity vs time Motor 1
 		self.velDataChart2 = []	# Velocity visualization, for preview of velocity vs time Motor 2
 		self.velDataChartT = []	# Velocity visualization, for preview of velocity vs time Total V
-
-
 
 		skipSerial = False
 		if self.options.previewOnly:
@@ -395,10 +395,9 @@ class AxiDrawClass( inkex.Effect ):
 				pass	# No harm done if haven't read these
 
 	def UpdateSVGWCBData( self, aNodeList ):
-		if self.options.fileOutput:
-			if ( not self.svgDataRead ):
-				WCBdata = inkex.etree.SubElement( self.svg, 'WCB' )
-				self.svgDataRead = True # Ensure that we don't keep adding WCB elements
+		if ( not self.svgDataRead ):
+			WCBdata = inkex.etree.SubElement( self.svg, 'WCB' )
+			self.svgDataRead = True # Ensure that we don't keep adding WCB elements
 		if ( not self.svgDataWritten ):
 				for node in aNodeList:
 					if node.tag == 'svg':
@@ -2315,12 +2314,12 @@ class AxiDrawClass( inkex.Effect ):
 			inkex.errormsg( '\nUSB Connectivity lost.') 
 			pauseState = '2' # Pause the plot; we appear to have lost connectivity.
 			if self.spewDebugdata:
-				inkex.errormsg( '\n (lost after node number : ' + str(self.nodeCount) + ')' )	
+				inkex.errormsg( '\n (USB Connectivity lost after node number : ' + str(self.nodeCount) + ')' )	
 
 		if ((pauseState == '1') and (self.delayBetweenCopies == False)):
 			inkex.errormsg( 'Plot paused by button press.')
 			if self.spewDebugdata:
-				inkex.errormsg( '\n (lost after node number : ' + str(self.nodeCount) + ')' )	
+				inkex.errormsg( '\n (Paused after node number : ' + str(self.nodeCount) + ')' )	
 
 		if (pauseState == '1') or (pauseState == '2'):  # Stop plot
 			self.svgNodeCount = self.nodeCount

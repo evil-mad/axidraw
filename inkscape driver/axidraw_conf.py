@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.6.4, dated November 14, 2017.
+# Version 1.6.5, dated December 17, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -80,9 +80,6 @@ visible from within the Inkscape GUI.
 smoothness = 10.0		# Curve smoothing (default: 10.0)
 
 cornering = 10.0		# Cornering speed factor (default: 10.0)
-
-
-fileOutput = False		# If True: Output updated contents of SVG on stdout. 
 
 
 '''
