@@ -60,7 +60,6 @@ class AxiDrawClass( inkex.Effect ):
 	def __init__( self ):
 		inkex.Effect.__init__( self )
 
-
 		self.OptionParser.add_option( "--mode",	action="store", type="string", dest="mode", default="plot", help="Mode (or GUI tab) selected" )
 		self.OptionParser.add_option( "--penUpPosition", action="store", type="int", dest="penUpPosition", default=axidraw_conf.penUpPosition, help="Height of pen when lifted" )
 		self.OptionParser.add_option( "--penDownPosition", action="store", type="int", dest="penDownPosition", default=axidraw_conf.penDownPosition, help="Height of pen when lowered" )	
@@ -88,6 +87,18 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--copiesOfLayer", action="store", type="int", dest="copiesOfLayer", default=axidraw_conf.copiesOfLayer, help="Copies to plot while in Layer mode" )
 		self.OptionParser.add_option( "--copyDelay", action="store", type="int", dest="copyDelay", default=axidraw_conf.copyDelay, help="Seconds to delay between copies." )
 		self.OptionParser.add_option( "--port", action="store", type="string", dest="port", default=None, help="Serial port to use" )
+
+		#Set default values of certain parameters
+		self.svgLayer_Old = int( 0 )
+		self.svgNodeCount_Old = int( 0 )
+		self.svgLastPath_Old = int( 0 )
+		self.svgLastPathNC_Old = int( 0 )
+		self.svgLastKnownPosX_Old = float( 0.0 )
+		self.svgLastKnownPosY_Old = float( 0.0 )
+		self.svgPausedPosX_Old = float( 0.0 )
+		self.svgPausedPosY_Old = float( 0.0 )	
+		self.svgRandSeed_Old = float( 1.0 )	
+		self.svgRow_Old = int( 1 )
 
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
@@ -127,17 +138,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.copiesToPlot = 1
 		self.delayBetweenCopies = False	# Not currently delaying between copies
 
-		#Values to be read from file:
-		self.svgLayer_Old = int( 0 )
-		self.svgNodeCount_Old = int( 0 )
-		self.svgLastPath_Old = int( 0 )
-		self.svgLastPathNC_Old = int( 0 )
-		self.svgLastKnownPosX_Old = float( 0.0 )
-		self.svgLastKnownPosY_Old = float( 0.0 )
-		self.svgPausedPosX_Old = float( 0.0 )
-		self.svgPausedPosY_Old = float( 0.0 )	
-		self.svgRandSeed_Old = float( 1.0 )	
-		self.svgRow_Old = float( 1.0 )
+
 
 		#New values to write to file:
 		self.svgLayer = int( 0 )
@@ -392,7 +393,8 @@ class AxiDrawClass( inkex.Effect ):
 				self.svgRandSeed_Old = float( wcbNode.get( 'randseed' ) ) 
 				self.svgRow_Old = float( wcbNode.get( 'row' ) ) 
 			except:
-				pass	# No harm done if haven't read these
+				# No harm done if these variables are not present; leave them at default values and proceed.
+				pass
 
 	def UpdateSVGWCBData( self, aNodeList ):
 		if ( not self.svgDataRead ):
@@ -575,14 +577,19 @@ class AxiDrawClass( inkex.Effect ):
 				self.plotSegmentWithVelocity( fX, fY, 0, 0)
 
 			# Revert back to original SVG document, prior to adding preview layers.
+			#  and prior to saving updated "WCB" progress data in the file.
 			#  No changes to the SVG document prior to this point will be saved.
 			#
 			#  Doing so allows us to use routines that alter the SVG
 			#  prior to this point -- e.g., plot re-ordering for speed 
 			#  or font substitutions.
-			
-			self.document = copy.deepcopy(self.original_document)
-			self.svg  = self.document.getroot()
+			# 
+			#  When _not_ run as __main__, the routine that calls this
+			#  _may_ wish to provide a copy of original_document to revert to.
+
+			if  (self.original_document is not None):
+				self.document = copy.deepcopy(self.original_document)
+				self.svg  = self.document.getroot()
 
 			if ( not self.bStopped ): 
 				if (self.options.mode == "plot") or (self.options.mode == "layers") or (self.options.mode == "resume"):
