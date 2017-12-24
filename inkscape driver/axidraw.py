@@ -733,6 +733,11 @@ class AxiDrawClass( inkex.Effect ):
 		for node in aNodeList:
 			if self.bStopped:
 				return
+
+			style = simplestyle.parseStyle(node.get('style'))
+			if 'display' in style.keys() and style['display'] == 'none':
+				continue  # Do not plot this object nor its children
+
 			v = node.get( 'visibility', parent_visibility )			# Ignore invisible nodes
 			if v == 'inherit':
 				v = parent_visibility
