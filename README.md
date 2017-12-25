@@ -21,7 +21,7 @@ Dependencies:
 
 1. [plotink](https://github.com/evil-mad/plotink) helper routines for Inkscape extensions.
 2. eggbot_hatch.py from the [EggBot extensions for Inkscape](https://github.com/evil-mad/EggBot/).
-3. [Pyserial](https://pypi.python.org/pypi/pyserial). (Note that an older version, 2.7, must be used on Windows.)
+3. [Pyserial](https://pypi.python.org/pypi/pyserial). (Note that an older version, 2.7, must be used on Windows when using Inkscape 0.91 or older.)
 
 
 ---------
