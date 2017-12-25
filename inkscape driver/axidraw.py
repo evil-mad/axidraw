@@ -744,11 +744,11 @@ class AxiDrawClass( inkex.Effect ):
 			if node.get( 'display' ) == 'none':
 				continue  # Do not plot this object or its children
 			
-			v = node.get( 'visibility', parent_visibility )			# Ignore invisible nodes
-			if v == 'inherit':
-				v = parent_visibility
-			if v == 'hidden' or v == 'collapse':
-				continue
+			visibility = node.get( 'visibility', parent_visibility )	
+			if visibility == 'inherit':
+				visibility = parent_visibility
+			if visibility == 'hidden' or visibility == 'collapse':
+				continue	# Ignore invisible nodes
 
 			# first apply the current matrix transform to this node's transform
 			matNew = composeTransform( matCurrent, parseTransform( node.get( "transform" ) ) )
@@ -768,7 +768,7 @@ class AxiDrawClass( inkex.Effect ):
 					self.sCurrentLayerName = node.get( inkex.addNS( 'label', 'inkscape' ) )
 					self.DoWePlotLayer(self.sCurrentLayerName )
 					self.penRaise()
-				self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )
+				self.recursivelyTraverseSvg( node, matNew, parent_visibility=visibility )
 
 				# Restore old layer status variables
 				self.UseCustomLayerPenHeight = oldUseCustomLayerPenHeight
@@ -789,11 +789,11 @@ class AxiDrawClass( inkex.Effect ):
 				# A symbol is much like a group, except that it should only be rendered when called within a "use" tag.
 				
 				if (self.useTagNestLevel > 0):
-					self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )
+					self.recursivelyTraverseSvg( node, matNew, parent_visibility=visibility )
 					
 			elif node.tag == inkex.addNS( 'a', 'svg' ) or node.tag == 'a':
 				# An 'a' is much like a group, in that it is a generic container element.
-				self.recursivelyTraverseSvg( node, matNew, parent_visibility=v )
+				self.recursivelyTraverseSvg( node, matNew, parent_visibility=visibility )
 	
 			elif node.tag == inkex.addNS( 'use', 'svg' ) or node.tag == 'use':
 
@@ -824,9 +824,9 @@ class AxiDrawClass( inkex.Effect ):
 							matNew2 = composeTransform( matNew, parseTransform( 'translate(%f,%f)' % (x,y) ) )
 						else:
 							matNew2 = matNew
-						v = node.get( 'visibility', v )
+						visibility = node.get( 'visibility', visibility )
 						self.useTagNestLevel = self.useTagNestLevel + 1	# Use a number, not a boolean, to keep track of nested "use" elements.
-						self.recursivelyTraverseSvg( refnode, matNew2, parent_visibility=v )
+						self.recursivelyTraverseSvg( refnode, matNew2, parent_visibility=visibility )
 						self.useTagNestLevel = self.useTagNestLevel - 1
 					else:
 						continue
