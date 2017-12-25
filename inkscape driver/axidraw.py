@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.6.5, dated December 17, 2017.
+# Version 1.7.0, dated December 25, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -103,7 +103,7 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.6.5, dated December 17, 2017."
+		self.versionString = "AxiDraw Control - Version 1.7.0, December 25, 2017."
 		self.spewDebugdata = False
 		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
@@ -735,9 +735,15 @@ class AxiDrawClass( inkex.Effect ):
 				return
 
 			style = simplestyle.parseStyle(node.get('style'))
+			
+			# Check for "display:none" in the node's style attribute:
 			if 'display' in style.keys() and style['display'] == 'none':
-				continue  # Do not plot this object nor its children
-
+				continue  # Do not plot this object or its children
+			
+			# The node may have a display="none" attribute as well:
+			if node.get( 'display' ) == 'none':
+				continue  # Do not plot this object or its children
+			
 			v = node.get( 'visibility', parent_visibility )			# Ignore invisible nodes
 			if v == 'inherit':
 				v = parent_visibility
