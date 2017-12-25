@@ -744,11 +744,15 @@ class AxiDrawClass( inkex.Effect ):
 			if node.get( 'display' ) == 'none':
 				continue  # Do not plot this object or its children
 			
+			# Visibility attributes control whether a given object will plot.
+			# Children of hidden (not visible) parents may be plotted if
+			# they assert visibility.
 			visibility = node.get( 'visibility', parent_visibility )	
 			if visibility == 'inherit':
 				visibility = parent_visibility
-			if visibility == 'hidden' or visibility == 'collapse':
-				continue	# Ignore invisible nodes
+
+			if 'visibility' in style.keys():
+				visibility = style['visibility'] # Style may override the attribute.
 
 			# first apply the current matrix transform to this node's transform
 			matNew = composeTransform( matCurrent, parseTransform( node.get( "transform" ) ) )
@@ -833,6 +837,8 @@ class AxiDrawClass( inkex.Effect ):
 				else:
 					continue
 			elif self.plotCurrentLayer:	#Skip subsequent tag checks unless we are plotting this layer.
+				if visibility == 'hidden' or visibility == 'collapse':
+					continue	# Do not plot this node if it is not visible.
 				if node.tag == inkex.addNS( 'path', 'svg' ):
 	
 					# If in resume mode AND self.pathcount < self.svgLastPath, then skip this path.
