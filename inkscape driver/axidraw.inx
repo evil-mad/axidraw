@@ -19,7 +19,6 @@ and use additional AxiDraw functions.
 Need help? Visit http://axidraw.com/docs
 
 
-
 </_param>
 
 <param indent="2" name="copiesOfDocument" type="int" min="0" max="9999"  _gui-text="Copies to Plot:">1</param>	
@@ -27,28 +26,27 @@ Need help? Visit http://axidraw.com/docs
 
 </page>
 
+
 <page name='setup' _gui-text='Setup'>
 
-<_param name="instructions_setup" type="description" appearance="header">AxiDraw: Basic Setup</_param>
-<param indent="2" name="penUpPosition" type="int" min="0" max="100" appearance="full" 
+<_param name="instructions_setup" type="description" appearance="header">Basic Setup</_param>
+
+<param name="penUpPosition" type="int" min="0" max="100" appearance="full" 
 _gui-text="Pen height: UP (%):">60</param>
-<param indent="2" name="penDownPosition" type="int" min="0" max="100" appearance="full"
+<param name="penDownPosition" type="int" min="0" max="100" appearance="full"
 _gui-text="Pen height: DOWN, (%):">30</param>
 
-
-<param name="setupType"  indent="1" type="optiongroup" _gui-text="Action on 'Apply':">
+<param name="setupType"  indent="1" type="optiongroup" _gui-text="       Action on 'Apply':">
 <_option value="align-mode">Raise pen, turn off motors</_option>	
 <_option value="toggle-pen">Toggle pen between UP, DOWN</_option>
 </param>
 <_param indent="1" name="instructions_setup3" type="description" xml:space="preserve">
-- Raise pen and turn off stepper motors to manually
-move carriage to the Home Corner (upper left).
+- Raise pen and turn off stepper motors to manually move carriage to the Home Corner (upper left).
 
-- Raise and lower pen to check the vertical positions
-of the pen for writing and drawing.
-
+- Raise and lower pen to check the vertical positions of the pen for writing and drawing.
 </_param>
 </page>
+
 
 <page name='timing' _gui-text='Timing'>
 <_param name="instructions_timing1" type="description" appearance="header">Movement speeds:</_param>
@@ -81,14 +79,12 @@ of the pen for writing and drawing.
 
 <_param name="instructions_timing4" type="description" appearance="header">Multiple Copies:</_param>
 <param indent="1" name="copyDelay" type="int" min="0" max="3600" appearance="header" _gui-text="Seconds of delay between copies:">15</param>	
-<_param indent="6" name="instructions_timing5" type="description" xml:space="preserve">
-(Press 'Apply' to save settings.)</_param>
 </page>
+
 
 <page name='options' _gui-text='Options'>
 
 <_param name="instructions_options6" type="description" appearance="header">Advanced Options:</_param>
-
 
 <param indent="1" name="autoRotate" type="boolean" _gui-text="Auto-rotate page when printing">true</param>	
 <param indent="1" name="constSpeed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
@@ -104,7 +100,6 @@ of the pen for writing and drawing.
 
 <_param name="instructions_options7" type="description" appearance="header">Preview mode:</_param>
 
-
 <param indent="1" name="previewOnly" type="boolean" _gui-text="Enable offline preview mode; Simulate plotting only">false</param> 
 <param indent="5" name="previewType" type="optiongroup" appearance="minimal" _gui-text="Preview mode rendering:">
 <_option value="0">None</_option>
@@ -113,70 +108,50 @@ of the pen for writing and drawing.
 <_option value="3">All movement</_option>
 </param>
 
-
-
-<_param indent="6"  name="instructions_options3" type="description" xml:space="preserve">
-
-(Press 'Apply' to save settings.)</_param>
 </page>
 
+
 <page name="manual" _gui-text="Manual">
-<_param name="instructions_manual" type="description" appearance="header">AxiDraw Manual Control</_param>
+<_param name="instructions_manual" type="description" appearance="header">Manual Control</_param>
 <_param indent="1" name="instructions_manual" type="description"  >
-You can use this tab to send "manual" commands to the 
-AxiDraw: Walk (move) the carriage, raise or lower the
-pen, enable or disable the motors, or test communication
-with the machine.
+Use this tab to execute various "manual" AxiDraw commands. For example, you can walk (move) the carriage, raise or lower the pen, or enable or disable the motors.
 </_param>
 
 <param name="manualType" type="optiongroup" appearance="minimal"
 _gui-text="               Command: ">
 <_option value="none"           >- Select -</_option>
-<_option value="raise-pen"      >Raise the Pen</_option>
-<_option value="lower-pen"      >Lower the Pen</_option>
 <_option value="walk-x-motor"   >Walk Carriage (X)</_option>
 <_option value="walk-y-motor"   >Walk Carriage (Y)</_option>
+<_option value="raise-pen"      >Raise the Pen</_option>
+<_option value="lower-pen"      >Lower the Pen</_option>
 <_option value="enable-motors"  >Enable Motors</_option>
 <_option value="disable-motors" >Disable Motors</_option> 
-<_option value="version-check"  >Check EBB Version</_option>
 <_option value="bootload"       >Enter EBB Bootloader mode</_option>
 <_option value="strip-data"     >Strip plotter data from file</_option>
 </param>
 
 <param name="WalkDistance" indent="1" type="float" min="-11" max="11" _gui-text="Walk distance in inches (+ or -):">1.00</param>
 
-
 <_param  indent="1" name="instructions_manual2" type="description" >
-Note: The manual "walk" commands move the motors
-as requested, without regard to the current 
-position. Moving too far or in the wrong direction
-could cause AxiDraw to run into the ends of travel.
-</_param>
+Note: The manual "walk" commands will move the carriage as requested, without regard to the current position. Moving too far or in the wrong direction may cause AxiDraw to try and move beyond its physical limits of travel.</_param>
 <_param  indent="6" name="instructions_manual3" type="description" xml:space="preserve">
 Press 'Apply' to execute the command.
 </_param>
 </page>
 
-<page name="resume" _gui-text="Resume">
 
+<page name="resume" _gui-text="Resume">
 
 <_param name="instructions_resume1" type="description"  appearance="header">Pause and Resume</_param>
 
-<_param indent="2" name="instructions_resume2" type="description"> 
-To pause a plot in progress, press the pause button on
-the AxiDraw's "EBB" controller board. After pausing,
-you can change settings or perform any manual adjustments
-that are needed.
+<_param indent="1" name="instructions_resume2" type="description"> 
+To pause a plot in progress, press the pause button on the left side of the AxiDraw. After pausing, you can change settings or perform any manual adjustments that are needed.
 
-To resume printing, or to simply cancel and return to the
-Home Corner, press 'Apply' below.   
+To resume plotting, or to simply cancel and return the carriage to the Home Corner, press 'Apply' with this tab selected.
 
-Plot progress is stored in the SVG file itself. If you
-plan to quit Inkscape and resume later, remember to save
-the document before quitting.
+Plot progress is stored in the SVG file itself. If you plan to quit Inkscape and resume later, please save the document first.
 
-You can resume directly where you paused, or after using
-the Return to Home Corner command.
+You can resume directly where you paused, or after using the Return to Home Corner command.
 </_param>
 
 <param name="resumeType" type="optiongroup" appearance=""  indent="2" _gui-text="Action on 'Apply':">
@@ -186,21 +161,17 @@ the Return to Home Corner command.
 
 </page>		
 
+
 <page name="layers" _gui-text="Layers">
-<_param name="instructions_layer" type="description"  appearance="header">Print individual layer(s) </_param>
+<_param name="instructions_layer" type="description"  appearance="header">Plot Individual Layers </_param>
 <_param  indent="1" name="instructions_layer2" type="description" >
-Normally, we plot paths from all layers.  
+Normally, we plot paths from all visible layers.  
 
-You can also choose to plot a single layer or group of
-layers, for example to plot only a single color of ink.
+You can also choose to plot a single layer or group of layers, for example to plot only a single color of ink.
 
-Pressing 'Apply' with this tab selected will plot only
-layers whose names begin with the selected number, which
-can be in the range 0 to 1000.
+Press 'Apply' with this tab selected to plot only the visible layers whose names begin with the selected number, which can be in the range 0 to 1000.
 
-For example, a layer named "5-red" will be printed if
-the number 5 is selected, but a layer named "2-black"
-or "guide lines" will not be.
+For example, a layer named "5-red" will be plotted if the number 5 is selected, but layers named "guide lines", "55", or "2-black" will be skipped.
 </_param>
 <param indent="2" name="layerNumber" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
 <param indent="2" name="copiesOfLayer" type="int" min="0" max="9999" appearance="header" _gui-text="Copies to Plot:">1</param>	
@@ -209,28 +180,34 @@ or "guide lines" will not be.
 </page>
 
 
-<page name="Help" _gui-text="*">
-<_param name="instructions_general" type="description"
-xml:space="preserve">
-AxiDraw Control    version 1.7.0, dated 2017-12-25
+<page name="fwVersion" _gui-text="Version">
+<_param name="instructions_general" type="description" appearance="header" 
+>Model and Version</_param>
+<param name="model" type="optiongroup" appearance="minimal" indent="4" _gui-text="AxiDraw Model:">
+<_option value="1">AxiDraw V2 or AxiDraw V3</_option>
+<_option value="2">AxiDraw V3/A3</_option>
+<_option value="3">AxiDraw V3 XLX</_option>
+</param>
+
+<_param name="instructions_general2" type="description" indent="1" xml:space="preserve">
+AxiDraw Control v 1.7.0  	2017-12-27
+
+Press 'Apply' to query the firmware version;
+EBB firmware 2.5.1 or newer is recommended.
+
 
 Copyright 2017 Evil Mad Science LLC
 
-http://axidraw.com/
+Documentation is online at: axidraw.com/docs
+Issue tracker is online at: axidraw.com/dev
 
-Issue tracker:
-https://github.com/evil-mad/axidraw/issues
 
-EBB Firmware 2.5.1 or newer is recommended.
-
-Known issues:
-* "Cancel" function does not work while plotting.
-  (This is due to a known bug in Inkscape.)
-  
-  Use the physical pause button -- on the left
-  side of the machine -- to pause a plot.
+Note: Inkscape's "Cancel" button does not work while plotting;
+Press the physical pause button on the left side of the machine.
 </_param>
 </page>
+
+
 </param>
 <effect needs-live-preview="false" needs-document="no">
 <object-type>all</object-type>

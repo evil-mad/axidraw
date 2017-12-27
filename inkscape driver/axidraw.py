@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Version 1.7.0, dated December 25, 2017.
+# See versionString below for current version and date.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -74,9 +74,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--autoRotate", action="store", type="inkbool", dest="autoRotate", default=axidraw_conf.autoRotate, help="Auto pick portrait or landscape mode" )
 		self.OptionParser.add_option( "--constSpeed", action="store", type="inkbool", dest="constSpeed", default=axidraw_conf.constSpeed, help="Constant velocity when pen is down" )
 		self.OptionParser.add_option( "--reportTime", action="store", type="inkbool", dest="reportTime", default=axidraw_conf.reportTime, help="Report time elapsed" )
-		self.OptionParser.add_option( "--resolution", action="store", type="int", dest="resolution", default=axidraw_conf.resolution, help="Resolution factor" )	
-		self.OptionParser.add_option( "--smoothness", action="store", type="float", dest="smoothness", default=axidraw_conf.smoothness, help="Smoothness of curves" )
-		self.OptionParser.add_option( "--cornering", action="store", type="float", dest="cornering", default=axidraw_conf.cornering, help="Cornering speed factor" )
 		self.OptionParser.add_option( "--manualType", action="store", type="string", dest="manualType", default="version-check", help="The active option when Apply was pressed" )
 		self.OptionParser.add_option( "--WalkDistance", action="store", type="float", dest="WalkDistance", default=1, help="Distance for manual walk" )
 		self.OptionParser.add_option( "--resumeType", action="store", type="string", dest="resumeType", default="ResumeNow", help="The active option when Apply was pressed" )
@@ -86,6 +83,10 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--copiesOfDocument", action="store", type="int", dest="copiesOfDocument", default=axidraw_conf.copiesOfDocument, help="Copies to plot while in Plot mode" )
 		self.OptionParser.add_option( "--copiesOfLayer", action="store", type="int", dest="copiesOfLayer", default=axidraw_conf.copiesOfLayer, help="Copies to plot while in Layer mode" )
 		self.OptionParser.add_option( "--copyDelay", action="store", type="int", dest="copyDelay", default=axidraw_conf.copyDelay, help="Seconds to delay between copies." )
+		self.OptionParser.add_option( "--resolution", action="store", type="int", dest="resolution", default=axidraw_conf.resolution, help="Resolution factor" )	
+		self.OptionParser.add_option( "--model", action="store", type="int", dest="model", default=1, help="AxiDraw Model Type" )	
+		self.OptionParser.add_option( "--smoothness", action="store", type="float", dest="smoothness", default=axidraw_conf.smoothness, help="Smoothness of curves" )
+		self.OptionParser.add_option( "--cornering", action="store", type="float", dest="cornering", default=axidraw_conf.cornering, help="Cornering speed factor" )
 		self.OptionParser.add_option( "--port", action="store", type="string", dest="port", default=None, help="Serial port to use" )
 
 		#Set default values of certain parameters
@@ -103,7 +104,7 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.7.0, December 25, 2017."
+		self.versionString = "AxiDraw Control - Version 1.7.0, December 27, 2017."
 		self.spewDebugdata = False
 		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
@@ -160,11 +161,19 @@ class AxiDrawClass( inkex.Effect ):
 		self.svgHeight = 0
 		self.printPortrait = False
 		
-		self.xBoundsMax = axidraw_conf.PageWidthIn
 		self.xBoundsMin = axidraw_conf.StartPosX
-		self.yBoundsMax = axidraw_conf.PageHeightIn
 		self.yBoundsMin = axidraw_conf.StartPosY
-		
+
+		if (self.options.model == 2):
+			self.xBoundsMax = axidraw_conf.XTravel_V3A3
+			self.yBoundsMax = axidraw_conf.YTravel_V3A3
+		elif (self.options.model == 3):
+			self.xBoundsMax = axidraw_conf.XTravel_V3XLX
+			self.yBoundsMax = axidraw_conf.YTravel_V3XLX
+		else:
+			self.xBoundsMax = axidraw_conf.XTravel_Default
+			self.yBoundsMax = axidraw_conf.YTravel_Default
+
 		self.svgTransform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
 		
 		self.PenDownSpeed = axidraw_conf.PenDownSpeed * axidraw_conf.SpeedLimXY_HR / 110.0	#Speed given as maximum inches/second in XY plane
@@ -209,7 +218,11 @@ class AxiDrawClass( inkex.Effect ):
 			return
 		if (self.options.mode == "version"):
 			inkex.errormsg( gettext.gettext(self.versionString))
-			return			
+			return
+		if (self.options.mode == "fwVersion"):
+			# Alias to asserting mode = "manual", manualType = "version-check".
+			self.options.mode = "manual"
+			self.options.manualType = "version-check"
 		if (self.options.mode == "manual"):
 			if (self.options.manualType == "none"):
 				return	#No option selected. Do nothing and return no error.

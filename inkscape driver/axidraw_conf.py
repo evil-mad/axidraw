@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.6.5, dated December 17, 2017.
+# Version 1.7.0, dated December 27, 2017.
 #
 # Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -93,9 +93,14 @@ adjusted in everyday use. That said, proceed with caution, and keep a backup cop
 #Page size values typically do not need to be changed. They primarily affect viewpoint and centering.
 #Measured in page pixelssteps.  Default printable area for AxiDraw is 300 x 218 mm
 
-PageWidthIn = 11.81		# Default page width in inches		300 mm = about 11.81 inches
-PageHeightIn = 8.58		# Default page height in inches		218 mm = about 8.58 inches
+XTravel_Default = 11.81		# AxiDraw V2 and AxiDraw V3: X Carriage travel in inches. 	Default: 300 mm = about 11.81 inches
+YTravel_Default =  8.58		# AxiDraw V2 and AxiDraw V3: Y Carriage travel in inches. 	Default: 218 mm = about 8.58 inches
 
+XTravel_V3A3    = 16.93		# AxiDraw V3/A3: X Carriage travel in inches. 				Default: 430 mm = about 16.93 inches
+YTravel_V3A3    = 11.06		# AxiDraw V3/A3: Y Carriage travel in inches. 				Default: 297 mm = about 11.69 inches
+
+XTravel_V3XLX   = 23.42		# AxiDraw V3 XLX: X Carriage travel in inches. 				Default: 595 mm = about 23.42 inches
+YTravel_V3XLX   =  8.58		# AxiDraw V3 XLX: Y Carriage travel in inches. 				Default: 218 mm = about 8.58 inches
 
 NativeResFactor = 1016.0	# Motor resolution calculation factor, steps per inch, and used in conversions. Default: 1016.0
 							# Note that resolution is defined along native (not X or Y) axes.
