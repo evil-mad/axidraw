@@ -140,6 +140,24 @@ Press 'Apply' to execute the command.
 </page>
 
 
+<page name="layers" _gui-text="Layers">
+<_param name="instructions_layer" type="description"  appearance="header">Plot Individual Layers </_param>
+<_param  indent="1" name="instructions_layer2" type="description" >
+Normally, we plot paths from all visible layers.  
+
+You can also choose to plot a single layer or group of layers, for example to plot only a single color of ink.
+
+Press 'Apply' with this tab selected to plot only the visible layers whose names begin with the selected number, which can be in the range 0 to 1000.
+
+For example, a layer named "5-red" will be plotted if the number 5 is selected, but layers named "guide lines", "55", or "2-black" will be skipped.
+</_param>
+<param indent="2" name="layerNumber" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
+<param indent="2" name="copiesOfLayer" type="int" min="0" max="9999" appearance="header" _gui-text="Copies to Plot:">1</param>	
+<_param name="instructions_layer1" type="description" indent="4" > Tip: Select 0 copies to plot continuously until paused.</_param>
+
+</page>
+
+
 <page name="resume" _gui-text="Resume">
 
 <_param name="instructions_resume1" type="description"  appearance="header">Pause and Resume</_param>
@@ -158,24 +176,6 @@ You can resume directly where you paused, or after using the Return to Home Corn
 <_option indent="1" value="ResumeNow" >Resume (From Home or Where Paused)</_option>
 <_option indent="1" value="justGoHome">Return to Home Corner (only)</_option>	
 </param>
-
-</page>		
-
-
-<page name="layers" _gui-text="Layers">
-<_param name="instructions_layer" type="description"  appearance="header">Plot Individual Layers </_param>
-<_param  indent="1" name="instructions_layer2" type="description" >
-Normally, we plot paths from all visible layers.  
-
-You can also choose to plot a single layer or group of layers, for example to plot only a single color of ink.
-
-Press 'Apply' with this tab selected to plot only the visible layers whose names begin with the selected number, which can be in the range 0 to 1000.
-
-For example, a layer named "5-red" will be plotted if the number 5 is selected, but layers named "guide lines", "55", or "2-black" will be skipped.
-</_param>
-<param indent="2" name="layerNumber" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
-<param indent="2" name="copiesOfLayer" type="int" min="0" max="9999" appearance="header" _gui-text="Copies to Plot:">1</param>	
-<_param name="instructions_layer1" type="description" indent="4" > Tip: Select 0 copies to plot continuously until paused.</_param>
 
 </page>
 
