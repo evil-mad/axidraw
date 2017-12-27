@@ -74,7 +74,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--autoRotate", action="store", type="inkbool", dest="autoRotate", default=axidraw_conf.autoRotate, help="Auto pick portrait or landscape mode" )
 		self.OptionParser.add_option( "--constSpeed", action="store", type="inkbool", dest="constSpeed", default=axidraw_conf.constSpeed, help="Constant velocity when pen is down" )
 		self.OptionParser.add_option( "--reportTime", action="store", type="inkbool", dest="reportTime", default=axidraw_conf.reportTime, help="Report time elapsed" )
-		self.OptionParser.add_option( "--manualType", action="store", type="string", dest="manualType", default="version-check", help="The active option when Apply was pressed" )
+		self.OptionParser.add_option( "--manualType", action="store", type="string", dest="manualType", default="version", help="The active option when Apply was pressed" )
 		self.OptionParser.add_option( "--WalkDistance", action="store", type="float", dest="WalkDistance", default=1, help="Distance for manual walk" )
 		self.OptionParser.add_option( "--resumeType", action="store", type="string", dest="resumeType", default="ResumeNow", help="The active option when Apply was pressed" )
 		self.OptionParser.add_option( "--layerNumber", action="store", type="int", dest="layerNumber", default=axidraw_conf.DefaultLayer, help="Selected layer for multilayer plotting" )
@@ -219,10 +219,10 @@ class AxiDrawClass( inkex.Effect ):
 		if (self.options.mode == "version"):
 			inkex.errormsg( gettext.gettext(self.versionString))
 			return
-		if (self.options.mode == "fwVersion"):
+		if (self.options.mode == "fwversion"):
 			# Alias to asserting mode = "manual", manualType = "version-check".
 			self.options.mode = "manual"
-			self.options.manualType = "version-check"
+			self.options.manualType = "version"
 		if (self.options.mode == "manual"):
 			if (self.options.manualType == "none"):
 				return	#No option selected. Do nothing and return no error.
@@ -467,7 +467,7 @@ class AxiDrawClass( inkex.Effect ):
 		elif self.options.manualType == "disable-motors":
 			ebb_motion.sendDisableMotors(self.serialPort)	
 
-		elif self.options.manualType == "version-check":
+		elif self.options.manualType == "version":
 			strVersion = ebb_serial.queryVersion( self.serialPort)
 			inkex.errormsg( 'I asked the EBB for its version info, and it replied:\n ' + strVersion )
 

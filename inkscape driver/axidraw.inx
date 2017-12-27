@@ -180,7 +180,7 @@ You can resume directly where you paused, or after using the Return to Home Corn
 </page>
 
 
-<page name="fwVersion" _gui-text="Version">
+<page name="fwversion" _gui-text="Version">
 <_param name="instructions_general" type="description" appearance="header" 
 >Model and Version</_param>
 <param name="model" type="optiongroup" appearance="minimal" indent="4" _gui-text="AxiDraw Model:">
