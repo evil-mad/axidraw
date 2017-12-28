@@ -210,8 +210,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.options.penUpPosition = plot_utils.constrainLimits( self.options.penUpPosition, 0, 100) # Constrain input values
 				# This value is only set once, so it can be checked and limited here.
 
-		if (self.options.mode == "Help"):
-			return
 		if (self.options.mode == "options"):
 			return
 		if (self.options.mode == "timing"):
