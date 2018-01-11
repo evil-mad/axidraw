@@ -233,10 +233,23 @@ class AxiDrawClass( inkex.Effect ):
 				inkex.errormsg( gettext.gettext( "I've removed all AxiDraw data from this SVG file. Have a great day!" ) )
 				return
 
-		if skipSerial == False:
+		if skipSerial == False:		
 			if self.options.port is None:
 				self.serialPort = ebb_serial.openPort()
+			elif (str(type(self.options.port)) == "<type 'str'>") or (str(type(self.options.port)) == "<type 'unicode'>") :
+				# This function may be passed a port name to open (and later close).
+				tempstring = str(self.options.port)
+				self.options.port = tempstring.strip('\"')	
+				#inkex.errormsg( 'About to test serial port: ' + str(self.options.port) )
+
+				self.serialPort = ebb_serial.testPort( self.options.port )
+				self.options.port = None # Clear this input, to ensure that we close the port later.
 			else:
+				# This function may be passed a true serial port object,
+				# such as an instance of serial.serialposix.Serial.
+				# In that case, we should interact with that given
+				# port, and leave it open at the end.
+				
 				self.serialPort = self.options.port
 			if self.serialPort is None:
 				inkex.errormsg( gettext.gettext( "Failed to connect to AxiDraw. :(" ))
@@ -348,7 +361,6 @@ class AxiDrawClass( inkex.Effect ):
 				ebb_serial.closePort(self.serialPort)
 		
 	def resumePlotSetup( self ):
-
 		self.LayerFound = False
 		if ( self.svgLayer_Old < 101 ) and ( self.svgLayer_Old >= 0 ):
 			self.options.layerNumber = self.svgLayer_Old 
@@ -827,11 +839,11 @@ class AxiDrawClass( inkex.Effect ):
 				#  3. We may be able to unlink clones using the code in pathmodifier.py
 
 				refid = node.get( inkex.addNS( 'href', 'xlink' ) )
-				if refid:
+				if refid is not None:
 					# [1:] to ignore leading '#' in reference
 					path = '//*[@id="%s"]' % refid[1:]
 					refnode = node.xpath( path )
-					if refnode:
+					if refnode is not None:
 						x = float( node.get( 'x', '0' ) )
 						y = float( node.get( 'y', '0' ) )
 						# Note: the transform has already been applied
