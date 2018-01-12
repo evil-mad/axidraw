@@ -4,7 +4,7 @@
 #
 # See versionString below for current version and date.
 #
-# Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2018 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -104,9 +104,8 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.7.0, December 27, 2017."
+		self.versionString = "AxiDraw Control - Version 1.7.1, January 11, 2018."
 		self.spewDebugdata = False
-		self.debugPause = -1	# Debug method: Simulate a manual button press at a given node. Value of -1: Do not force pause.
 
 		self.start_time = time.time()		
 		self.ptEstimate = 0.0	#plot time estimate, milliseconds
@@ -118,6 +117,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.penUp = None  #Initial state of pen is neither up nor down, but _unknown_.
 		self.virtualPenUp = False  #Keeps track of pen postion when stepping through plot before resuming
 		self.ignoreLimits = False
+		self.forcePause = False	# Flag to initiate forced pause
 
 		fX = None
 		fY = None 
@@ -540,13 +540,6 @@ class AxiDrawClass( inkex.Effect ):
 				return
 			unused = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
 
-		if self.options.mode == "resume":
-			if ( self.options.resumeType == "justGoHome" ):
-				fX = axidraw_conf.StartPosX
-				fY = axidraw_conf.StartPosY 
-				self.plotSegmentWithVelocity(fX, fY, 0, 0)
-				return
-		
 		# Modifications to SVG -- including re-ordering and text substitution may be made at this point, and will not be preserved.
 
 		# Viewbox handling
@@ -586,6 +579,11 @@ class AxiDrawClass( inkex.Effect ):
 					self.plotSegmentWithVelocity(fX, fY, 0, 0) # pen-up move to starting point
 					self.resumeMode = True
 					self.nodeCount = 0
+				else: # i.e., ( self.options.resumeType == "justGoHome" ):
+					fX = axidraw_conf.StartPosX
+					fY = axidraw_conf.StartPosY 
+					self.plotSegmentWithVelocity(fX, fY, 0, 0)
+					return
 		
 			self.recursivelyTraverseSvg( self.svg, self.svgTransform )	# Call the recursive routine to plot the document
 			self.penRaise()   #Always end with pen-up
@@ -1205,8 +1203,13 @@ class AxiDrawClass( inkex.Effect ):
 		
 		Secondary function: Parse characters following the layer number (if any) to see if
 		there is a "+H" or "+S" escape code, that indicates that overrides the pen-down
-		height or speed for the given layer. We also check for the "%" leading character,
-		which indicates a layer that should be skipped.
+		height or speed for the given layer. A "+D" indicates a given time delay.
+		
+		Two additional single-character escape codes are:
+		"%" (leading character only)-- sets a non-printing "documentation" layer.
+		"!" (leading character only)-- force a pause, as though the button were pressed.
+		
+		The escape sequences are described at: https://wiki.evilmadscientist.com/AxiDraw_Layer_Control
 		"""
 
 		# Look at layer name.  Sample first character, then first two, and
@@ -1226,6 +1229,30 @@ class AxiDrawClass( inkex.Effect ):
 		if MaxLength > 0:
 			if CurrentLayerName[0] == '%':
 				self.plotCurrentLayer = False	#First character is "%" -- skip this layer
+			if CurrentLayerName[0] == '!':
+				#First character is "!" -- force a pause
+
+				# if we're in resume mode AND self.pathcount < self.svgLastPath, then skip over this path.
+				# if two or more forced pauses occur without any plotting between them, they
+				# may be treated as a _single_ pause when resuming.
+
+				doWePauseNow = False 
+				if (self.resumeMode): 
+					if (self.pathcount < self.svgLastPath_Old ): # Fully plotted; skip.
+						#This pause was *already executed*, and we are resuming past it. Skip.
+						self.pathcount += 1 
+				else:
+					doWePauseNow = True
+				if (doWePauseNow):
+					self.pathcount += 1	# This action counts as a "path" from the standpoint of pause/resume
+					
+					# Record this as though it were a completed path:
+					self.svgLastPath = self.pathcount #The number of the last path completed
+					self.svgLastPathNC = self.nodeCount #the node count after the last path was completed.
+					
+					self.forcePause = True
+					self.PauseResumeCheck()		# Carry out the pause, or resume if required.
+
 			while stringPos <= MaxLength:
 				LayerNameFragment = CurrentLayerName[:stringPos]
 				if (LayerNameFragment.isdigit()):
@@ -1246,8 +1273,8 @@ class AxiDrawClass( inkex.Effect ):
 		if (self.plotCurrentLayer == True):
 			self.LayersFoundToPlot = True
 
-			#End of part 1, current layer to see if we print it.
-			#Now, check to see if there is additional information coded here.
+			# End of part 1, current layer to see if we print it.
+			# Now, check to see if there is additional information coded here.
 
 			oldPenDown = self.LayerPenDownPosition
 			oldSpeed = self.LayerPenDownSpeed
@@ -1263,8 +1290,8 @@ class AxiDrawClass( inkex.Effect ):
 
 			if MaxLength > stringPos + 2:
 				while stringPos <= MaxLength:	
-					EscapeSequence = CurrentLayerName[stringPos:stringPos+2].lower()
-					if (EscapeSequence == "+h") or (EscapeSequence == "+s") or (EscapeSequence == "+d"):
+					key = CurrentLayerName[stringPos:stringPos+2].lower()
+					if (key == "+h") or (key == "+s") or (key == "+d"):
 						paramStart = stringPos + 2
 						stringPos = stringPos + 3
 						TempNumString = 'x'
@@ -1278,7 +1305,7 @@ class AxiDrawClass( inkex.Effect ):
 						if ( str.isdigit( TempNumString ) ):
 							parameterInt = int( float( TempNumString ) )
 
-							if (EscapeSequence == "+d"):
+							if (key == "+d"):
 								if (parameterInt > 0):
 									# Delay requested before plotting this layer. Delay times are in milliseconds.
 									timeRemaining = float( parameterInt ) / 1000.0	# Convert to seconds
@@ -1293,12 +1320,12 @@ class AxiDrawClass( inkex.Effect ):
 											timeRemaining = timeRemaining - 0.1
 											self.PauseResumeCheck()		# Check if pause button was pressed while we were sleeping
 											
-							if (EscapeSequence == "+h"):
+							if (key == "+h"):
 								if ((parameterInt >= 0) and (parameterInt <= 100)):
 									self.UseCustomLayerPenHeight = True
 									self.LayerPenDownPosition = parameterInt
 								
-							if (EscapeSequence == "+s"):
+							if (key == "+s"):
 								if ((parameterInt > 0) and (parameterInt <= 100)):
 									self.UseCustomLayerSpeed = True
 									self.LayerPenDownSpeed = parameterInt
@@ -1374,7 +1401,7 @@ class AxiDrawClass( inkex.Effect ):
 
 			if ( not self.bStopped ):	#an "index" for resuming plots quickly-- record last complete path
 				self.svgLastPath = self.pathcount #The number of the last path completed
-				self.svgLastPathNC = self.nodeCount #the node count after the last path was completed.			
+				self.svgLastPathNC = self.nodeCount #the node count after the last path was completed.
 
 	def PlanTrajectory( self, inputPath ):
 		'''
@@ -2341,7 +2368,7 @@ class AxiDrawClass( inkex.Effect ):
 		# Pause & Resume functionality is managed here, called (for example) while planning 
 		# a segment to plot. First check to see if the pause button has been pressed.
 		# Increment the node counter.
-		# Resume drawing if we were in resume mode and supposed to resume at this node.
+		# Also, resume drawing if we _were_ in resume mode and need to resume at this node.
 		
 		if self.bStopped:
 			return	# We have _already_ halted the plot due to a button press. No need to proceed.
@@ -2351,9 +2378,9 @@ class AxiDrawClass( inkex.Effect ):
 		else:
 			strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
 			
-		if (self.debugPause > 0):
-			if ((self.nodeCount == self.debugPause) and (self.options.mode == "plot")):
-				strButton = ['1']	# simulate pause button press at given node
+		if (self.forcePause):
+			strButton = ['1']	# simulate pause button press
+			self.forcePause = False # Clear the flag
 
 		try:
 			pauseState = strButton[0]
@@ -2415,23 +2442,17 @@ class AxiDrawClass( inkex.Effect ):
 		if ( self.options.resolution == 1 ):	# High-resolution ("Super") mode
 			if not (self.options.previewOnly):
 				ebb_motion.sendEnableMotors(self.serialPort, 1) # 16X microstepping
-						
 			self.StepScaleFactor = 2.0 * axidraw_conf.NativeResFactor			
 			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedLimXY_HR	/ 110.0		#Speed given as maximum inches/second in XY plane
 			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedLimXY_HR / 110.0	#Speed given as maximum inches/second in XY plane
-
-
-			
-		elif ( self.options.resolution == 2 ):	# Low-resolution ("Normal") mode
+		
+		else: # i.e., self.options.resolution == 2; Low-resolution ("Normal") mode
 			if not (self.options.previewOnly):
 				ebb_motion.sendEnableMotors(self.serialPort, 2) # 8X microstepping
-
 			self.StepScaleFactor = axidraw_conf.NativeResFactor
-			
 			#In low-resolution mode, allow faster pen-up moves. Keep maximum pen-down speed the same. 
 			self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedLimXY_LR / 110.0	#Speed given as maximum inches/second in XY plane
 			self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedLimXY_LR	/ 110.0		#Speed given as maximum inches/second in XY plane
-
 
 		if (self.options.constSpeed):
 			if ( self.options.resolution == 1 ):	# High-resolution ("Super") mode
