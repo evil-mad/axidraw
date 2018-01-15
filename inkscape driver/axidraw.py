@@ -29,7 +29,6 @@ libpath = os.path.join('axidraw', 'lib')
 sys.path.append(libpath)
 sys.path.append('lib')
 
-
 import inkex
 from simpletransform import *
 import simplepath
@@ -44,7 +43,7 @@ import ebb_serial	# Requires v 0.9 in plotink:	 https://github.com/evil-mad/plot
 import ebb_motion	# Requires v 0.12 in plotink
 import plot_utils	# Requires v 0.9 in plotink
 
-import axidraw_conf	#Some settings can be changed here.
+import axidraw_conf	# Some settings can be changed here.
 
 try:
 	xrange = xrange # We have Python 2
@@ -80,7 +79,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--layerNumber", action="store", type="int", dest="layerNumber", default=axidraw_conf.DefaultLayer, help="Selected layer for multilayer plotting" )
 		self.OptionParser.add_option( "--previewOnly", action="store", type="inkbool", dest="previewOnly", default=axidraw_conf.previewOnly, help="Offline preview. Simulate plotting only." )
 		self.OptionParser.add_option( "--previewType", action="store", type="int", dest="previewType", default=axidraw_conf.previewType, help="Preview mode rendering" )
-		self.OptionParser.add_option( "--copiesOfDocument", action="store", type="int", dest="copiesOfDocument", default=axidraw_conf.copiesOfDocument, help="Copies to plot while in Plot mode" )
+		self.OptionParser.add_option( "--copiesOfDocument", action="store", type="int", dest="copiesOfDocument", default=axidraw_conf.copiesOfDocument, help="Copies to plot, in Plot mode" )
 		self.OptionParser.add_option( "--copiesOfLayer", action="store", type="int", dest="copiesOfLayer", default=axidraw_conf.copiesOfLayer, help="Copies to plot while in Layer mode" )
 		self.OptionParser.add_option( "--copyDelay", action="store", type="int", dest="copyDelay", default=axidraw_conf.copyDelay, help="Seconds to delay between copies." )
 		self.OptionParser.add_option( "--resolution", action="store", type="int", dest="resolution", default=axidraw_conf.resolution, help="Resolution factor" )	
@@ -139,8 +138,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.sCurrentLayerName = ''
 		self.copiesToPlot = 1
 		self.delayBetweenCopies = False	# Not currently delaying between copies
-
-
 
 		#New values to write to file:
 		self.svgLayer = int( 0 )
@@ -450,7 +447,6 @@ class AxiDrawClass( inkex.Effect ):
 		if self.options.setupType == "align-mode":
 			self.penRaise()
 			ebb_motion.sendDisableMotors(self.serialPort)	
-
 		elif self.options.setupType == "toggle-pen":
 			ebb_motion.TogglePen(self.serialPort)
 
@@ -483,17 +479,13 @@ class AxiDrawClass( inkex.Effect ):
 		if self.options.manualType == "raise-pen":
 			self.ServoSetupWrapper()
 			self.penRaise()
-
 		elif self.options.manualType == "lower-pen":
 			self.ServoSetupWrapper()
 			self.penLower()
-
 		elif self.options.manualType == "enable-motors":
 			self.EnableMotors()
-
 		elif self.options.manualType == "disable-motors":
 			ebb_motion.sendDisableMotors(self.serialPort)	
-
 		else:  # self.options.manualType is walk motor:
 			if self.options.manualType == "walk-y-motor":
 				nDeltaX = 0
@@ -572,9 +564,7 @@ class AxiDrawClass( inkex.Effect ):
 
 		self.svgTransform = parseTransform( 'scale(%f,%f) translate(%f,%f)' % (sx, sy,Offset0, Offset1))
 
-
-		# wrap everything in a try so we can be sure to close the serial port 
-		try:
+		try: # wrap everything in a try so we can be sure to close the serial port 
 			self.ServoSetupWrapper()
 			self.penRaise() 
 			self.EnableMotors() #Set plotting resolution
@@ -1782,10 +1772,6 @@ class AxiDrawClass( inkex.Effect ):
 
 		if spewSegmentDebugData:
 			inkex.errormsg( 'plotSegmentWithVelocity({}, {}, {}, {})'.format(xDest,yDest,Vi, Vf))
-
-
-
-		if spewSegmentDebugData:
 			if self.resumeMode or self.bStopped:
 				spewText = '\nSkipping '
 			else:
@@ -1838,7 +1824,6 @@ class AxiDrawClass( inkex.Effect ):
 		motorSteps1 = int( round(self.StepScaleFactor * motorDist1))	# Round the requested motion to the nearest motor step.
 		motorSteps2 = int( round(self.StepScaleFactor * motorDist2))	# Round the requested motion to the nearest motor step.
 
-
 		# Since we are rounding, we need to keep track of the actual distance moved,
 		# not just the _requested_ distance to move.
 
@@ -1876,9 +1861,6 @@ class AxiDrawClass( inkex.Effect ):
 		# Maximum travel speeds:
 		# & acceleration/deceleration rate: (Maximum speed) / (time to reach that speed)
 
-
-
-
 		if ( self.penUp ):	
 			speedLimit = self.penUpSpeed
 		else:		
@@ -1895,7 +1877,6 @@ class AxiDrawClass( inkex.Effect ):
 
 		# Distance that is required to reach full speed, from zero speed:  x = 1/2 a t^2 
 		accelDist = 0.5 * accelRate * tMax  * tMax
-
 
 		if (Vi_InchesPerSec > speedLimit):
 			Vi_InchesPerSec = speedLimit
@@ -1923,8 +1904,6 @@ class AxiDrawClass( inkex.Effect ):
 			inkex.errormsg( 'Vf_InchesPerSec: {}'.format(Vf_InchesPerSec))
 			inkex.errormsg( 'tAccelMax: {:.3}'.format(tAccelMax))
 			inkex.errormsg( 'tDecelMax: {:.3}'.format(tDecelMax))
-
-
 
 		#Distance that is required to reach full speed, from our start at speed Vi_InchesPerSec:
 		# distance = vi * t + (1/2) a t^2
@@ -2110,7 +2089,6 @@ class AxiDrawClass( inkex.Effect ):
 						inkex.errormsg( 'accelRateLocal changed')
 				else:
 					accelRateLocal = accelRate
-
 
 				if (accelRateLocal > 0): # Handle edge cases including when we are already at maximum speed
 					Ta = ( math.sqrt(2 * Vi_InchesPerSec * Vi_InchesPerSec + 2 * Vf_InchesPerSec * Vf_InchesPerSec + 4 * accelRateLocal * segmentLengthInches) 
@@ -2370,8 +2348,6 @@ class AxiDrawClass( inkex.Effect ):
 					self.svgLastKnownPosX = self.fCurrX - axidraw_conf.StartPosX
 					self.svgLastKnownPosY = self.fCurrY - axidraw_conf.StartPosY	
 
-
-
 	def PauseResumeCheck (self):
 		# Pause & Resume functionality is managed here, called (for example) while planning 
 		# a segment to plot. First check to see if the pause button has been pressed.
@@ -2443,7 +2419,6 @@ class AxiDrawClass( inkex.Effect ):
 		else:	
 			LocalPenDownSpeed = self.options.penDownSpeed
 
-			
 		LocalPenDownSpeed = plot_utils.constrainLimits( LocalPenDownSpeed, 1, 110)				# Constrain input values
 		self.options.penUpSpeed = plot_utils.constrainLimits( self.options.penUpSpeed, 1, 110)	# Constrain input values
 
