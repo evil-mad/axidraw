@@ -54,8 +54,9 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <param indent="1" name="penUpSpeed" type="int" min="1" max="110" _gui-text="Pen-up movement speed (%):">75</param>
 
 <param indent="1" name="accelFactor" type="optiongroup" appearance="minimal" _gui-text="Acceleration :">
-<_option value="75">Standard</_option>
+<_option value="50">Standard</_option>
 <_option value="100">Maximum</_option>
+<_option value="75">High</_option>
 <_option value="35">Slow</_option>
 <_option value="10">Very slow</_option>
 </param>
@@ -190,7 +191,7 @@ You can resume directly where you paused, or after using the Return to Home Corn
 </param>
 
 <_param name="instructions_general2" type="description" indent="1" xml:space="preserve">
-AxiDraw Control v 1.7.1  	2018-01-11
+AxiDraw Control v 1.7.2  	2018-01-14
 
 Press 'Apply' to query the firmware version;
 EBB firmware 2.5.1 or newer is recommended.

@@ -41,7 +41,7 @@ import string
 import time
 
 import ebb_serial	# Requires v 0.9 in plotink:	 https://github.com/evil-mad/plotink
-import ebb_motion	# Requires v 0.11 in plotink
+import ebb_motion	# Requires v 0.12 in plotink
 import plot_utils	# Requires v 0.9 in plotink
 
 import axidraw_conf	#Some settings can be changed here.
@@ -104,7 +104,7 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.7.1, January 11, 2018."
+		self.versionString = "AxiDraw Control - Version 1.7.2, January 14, 2018."
 		self.spewDebugdata = False
 
 		self.start_time = time.time()		
@@ -114,6 +114,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.DocUnitScaleFactor = 1
 
 		self.serialPort = None
+		self.EBBversion = "none"
 		self.penUp = None  #Initial state of pen is neither up nor down, but _unknown_.
 		self.virtualPenUp = False  #Keeps track of pen postion when stepping through plot before resuming
 		self.ignoreLimits = False
@@ -215,12 +216,9 @@ class AxiDrawClass( inkex.Effect ):
 		if (self.options.mode == "timing"):
 			return
 		if (self.options.mode == "version"):
+			# Return the version of _this python script_.
 			inkex.errormsg( gettext.gettext(self.versionString))
 			return
-		if (self.options.mode == "fwversion"):
-			# Alias to asserting mode = "manual", manualType = "version-check".
-			self.options.mode = "manual"
-			self.options.manualType = "version"
 		if (self.options.mode == "manual"):
 			if (self.options.manualType == "none"):
 				return	#No option selected. Do nothing and return no error.
@@ -232,7 +230,10 @@ class AxiDrawClass( inkex.Effect ):
 					self.svg.remove( node )
 				inkex.errormsg( gettext.gettext( "I've removed all AxiDraw data from this SVG file. Have a great day!" ) )
 				return
-
+		if (self.options.mode == "fwversion"):	
+			self.options.mode = "manual"	# Use "manual" command mechanism to handle fwversion request.
+			self.options.manualType = "fwversion"
+			
 		if skipSerial == False:		
 			if self.options.port is None:
 				self.serialPort = ebb_serial.openPort()
@@ -241,7 +242,6 @@ class AxiDrawClass( inkex.Effect ):
 				tempstring = str(self.options.port)
 				self.options.port = tempstring.strip('\"')	
 				#inkex.errormsg( 'About to test serial port: ' + str(self.options.port) )
-
 				self.serialPort = ebb_serial.testPort( self.options.port )
 				self.options.port = None # Clear this input, to ensure that we close the port later.
 			else:
@@ -249,12 +249,11 @@ class AxiDrawClass( inkex.Effect ):
 				# such as an instance of serial.serialposix.Serial.
 				# In that case, we should interact with that given
 				# port, and leave it open at the end.
-				
 				self.serialPort = self.options.port
 			if self.serialPort is None:
 				inkex.errormsg( gettext.gettext( "Failed to connect to AxiDraw. :(" ))
 				return
-				
+
 		self.svg = self.document.getroot()
 		self.ReadWCBdata(self.svg)
 
@@ -350,13 +349,12 @@ class AxiDrawClass( inkex.Effect ):
 			self.setupCommand()
 			
 		elif self.options.mode == "manual":
-			self.manualCommand()
+			self.manualCommand() # Handle manual commands that use both power and usb.
 
 		if ResumeDataNeedsUpdating:
 			self.UpdateSVGWCBData( self.svg )
 		if self.serialPort is not None:
-			if not ((self.options.mode == "manual") and (self.options.manualType == "bootload")):
-				ebb_motion.doTimedPause(self.serialPort, 10) #Pause a moment for underway commands to finish...
+			ebb_motion.doTimedPause(self.serialPort, 10) #Pause a moment for underway commands to finish.
 			if self.options.port is None:	# Do not close serial port if it was opened externally.
 				ebb_serial.closePort(self.serialPort)
 		
@@ -445,6 +443,8 @@ class AxiDrawClass( inkex.Effect ):
 		if self.serialPort is None:
 			return
 
+		self.queryEBBVoltage()
+
 		self.ServoSetupWrapper()
 
 		if self.options.setupType == "align-mode":
@@ -457,11 +457,28 @@ class AxiDrawClass( inkex.Effect ):
 
 	def manualCommand( self ):
 		"""Execute commands in the "manual" mode/tab"""
-
-		#TODO: Parse version number, and check power input status
-
+	
+		# First: Commands that require serial but not power:	
+		if self.options.previewOnly:
+			inkex.errormsg( 'Command unavailable while in preview mode.')
+			
 		if self.serialPort is None:
 			return 
+
+		if self.options.manualType == "fwversion":
+			EBBversionString = ebb_serial.queryVersion(self.serialPort) # Full string, human readable
+			inkex.errormsg( 'I asked the EBB for its version info, and it replied:\n ' + EBBversionString )
+			return
+			
+		if self.options.manualType == "bootload":
+			ebb_serial.bootload(self.serialPort)	
+			inkex.errormsg( gettext.gettext( "Entering bootloader mode for firmware programming.\n" +
+			"To resume normal operation, you will need to first\n" +
+			"disconnect the AxiDraw from both USB and power." ) )
+			return
+
+		# Next: Commands that require both power and seraial connectivity:
+		self.queryEBBVoltage()
 
 		if self.options.manualType == "raise-pen":
 			self.ServoSetupWrapper()
@@ -476,16 +493,6 @@ class AxiDrawClass( inkex.Effect ):
 
 		elif self.options.manualType == "disable-motors":
 			ebb_motion.sendDisableMotors(self.serialPort)	
-
-		elif self.options.manualType == "version":
-			strVersion = ebb_serial.queryVersion( self.serialPort)
-			inkex.errormsg( 'I asked the EBB for its version info, and it replied:\n ' + strVersion )
-
-		elif self.options.manualType == "bootload":
-			ebb_serial.bootload(self.serialPort)	
-			inkex.errormsg( gettext.gettext( "Entering bootloader mode for firmware programming.\n" +
-			"To resume normal operation, you will need to first\n" +
-			"disconnect the AxiDraw from both USB and power." ) )
 
 		else:  # self.options.manualType is walk motor:
 			if self.options.manualType == "walk-y-motor":
@@ -538,6 +545,7 @@ class AxiDrawClass( inkex.Effect ):
 			velDataPlot = False
 			if self.serialPort is None:
 				return
+			self.queryEBBVoltage()
 			unused = ebb_motion.QueryPRGButton(self.serialPort)	#Initialize button-press detection
 
 		# Modifications to SVG -- including re-ordering and text substitution may be made at this point, and will not be preserved.
@@ -2596,6 +2604,16 @@ class AxiDrawClass( inkex.Effect ):
 	
 			intTemp = 5 * self.options.penLowerRate
 			ebb_motion.setPenDownRate(self.serialPort, intTemp)
+
+	def queryEBBVoltage( self ): # Check that power supply is detected.
+		if (axidraw_conf.SkipVoltageCheck):
+			return
+		if (self.serialPort is not None) and (not self.options.previewOnly):
+			voltageOK = ebb_motion.queryVoltage(self.serialPort)
+			if (voltageOK == False):
+				if ('voltage' not in self.warnings):
+					inkex.errormsg( gettext.gettext ('Warning: Low voltage detected.\nCheck that power supply is plugged in.'))
+					self.warnings['voltage'] = 1
 
 	def getDocProps( self ):
 		'''

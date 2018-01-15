@@ -147,3 +147,5 @@ ServoMin = 10800		# Lowest allowed position; "0%" on the scale.		Default value: 
 # The new limiting values are equivalent to 16%, 86% on that prior scale, giving a little less vertical range, but higher resolution.
 # More importantly, it constrains the servo to within the travel ranges that they are typically calibrated, following best practice.
 
+SkipVoltageCheck = False # Set to True if you would like to disable EBB input power voltage checks. Default: False
+
