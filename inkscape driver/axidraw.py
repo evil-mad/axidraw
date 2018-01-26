@@ -98,12 +98,13 @@ class AxiDrawClass( inkex.Effect ):
 		self.svgPausedPosX_Old = float( 0.0 )
 		self.svgPausedPosY_Old = float( 0.0 )	
 		self.svgRandSeed_Old = float( 1.0 )	
-		self.svgRow_Old = int( 1 )
+		self.svgRow_Old = int( 0 )
+		self.svgApplication_Old = ""
 
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.7.2, January 14, 2018."
+		self.versionString = "AxiDraw Control - Version 1.7.3, January 26, 2018."
 		self.spewDebugdata = False
 
 		self.start_time = time.time()		
@@ -403,16 +404,18 @@ class AxiDrawClass( inkex.Effect ):
 				self.svgLastKnownPosY_Old = float( wcbNode.get( 'lastknownposy' ) ) 
 				self.svgPausedPosX_Old = float( wcbNode.get( 'pausedposx' ) )
 				self.svgPausedPosY_Old = float( wcbNode.get( 'pausedposy' ) ) 
+				self.svgApplication_Old = str( wcbNode.get( 'application' ) ) 
 				self.svgDataRead = True
 			except:
 				self.svg.remove( wcbNode ) # An error before this point leaves svgDataRead as False. 
 				# Also remove the node, to prevent adding a duplicate WCB node later.
 			try:
+				# Check for additonal, optional attributes:
 				self.svgRandSeed_Old = float( wcbNode.get( 'randseed' ) ) 
 				self.svgRow_Old = float( wcbNode.get( 'row' ) ) 
 			except:
-				# No harm done if these variables are not present; leave them at default values and proceed.
-				pass
+				pass # Leave as default if not found
+
 
 	def UpdateSVGWCBData( self, aNodeList ):
 		if ( not self.svgDataRead ):
@@ -432,6 +435,7 @@ class AxiDrawClass( inkex.Effect ):
 						node.set( 'pausedposx', str( (self.svgPausedPosX) ) )
 						node.set( 'pausedposy', str( (self.svgPausedPosY) ) )
 						node.set( 'randseed', str( (self.svgRandSeed) ) )
+						node.set( 'application', "Axidraw" )	# Name of this program
 						self.svgDataWritten = True
 
 	def setupCommand( self ):
@@ -606,7 +610,10 @@ class AxiDrawClass( inkex.Effect ):
 			#  When _not_ run as __main__, the routine that calls this
 			#  _may_ wish to provide a copy of original_document to revert to.
 
-			if  (self.original_document is not None):
+			if hasattr(self, 'backupOriginal'):
+				self.document = copy.deepcopy(self.backupOriginal)
+				self.svg  = self.document.getroot()
+			elif hasattr(self, 'original_document'):
 				self.document = copy.deepcopy(self.original_document)
 				self.svg  = self.document.getroot()
 
@@ -625,7 +632,7 @@ class AxiDrawClass( inkex.Effect ):
 					self.svgRandSeed = 0
 					
 			if (self.warnOutOfBounds):
-				inkex.errormsg( gettext.gettext( 'Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help!' ) )
+				inkex.errormsg( gettext.gettext( 'Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help.' ) )
 
 			if self.options.previewOnly:
 				# Remove old preview layers, whenever preview mode is enabled
@@ -969,7 +976,7 @@ class AxiDrawClass( inkex.Effect ):
 					#  <polyline points="x1,y1 x2,y2 x3,y3 [...]"/> 
 					# to 
 					#   <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...]"/> 
-					# Note: we ignore polylines with no points
+					# Note: we ignore polylines with no points, or polylines with only a single point.
 	
 					pl = node.get( 'points', '' ).strip()
 					if pl == '':
@@ -993,9 +1000,14 @@ class AxiDrawClass( inkex.Effect ):
 						pa = pl.split()
 						if not len( pa ):
 							continue
-						d = "M " + pa[0]
-						for i in range( 1, len( pa ) ):
-							d += " L " + pa[i]
+						pathLength = len( pa )
+						if (pathLength < 4): # Minimum of x1,y1 x2,y2 required.
+							continue
+						d = "M " + pa[0] + " " + pa[1]
+						i = 2
+						while (i < (pathLength - 1 )):
+							d += " L " + pa[i] + " " + pa[i + 1]
+							i += 2
 						#Create (but do not add to SVG) a path to represent the polyline
 						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
 						newpath.set( 'd', d )
