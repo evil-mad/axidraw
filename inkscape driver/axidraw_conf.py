@@ -1,8 +1,8 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.7.0, dated December 27, 2017.
+# Version 1.7.4, dated January 30, 2017.
 #
-# Copyright 2017 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2018 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # https://github.com/evil-mad/AxiDraw
 #
@@ -68,6 +68,7 @@ resolution = 1			# Resolution: Either 1 for (coarser) low resolution, or value 2
 						# Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
 						# not along the XY axes of the machine. This parameter chooses 8X or 16X microstepping on the motors.
 
+model = 1
 
 '''
 Additional user-adjustable control parameters:
@@ -97,7 +98,7 @@ XTravel_Default = 11.81		# AxiDraw V2 and AxiDraw V3: X Carriage travel in inche
 YTravel_Default =  8.58		# AxiDraw V2 and AxiDraw V3: Y Carriage travel in inches. 	Default: 218 mm = about 8.58 inches
 
 XTravel_V3A3    = 16.93		# AxiDraw V3/A3: X Carriage travel in inches. 				Default: 430 mm = about 16.93 inches
-YTravel_V3A3    = 11.06		# AxiDraw V3/A3: Y Carriage travel in inches. 				Default: 297 mm = about 11.69 inches
+YTravel_V3A3    = 11.69		# AxiDraw V3/A3: Y Carriage travel in inches. 				Default: 297 mm = about 11.69 inches
 
 XTravel_V3XLX   = 23.42		# AxiDraw V3 XLX: X Carriage travel in inches. 				Default: 595 mm = about 23.42 inches
 YTravel_V3XLX   =  8.58		# AxiDraw V3 XLX: Y Carriage travel in inches. 				Default: 218 mm = about 8.58 inches
@@ -140,8 +141,9 @@ BoundsTolerance = 0.001	# Allow movements outside of declared bounds by this dis
 MinGap = 0.010			# Distance Threshold (inches)
 
 # Servo motion limits, in units of (1/12 MHz), about 83 ns:
-ServoMax = 25200		# Highest allowed position; "100%" on the scale.	Default value: 25200 units, or 2.1 ms.
-ServoMin = 10800		# Lowest allowed position; "0%" on the scale.		Default value: 10800 units, or 0.9 ms.
+ServoMax = 27831		# Highest allowed position; "100%" on the scale.	Default value: 25200 units, or 2.31 ms.
+ServoMin = 9855		# Lowest allowed position; "0%" on the scale.		Default value: 10800 units, or 0.818 ms.
+
 
 # Note that previous versions of this configuration file used a wider range, 7500 - 28000, corresponding to a range of 625 us - 2333 us.
 # The new limiting values are equivalent to 16%, 86% on that prior scale, giving a little less vertical range, but higher resolution.

@@ -40,7 +40,7 @@ import string
 import time
 
 import ebb_serial	# Requires v 0.9 in plotink:	 https://github.com/evil-mad/plotink
-import ebb_motion	# Requires v 0.12 in plotink
+import ebb_motion	# Requires v 0.13 in plotink
 import plot_utils	# Requires v 0.9 in plotink
 
 import axidraw_conf	# Some settings can be changed here.
@@ -83,7 +83,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--copiesOfLayer", action="store", type="int", dest="copiesOfLayer", default=axidraw_conf.copiesOfLayer, help="Copies to plot while in Layer mode" )
 		self.OptionParser.add_option( "--copyDelay", action="store", type="int", dest="copyDelay", default=axidraw_conf.copyDelay, help="Seconds to delay between copies." )
 		self.OptionParser.add_option( "--resolution", action="store", type="int", dest="resolution", default=axidraw_conf.resolution, help="Resolution factor" )	
-		self.OptionParser.add_option( "--model", action="store", type="int", dest="model", default=1, help="AxiDraw Model Type" )	
+		self.OptionParser.add_option( "--model", action="store", type="int", dest="model", default=axidraw_conf.model, help="AxiDraw Model Type" )	
 		self.OptionParser.add_option( "--smoothness", action="store", type="float", dest="smoothness", default=axidraw_conf.smoothness, help="Smoothness of curves" )
 		self.OptionParser.add_option( "--cornering", action="store", type="float", dest="cornering", default=axidraw_conf.cornering, help="Cornering speed factor" )
 		self.OptionParser.add_option( "--port", action="store", type="string", dest="port", default=None, help="Serial port to use" )
@@ -104,7 +104,7 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.7.3, January 26, 2018."
+		self.versionString = "AxiDraw Control - Version 1.7.4, January 30, 2018."
 		self.spewDebugdata = False
 
 		self.start_time = time.time()		
@@ -441,6 +441,10 @@ class AxiDrawClass( inkex.Effect ):
 	def setupCommand( self ):
 		"""Execute commands from the "setup" mode"""
 
+		if self.options.previewOnly:
+			inkex.errormsg( 'Command unavailable while in preview mode.')
+			return
+			
 		if self.serialPort is None:
 			return
 
@@ -461,6 +465,7 @@ class AxiDrawClass( inkex.Effect ):
 		# First: Commands that require serial but not power:	
 		if self.options.previewOnly:
 			inkex.errormsg( 'Command unavailable while in preview mode.')
+			return
 			
 		if self.serialPort is None:
 			return 
@@ -587,10 +592,11 @@ class AxiDrawClass( inkex.Effect ):
 					self.plotSegmentWithVelocity(fX, fY, 0, 0)
 					return
 		
-			self.recursivelyTraverseSvg( self.svg, self.svgTransform )	# Call the recursive routine to plot the document
+			# Call the recursive routine to plot the document:
+			self.recursivelyTraverseSvg( self.svg, self.svgTransform )	
 			self.penRaise()   #Always end with pen-up
 
-			# return to home after end of normal plot
+			# Return to home after end of normal plot:
 			if ( ( not self.bStopped ) and ( self.ptFirst ) ):
 				self.xBoundsMin = axidraw_conf.StartPosX
 				self.yBoundsMin = axidraw_conf.StartPosY
@@ -606,16 +612,16 @@ class AxiDrawClass( inkex.Effect ):
 			#  Doing so allows us to use routines that alter the SVG
 			#  prior to this point -- e.g., plot re-ordering for speed 
 			#  or font substitutions.
-			# 
-			#  When _not_ run as __main__, the routine that calls this
-			#  _may_ wish to provide a copy of original_document to revert to.
-
-			if hasattr(self, 'backupOriginal'):
+			
+			try:
+				# If called from an external script that specifies a "backupOriginal",
+				# revert to _that_, rather than the true original
 				self.document = copy.deepcopy(self.backupOriginal)
 				self.svg  = self.document.getroot()
-			elif hasattr(self, 'original_document'):
+			except AttributeError:
 				self.document = copy.deepcopy(self.original_document)
 				self.svg  = self.document.getroot()
+
 
 			if ( not self.bStopped ): 
 				if (self.options.mode == "plot") or (self.options.mode == "layers") or (self.options.mode == "resume"):
@@ -2376,7 +2382,6 @@ class AxiDrawClass( inkex.Effect ):
 			
 		if (self.forcePause):
 			strButton = ['1']	# simulate pause button press
-			self.forcePause = False # Clear the flag
 
 		try:
 			pauseState = strButton[0]
@@ -2387,9 +2392,15 @@ class AxiDrawClass( inkex.Effect ):
 				inkex.errormsg( '\n (USB Connectivity lost after node number : ' + str(self.nodeCount) + ')' )	
 
 		if ((pauseState == '1') and (self.delayBetweenCopies == False)):
-			inkex.errormsg( 'Plot paused by button press.')
+			if (self.forcePause):
+				inkex.errormsg( 'Plot paused by layer name control.')
+			else:
+				inkex.errormsg( 'Plot paused by button press.')			
 			if self.spewDebugdata:
 				inkex.errormsg( '\n (Paused after node number : ' + str(self.nodeCount) + ')' )	
+
+		if (self.forcePause):
+			self.forcePause = False # Clear the flag
 
 		if (pauseState == '1') or (pauseState == '2'):  # Stop plot
 			self.svgNodeCount = self.nodeCount
@@ -2457,6 +2468,8 @@ class AxiDrawClass( inkex.Effect ):
 
 			# TODO: Re-evaluate this approach. It may be better to allow a higher maximum speed, but
 			#	get to it via a very short (1-2 segment only) acceleration period, rather than truly constant.
+		# ebb_motion.PBOutConfig( self.serialPort, 3, 0 )	# Configure I/O Pin B3 as an output, low
+
 			
 	def penRaise( self ):
 		self.virtualPenUp = True  # Virtual pen keeps track of state for resuming plotting.
@@ -2482,6 +2495,7 @@ class AxiDrawClass( inkex.Effect ):
 				self.ptEstimate += vTime
 			else:
 				ebb_motion.sendPenUp(self.serialPort, vTime )
+				# ebb_motion.PBOutValue( self.serialPort, 3, 0 )	# I/O Pin B3 output: low
 				if (vTime > 50):
 					if ((self.options.mode != "manual") and (self.options.mode != "setup")):
 						time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
@@ -2510,6 +2524,7 @@ class AxiDrawClass( inkex.Effect ):
 					self.ptEstimate += vTime
 				else:
 					ebb_motion.sendPenDown(self.serialPort, vTime )	
+					# ebb_motion.PBOutValue( self.serialPort, 3, 1 )	# I/O Pin B3 output: high
 					if (vTime > 50):
 						if self.options.mode != "manual":
 							time.sleep(float(vTime - 10)/1000.0)  #pause before issuing next command
