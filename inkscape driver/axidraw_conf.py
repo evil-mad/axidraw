@@ -134,15 +134,15 @@ AccelRatePU = 60.0		# Pen-up acceleration rate, inches per second squared
 
 TimeSlice = 0.025		# Interval, in seconds, of when to update the motors. Default: TimeSlice = 0.025 (25 ms)
 
-#Set a tolerance value, to avoid error messages if a "zero" position rounds to -0.0000010 or something.
+# Set a tolerance value, to avoid error messages if a "zero" position rounds to -0.0000010 or something.
 BoundsTolerance = 0.001	# Allow movements outside of declared bounds by this distance, in inches.
 
-#Skip pen-up moves shorter than this distance, when possible:
-MinGap = 0.010			# Distance Threshold (inches)
+# Allow sufficiently short pen-up moves to be substituted with a pen-down move:
+MinGap = 0.008			# Distance Threshold (inches). Default value: 0.008 inches; smaller than most pen lines.
 
 # Servo motion limits, in units of (1/12 MHz), about 83 ns:
 ServoMax = 27831		# Highest allowed position; "100%" on the scale.	Default value: 25200 units, or 2.31 ms.
-ServoMin = 9855		# Lowest allowed position; "0%" on the scale.		Default value: 10800 units, or 0.818 ms.
+ServoMin = 9855			# Lowest allowed position; "0%" on the scale.		Default value: 10800 units, or 0.818 ms.
 
 
 # Note that previous versions of this configuration file used a wider range, 7500 - 28000, corresponding to a range of 625 us - 2333 us.

@@ -209,6 +209,11 @@ class AxiDrawClass( inkex.Effect ):
 		self.options.penUpPosition = plot_utils.constrainLimits( self.options.penUpPosition, 0, 100) # Constrain input values
 				# This value is only set once, so it can be checked and limited here.
 
+		try:
+			self.CalledExternally
+		except AttributeError:
+			self.CalledExternally = False
+
 		if (self.options.mode == "options"):
 			return
 		if (self.options.mode == "timing"):
@@ -355,7 +360,7 @@ class AxiDrawClass( inkex.Effect ):
 			ebb_motion.doTimedPause(self.serialPort, 10) #Pause a moment for underway commands to finish.
 			if self.options.port is None:	# Do not close serial port if it was opened externally.
 				ebb_serial.closePort(self.serialPort)
-		
+
 	def resumePlotSetup( self ):
 		self.LayerFound = False
 		if ( self.svgLayer_Old < 101 ) and ( self.svgLayer_Old >= 0 ):
@@ -716,15 +721,15 @@ class AxiDrawClass( inkex.Effect ):
 					PDpath = inkex.etree.SubElement(self.previewLayer,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
-			if (self.options.reportTime):
+			if (self.options.reportTime) and (not self.CalledExternally):
 				if (self.copiesToPlot == 0):
 					if self.options.previewOnly:
 						m, s = divmod(self.ptEstimate/1000.0, 60)
 						h, m = divmod(m, 60)
 						if (h > 0):
-							inkex.errormsg("Estimated print time: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
+							inkex.errormsg("Estimated print time: %d:%02d:%02d (Hours, minutes, seconds)" % (h, m, s))
 						else:
-							inkex.errormsg("Estimated print time: %02d:%02d" % (m, s) + " (minutes, seconds)")
+							inkex.errormsg("Estimated print time: %02d:%02d (minutes, seconds)" % (m, s))
 	
 					elapsed_time = time.time() - self.start_time
 					m, s = divmod(elapsed_time, 60)
@@ -735,18 +740,19 @@ class AxiDrawClass( inkex.Effect ):
 						inkex.errormsg("Length of path to draw: %1.2f m." % downDist)
 						inkex.errormsg("Total movement distance: %1.2f m." % totDist)
 						if (self.options.previewType > 0):
-							inkex.errormsg("This estimate took: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
+							inkex.errormsg("This estimate took: %d:%02d:%02d (Hours, minutes, seconds)" % (h, m, s))
 					else:
 						if (h > 0):
-							inkex.errormsg("Elapsed time: %d:%02d:%02d" % (h, m, s) + " (Hours, minutes, seconds)")
+							inkex.errormsg("Elapsed time: %d:%02d:%02d (Hours, minutes, seconds)" % (h, m, s))
 						else:
-							inkex.errormsg("Elapsed time: %02d:%02d" % (m, s) + " (minutes, seconds)")
+							inkex.errormsg("Elapsed time: %02d:%02d (minutes, seconds)" % (m, s))
 						inkex.errormsg("Length of path drawn: %1.2f m." % downDist)
 						inkex.errormsg("Total distance moved: %1.2f m." % totDist)
 
 		finally:
 			# We may have had an exception and lost the serial port...
 			pass
+
 
 	def recursivelyTraverseSvg( self, aNodeList,
 			matCurrent=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
@@ -1407,6 +1413,9 @@ class AxiDrawClass( inkex.Effect ):
 							if (plot_utils.distance(fX - self.fCurrX,fY - self.fCurrY) > axidraw_conf.MinGap):
 								self.penRaise()
 								self.plotSegmentWithVelocity( fX, fY, 0, 0)	# Pen up straight move, zero velocity at endpoints
+							else:
+								self.plotSegmentWithVelocity( fX, fY, 0, 0)	# Super-short pen down move, in place of pen-up move.
+# 								self.nodeCount += 1	# Alternative: Increment node counter, at a slight accuracy cost.
 						elif nIndex == 1:
 							self.penLower() 
 						nIndex += 1
@@ -2379,7 +2388,11 @@ class AxiDrawClass( inkex.Effect ):
 			strButton = ['0']
 		else:
 			strButton = ebb_motion.QueryPRGButton(self.serialPort)	#Query if button pressed
-			
+
+#		# To test corner cases of pause and resume cycles, one may manually force a pause:	
+# 		if (self.options.mode == "plot") and (self.nodeCount == 24) and (self.options.row == 2):
+# 			self.forcePause = True
+		
 		if (self.forcePause):
 			strButton = ['1']	# simulate pause button press
 
@@ -2422,7 +2435,7 @@ class AxiDrawClass( inkex.Effect ):
 					inkex.errormsg( '\nself.virtualPenUp : ' + str(self.virtualPenUp) )				
 					inkex.errormsg( '\nself.penUp : ' + str(self.penUp) )				
 				if ( not self.virtualPenUp ):	# This is the point where we switch from virtual to real pen
-					self.penLower()	
+					self.penLower()
 
 	def EnableMotors( self ):
 		''' 
