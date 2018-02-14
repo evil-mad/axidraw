@@ -87,6 +87,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.OptionParser.add_option( "--smoothness", action="store", type="float", dest="smoothness", default=axidraw_conf.smoothness, help="Smoothness of curves" )
 		self.OptionParser.add_option( "--cornering", action="store", type="float", dest="cornering", default=axidraw_conf.cornering, help="Cornering speed factor" )
 		self.OptionParser.add_option( "--port", action="store", type="string", dest="port", default=None, help="Serial port to use" )
+		#self.OptionParser.add_option( "--useGUI", action="store", type="inkbool", dest="useGUI", default=False, help="True if called from within Inkscape" )
 
 		#Set default values of certain parameters
 		self.svgLayer_Old = int( 0 )
@@ -104,7 +105,7 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.7.4, January 30, 2018."
+		self.versionString = "AxiDraw Control - Version 1.7.5, 2018-02-03."
 		self.spewDebugdata = False
 
 		self.start_time = time.time()		
@@ -1145,6 +1146,8 @@ class AxiDrawClass( inkex.Effect ):
 					continue
 				elif node.tag == inkex.addNS( 'WCB', 'svg' ) or node.tag == 'WCB':
 					continue
+				elif node.tag == inkex.addNS( 'MergeData', 'svg' ) or node.tag == 'MergeData':
+					continue
 				elif node.tag == inkex.addNS( 'eggbot', 'svg' ) or node.tag == 'eggbot':
 					continue			
 				elif node.tag == inkex.addNS( 'title', 'svg' ) or node.tag == 'title':
@@ -1209,7 +1212,7 @@ class AxiDrawClass( inkex.Effect ):
 						else:
 							layerDescription = 'in layer "' + self.sCurrentLayerName + '".'
 						
-						inkex.errormsg( 'Warning: unable to plot' + '<' +  str( t[-1]) + '> object')
+						inkex.errormsg( 'Warning: unable to plot <' +  str( t[-1]) + '> object')
 						inkex.errormsg( layerDescription + 'Please convert it to a path first.' )
 						self.warnings[str( node.tag )] = 1
 					continue
