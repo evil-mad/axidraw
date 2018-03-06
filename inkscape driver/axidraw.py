@@ -105,7 +105,7 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.7.5, 2018-02-03."
+		self.versionString = "AxiDraw Control - Version 1.7.6, 2018-03-05."
 		self.spewDebugdata = False
 
 		self.start_time = time.time()		
@@ -238,22 +238,10 @@ class AxiDrawClass( inkex.Effect ):
 			self.options.mode = "manual"	# Use "manual" command mechanism to handle fwversion request.
 			self.options.manualType = "fwversion"
 			
-		if skipSerial == False:		
-			if self.options.port is None:
-				self.serialPort = ebb_serial.openPort()
-			elif (str(type(self.options.port)) == "<type 'str'>") or (str(type(self.options.port)) == "<type 'unicode'>") :
-				# This function may be passed a port name to open (and later close).
-				tempstring = str(self.options.port)
-				self.options.port = tempstring.strip('\"')	
-				#inkex.errormsg( 'About to test serial port: ' + str(self.options.port) )
-				self.serialPort = ebb_serial.testPort( self.options.port )
-				self.options.port = None # Clear this input, to ensure that we close the port later.
-			else:
-				# This function may be passed a true serial port object,
-				# such as an instance of serial.serialposix.Serial.
-				# In that case, we should interact with that given
-				# port, and leave it open at the end.
-				self.serialPort = self.options.port
+		if skipSerial == False:	
+			self.serialConnect()
+			#if self.serialPort is None:
+			#	self.serialConnect()	# Give a second try, before giving up. :)
 			if self.serialPort is None:
 				inkex.errormsg( gettext.gettext( "Failed to connect to AxiDraw. :(" ))
 				return
@@ -479,6 +467,9 @@ class AxiDrawClass( inkex.Effect ):
 		if self.options.manualType == "fwversion":
 			EBBversionString = ebb_serial.queryVersion(self.serialPort) # Full string, human readable
 			inkex.errormsg( 'I asked the EBB for its version info, and it replied:\n ' + EBBversionString )
+			inkex.errormsg( 'Additional system information:' )
+			inkex.errormsg( gettext.gettext(self.versionString))
+			inkex.errormsg( sys.version)
 			return
 			
 		if self.options.manualType == "bootload":
@@ -676,7 +667,7 @@ class AxiDrawClass( inkex.Effect ):
 				
 				nsPrefix = "plot"
 				if (self.options.previewType > 1):
-					pStyle.update({'stroke': 'red'})
+					pStyle.update({'stroke': 'rgb(255, 159, 159)'})  
 					path_attrs = {
 						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.pathDataPU),
@@ -2439,6 +2430,23 @@ class AxiDrawClass( inkex.Effect ):
 					inkex.errormsg( '\nself.penUp : ' + str(self.penUp) )				
 				if ( not self.virtualPenUp ):	# This is the point where we switch from virtual to real pen
 					self.penLower()
+
+	def serialConnect( self ):
+		if self.options.port is None:
+			self.serialPort = ebb_serial.openPort()
+		elif (str(type(self.options.port)) == "<type 'str'>") or (str(type(self.options.port)) == "<type 'unicode'>") :
+			# This function may be passed a port name to open (and later close).
+			tempstring = str(self.options.port)
+			self.options.port = tempstring.strip('\"')	
+			#inkex.errormsg( 'About to test serial port: ' + str(self.options.port) )
+			self.serialPort = ebb_serial.testPort( self.options.port )
+			self.options.port = None # Clear this input, to ensure that we close the port later.
+		else:
+			# This function may be passed a true serial port object,
+			# such as an instance of serial.serialposix.Serial.
+			# In that case, we should interact with that given
+			# port, and leave it open at the end.
+			self.serialPort = self.options.port
 
 	def EnableMotors( self ):
 		''' 

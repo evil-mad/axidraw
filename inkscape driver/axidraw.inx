@@ -191,7 +191,7 @@ You can resume directly where you paused, or after using the Return to Home Corn
 </param>
 
 <_param name="instructions_general2" type="description" indent="1" xml:space="preserve">
-AxiDraw Control v 1.7.5  	2018-02-03
+AxiDraw Control v 1.7.6  	2018-03-05
 
 Press 'Apply' to query the firmware version;
 EBB firmware 2.5.1 or newer is recommended.
