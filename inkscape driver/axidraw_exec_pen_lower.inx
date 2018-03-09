@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <_name>AxiDraw: Pen (lower)</_name>
+  <id>command.evilmadscientist.axidraw_pen_lower</id>
+  <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
+  <dependency type="executable" location="extensions">axidraw.py</dependency>
+  <dependency type="executable" location="extensions">inkex.py</dependency>
+  <param name="mode" type="notebook" gui-hidden="true">
+    <page name="manual" _gui-text="AxiDraw: Pen (lower)">
+      <_param name="splashpage" type="description" appearance="header">
+        AxiDraw v1.6.5 - Pen (lower)
+      </_param>
+      <param name="manualType" type="optiongroup" gui-hidden="true">
+        <_option value="lower-pen" >AxiDraw: Pen (lower)</_option>
+      </param>
+    </page>
+  </param>
+  <effect needs-live-preview="false" needs-document="no">
+    <object-type>all</object-type>
+    <effects-menu>
+      <submenu _name="AxiDraw"/>
+    </effects-menu>
+  </effect>
+  <script>
+    <command reldir="extensions" interpreter="python">axidraw.py</command>
+  </script>
+</inkscape-extension>
