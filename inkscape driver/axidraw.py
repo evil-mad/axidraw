@@ -1068,11 +1068,9 @@ class AxiDrawClass( inkex.Effect ):
 							newpath.set( 'transform', t )
 						self.plotPath( newpath, matNew )
 						
-				elif node.tag == inkex.addNS( 'ellipse', 'svg' ) or \
-					node.tag == 'ellipse' or \
-					node.tag == inkex.addNS( 'circle', 'svg' ) or \
-					node.tag == 'circle':
-	
+				elif node.tag in [inkex.addNS('ellipse', 'svg'), 'ellipse',
+					inkex.addNS('circle', 'svg'), 'circle']:
+					
 						# Convert circles and ellipses to a path with two 180 degree arcs.
 						# In general (an ellipse), we convert 
 						#   <ellipse rx="RX" ry="RY" cx="X" cy="Y"/> 
@@ -1145,8 +1143,9 @@ class AxiDrawClass( inkex.Effect ):
 					continue
 				elif node.tag == inkex.addNS( 'desc', 'svg' ) or node.tag == 'desc':
 					continue
-				elif (node.tag == inkex.addNS( 'text', 'svg' ) or node.tag == 'text' or
-					node.tag == inkex.addNS( 'flowRoot', 'svg' ) or node.tag == 'flowRoot'):
+
+				elif node.tag in [inkex.addNS('text', 'svg'), 'text',
+					inkex.addNS('flowRoot', 'svg'), 'flowRoot']:
 					if ('text' not in self.warnings) and (self.plotCurrentLayer):
 						if (self.sCurrentLayerName == ''):
 							tempText = '.'
