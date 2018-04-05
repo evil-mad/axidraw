@@ -90,7 +90,7 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <param indent="1" name="autoRotate" type="boolean" _gui-text="Auto-rotate page when printing">true</param>	
 <param indent="1" name="constSpeed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
 
-<param indent="1" name="reportTime" type="boolean" _gui-text="Report time elapsed after each drawing">false</param> 
+<param indent="1" name="reportTime" type="boolean" _gui-text="Report time elapsed">false</param> 
 <param indent="1" name="penLiftDelay" type="int" min="-500" max="500" _gui-text="Optional delay after raising pen (ms):">0</param>
 <param indent="1" name="penLowerDelay" type="int" min="-500" max="500" _gui-text="Optional delay after lowering pen (ms):">0</param>
 
@@ -191,7 +191,7 @@ You can resume directly where you paused, or after using the Return to Home Corn
 </param>
 
 <_param name="instructions_general2" type="description" indent="1" xml:space="preserve">
-AxiDraw Control v 1.7.6  	2018-03-05
+AxiDraw Control v 1.7.7  	2018-04-05
 
 Press 'Apply' to query the firmware version;
 EBB firmware 2.5.1 or newer is recommended.

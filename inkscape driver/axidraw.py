@@ -105,7 +105,7 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.7.6, 2018-03-05."
+		self.versionString = "AxiDraw Control - Version 1.7.7, 2018-04-05."
 		self.spewDebugdata = False
 
 		self.start_time = time.time()		
@@ -621,7 +621,7 @@ class AxiDrawClass( inkex.Effect ):
 
 
 			if ( not self.bStopped ): 
-				if (self.options.mode == "plot") or (self.options.mode == "layers") or (self.options.mode == "resume"):
+				if self.options.mode in ["plot", "layers", "resume"]:
 					# Clear saved plot data from the SVG file,
 					# IF we have _successfully completed_ a normal plot from the plot, layer, or resume mode.
 					self.svgLayer = 0
