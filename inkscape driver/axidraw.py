@@ -115,7 +115,6 @@ class AxiDrawClass( inkex.Effect ):
 		self.DocUnitScaleFactor = 1
 
 		self.serialPort = None
-		self.EBBversion = "none"
 		self.penUp = None  #Initial state of pen is neither up nor down, but _unknown_.
 		self.virtualPenUp = False  #Keeps track of pen postion when stepping through plot before resuming
 		self.ignoreLimits = False
@@ -568,7 +567,7 @@ class AxiDrawClass( inkex.Effect ):
 			Offset0 = 0.0
 			Offset1 = 0.0		
 
-		self.svgTransform = parseTransform( 'scale(%f,%f) translate(%f,%f)' % (sx, sy,Offset0, Offset1))
+		self.svgTransform = parseTransform('scale({0:f},{1:f}) translate({2:f},{3:f})'.format(sx, sy, Offset0, Offset1))
 
 		try: # wrap everything in a try so we can be sure to close the serial port 
 			self.ServoSetupWrapper()
