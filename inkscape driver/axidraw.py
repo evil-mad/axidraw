@@ -562,7 +562,7 @@ class AxiDrawClass( inkex.Effect ):
 				self.DocUnitScaleFactor = 1.0 / sx # Scale preview to viewbox
 		else:
 			# Handle case of no viewbox provided. 
-			sx = 1.0 / float( plot_utils.pxPerInch)
+			sx = 1.0 / float( plot_utils.PX_PER_INCH)
 			sy = sx	
 			Offset0 = 0.0
 			Offset1 = 0.0		
@@ -746,7 +746,7 @@ class AxiDrawClass( inkex.Effect ):
 
 
 	def recursivelyTraverseSvg( self, aNodeList,
-			matCurrent=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+			mat_current=None,
 			parent_visibility='visible' ):
 		"""
 		Recursively traverse the svg file to plot out all of the
@@ -758,6 +758,9 @@ class AxiDrawClass( inkex.Effect ):
 		handled include text.  Unhandled elements should be converted to
 		paths in Inkscape.
 		"""
+
+		if mat_current is None:
+			mat_current = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
 
 		for node in aNodeList:
 			if self.bStopped:
@@ -784,7 +787,7 @@ class AxiDrawClass( inkex.Effect ):
 				visibility = style['visibility'] # Style may override the attribute.
 
 			# first apply the current matrix transform to this node's transform
-			matNew = composeTransform( matCurrent, parseTransform( node.get( "transform" ) ) )
+			matNew = composeTransform( mat_current, parseTransform( node.get( "transform" ) ) )
 
 			if node.tag == inkex.addNS( 'g', 'svg' ) or node.tag == 'g':
 
