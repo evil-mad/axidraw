@@ -671,7 +671,7 @@ class AxiDrawClass( inkex.Effect ):
 						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.pathDataPU),
 						inkex.addNS( 'desc', nsPrefix ): "pen-up transit" }
-					PUpath = inkex.etree.SubElement( self.previewSLU,
+					inkex.etree.SubElement( self.previewSLU,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 				if ((self.options.previewType == 1) or (self.options.previewType == 3)):
@@ -680,7 +680,7 @@ class AxiDrawClass( inkex.Effect ):
 						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.pathDataPD),
 						inkex.addNS( 'desc', nsPrefix ): "pen-down drawing" }
-					PDpath = inkex.etree.SubElement( self.previewSLD,
+					inkex.etree.SubElement( self.previewSLD,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 				if ((self.options.previewType > 0) and self.velDataPlot):	# Preview enabled & do velocity Plot
@@ -693,7 +693,7 @@ class AxiDrawClass( inkex.Effect ):
 						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.velDataChartT),
 						inkex.addNS( 'desc', nsPrefix ): "Total V" }
-					PDpath = inkex.etree.SubElement(self.previewLayer,
+					inkex.etree.SubElement(self.previewLayer,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 					pStyle.update({'stroke': 'red'})
@@ -701,7 +701,7 @@ class AxiDrawClass( inkex.Effect ):
 						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.velDataChart1),
 						inkex.addNS( 'desc', nsPrefix ): "Motor 1 V" }
-					PDpath = inkex.etree.SubElement(self.previewLayer,
+					inkex.etree.SubElement(self.previewLayer,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 					pStyle.update({'stroke': 'green'})
@@ -709,7 +709,7 @@ class AxiDrawClass( inkex.Effect ):
 						'style': simplestyle.formatStyle( pStyle ),
 						'd': " ".join(self.velDataChart2),
 						inkex.addNS( 'desc', nsPrefix ): "Motor 2 V" }
-					PDpath = inkex.etree.SubElement(self.previewLayer,
+					inkex.etree.SubElement(self.previewLayer,
 						inkex.addNS( 'path', 'svg '), path_attrs, nsmap=inkex.NSS )
 
 			if (self.options.reportTime) and (not self.CalledExternally):
@@ -2321,7 +2321,7 @@ class AxiDrawClass( inkex.Effect ):
 							if (self.velDataPlot):
 								velocityLocal1 = moveSteps1 / float(moveTime)
 								velocityLocal2 = moveSteps2 / float(moveTime)
-								velocityLocal =  plot_utils.distance( moveSteps1, moveSteps2 ) / float(moveTime)								
+								velocityLocal =  plot_utils.distance( moveSteps1, moveSteps2 ) / float(moveTime)
 								self.updateVCharts( velocityLocal1, velocityLocal2, velocityLocal)
 								self.velDataTime += moveTime
 								self.updateVCharts( velocityLocal1, velocityLocal2, velocityLocal)
