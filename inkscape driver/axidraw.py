@@ -1,3 +1,4 @@
+# coding=utf-8
 # axidraw.py
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
@@ -105,7 +106,7 @@ class AxiDrawClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Control - Version 1.7.7, 2018-04-05."
+		self.versionString = "AxiDraw Control - Version 1.7.8, 2018-04-22."
 		self.spewDebugdata = False
 
 		self.start_time = time.time()		
@@ -432,7 +433,9 @@ class AxiDrawClass( inkex.Effect ):
 						self.svgDataWritten = True
 
 	def setupCommand( self ):
-		"""Execute commands from the "setup" mode"""
+		'''
+		Execute commands from the "setup" mode
+		'''
 
 		if self.options.previewOnly:
 			inkex.errormsg( 'Command unavailable while in preview mode.')
@@ -453,7 +456,9 @@ class AxiDrawClass( inkex.Effect ):
 
 
 	def manualCommand( self ):
-		"""Execute commands in the "manual" mode/tab"""
+		'''
+		Execute commands in the "manual" mode/tab
+		'''
 	
 		# First: Commands that require serial but not power:	
 		if self.options.previewOnly:
@@ -601,13 +606,15 @@ class AxiDrawClass( inkex.Effect ):
 				self.nodeCount = self.nodeTarget
 				self.plotSegmentWithVelocity( fX, fY, 0, 0)
 
-			# Revert back to original SVG document, prior to adding preview layers.
-			#  and prior to saving updated "WCB" progress data in the file.
-			#  No changes to the SVG document prior to this point will be saved.
-			#
-			#  Doing so allows us to use routines that alter the SVG
-			#  prior to this point -- e.g., plot re-ordering for speed 
-			#  or font substitutions.
+			'''
+			Revert back to original SVG document, prior to adding preview layers.
+			 and prior to saving updated "WCB" progress data in the file.
+			 No changes to the SVG document prior to this point will be saved.
+			
+			 Doing so allows us to use routines that alter the SVG
+			 prior to this point -- e.g., plot re-ordering for speed 
+			 or font substitutions.
+			'''
 			
 			try:
 				# If called from an external script that specifies a "backupOriginal",
@@ -748,7 +755,7 @@ class AxiDrawClass( inkex.Effect ):
 	def recursivelyTraverseSvg( self, aNodeList,
 			mat_current=None,
 			parent_visibility='visible' ):
-		"""
+		'''
 		Recursively traverse the svg file to plot out all of the
 		paths.  The function keeps track of the composite transformation
 		that should be applied to each path.
@@ -757,7 +764,7 @@ class AxiDrawClass( inkex.Effect ):
 		circle, ellipse and use (clone) elements.  Notable elements not
 		handled include text.  Unhandled elements should be converted to
 		paths in Inkscape.
-		"""
+		'''
 
 		if mat_current is None:
 			mat_current = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
@@ -833,20 +840,22 @@ class AxiDrawClass( inkex.Effect ):
 	
 			elif node.tag == inkex.addNS( 'use', 'svg' ) or node.tag == 'use':
 
-				# A <use> element refers to another SVG element via an xlink:href="#blah"
-				# attribute.  We will handle the element by doing an XPath search through
-				# the document, looking for the element with the matching id="blah"
-				# attribute.  We then recursively process that element after applying
-				# any necessary (x,y) translation.
-				#
-				# Notes:
-				#  1. We ignore the height and width attributes as they do not apply to
-				#     path-like elements, and
-				#  2. Even if the use element has visibility="hidden", SVG still calls
-				#     for processing the referenced element.  The referenced element is
-				#     hidden only if its visibility is "inherit" or "hidden".
-				#  3. We may be able to unlink clones using the code in pathmodifier.py
-
+				'''
+				A <use> element refers to another SVG element via an xlink:href="#blah"
+				attribute.  We will handle the element by doing an XPath search through
+				the document, looking for the element with the matching id="blah"
+				attribute.  We then recursively process that element after applying
+				any necessary (x,y) translation.
+				
+				Notes:
+				 1. We ignore the height and width attributes as they do not apply to
+				    path-like elements, and
+				 2. Even if the use element has visibility="hidden", SVG still calls
+				    for processing the referenced element.  The referenced element is
+				    hidden only if its visibility is "inherit" or "hidden".
+				 3. We may be able to unlink clones using the code in pathmodifier.py
+				'''
+				
 				refid = node.get( inkex.addNS( 'href', 'xlink' ) )
 				if refid is not None:
 					# [1:] to ignore leading '#' in reference
@@ -872,10 +881,12 @@ class AxiDrawClass( inkex.Effect ):
 				if visibility == 'hidden' or visibility == 'collapse':
 					continue	# Do not plot this node if it is not visible.
 				if node.tag == inkex.addNS( 'path', 'svg' ):
-	
-					# If in resume mode AND self.pathcount < self.svgLastPath, then skip this path.
-					# If in resume mode and self.pathcount = self.svgLastPath, then start here, and set
-					# self.nodeCount equal to self.svgLastPathNC
+				
+					'''
+					If in resume mode AND self.pathcount < self.svgLastPath, then skip this path.
+					If in resume mode and self.pathcount = self.svgLastPath, then start here, and set
+					self.nodeCount equal to self.svgLastPathNC
+					'''
 					
 					doWePlotThisPath = False 
 					if (self.resumeMode): 
@@ -892,16 +903,18 @@ class AxiDrawClass( inkex.Effect ):
 					
 				elif node.tag == inkex.addNS( 'rect', 'svg' ) or node.tag == 'rect':
 
-					# Manually transform 
-					#    <rect x="X" y="Y" width="W" height="H"/> 
-					# into 
-					#    <path d="MX,Y lW,0 l0,H l-W,0 z"/> 
-					# I.e., explicitly draw three sides of the rectangle and the
-					# fourth side implicitly
-					#
-					# If in resume mode AND self.pathcount < self.svgLastPath, then skip this path.
-					# If in resume mode and self.pathcount = self.svgLastPath, then start here, and set
-					# self.nodeCount equal to self.svgLastPathNC
+					'''
+					Manually transform 
+					   <rect x="X" y="Y" width="W" height="H"/> 
+					into 
+					   <path d="MX,Y lW,0 l0,H l-W,0 z"/> 
+					I.e., explicitly draw three sides of the rectangle and the
+					fourth side implicitly
+					
+					If in resume mode AND self.pathcount < self.svgLastPath, then skip this path.
+					If in resume mode and self.pathcount = self.svgLastPath, then start here, and set
+					self.nodeCount equal to self.svgLastPathNC
+					'''
 					
 					doWePlotThisPath = False 
 					if (self.resumeMode): 
@@ -938,14 +951,15 @@ class AxiDrawClass( inkex.Effect ):
 						
 				elif node.tag == inkex.addNS( 'line', 'svg' ) or node.tag == 'line':
 
-					# Convert
-					#   <line x1="X1" y1="Y1" x2="X2" y2="Y2/>
-					# to
-					#   <path d="MX1,Y1 LX2,Y2"/>
-	
-					# If in resume mode AND self.pathcount < self.svgLastPath, then skip this path.
-					# If in resume mode and self.pathcount = self.svgLastPath, then start here, and set
-					# self.nodeCount equal to self.svgLastPathNC
+					'''
+					Convert
+					  <line x1="X1" y1="Y1" x2="X2" y2="Y2/>
+					to
+					  <path d="MX1,Y1 LX2,Y2"/>	
+					If in resume mode AND self.pathcount < self.svgLastPath, then skip this path.
+					If in resume mode and self.pathcount = self.svgLastPath, then start here, and set
+					self.nodeCount equal to self.svgLastPathNC
+					'''
 	
 					doWePlotThisPath = False 
 					if (self.resumeMode): 
@@ -978,12 +992,16 @@ class AxiDrawClass( inkex.Effect ):
 
 				elif node.tag == inkex.addNS( 'polyline', 'svg' ) or node.tag == 'polyline':
 
-					# Convert
-					#  <polyline points="x1,y1 x2,y2 x3,y3 [...]"/> 
-					# to 
-					#   <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...]"/> 
-					# Note: we ignore polylines with no points, or polylines with only a single point.
-	
+					'''
+					Convert
+					 <polyline points="x1,y1 x2,y2 x3,y3 [...]"/> 
+					OR  
+					 <polyline points="x1 y1 x2 y2 x3 y3 [...]"/> 
+					to 
+					  <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...]"/> 
+					Note: we ignore polylines with no points, or polylines with only a single point.
+					'''
+					
 					pl = node.get( 'points', '' ).strip()
 					if pl == '':
 						continue
@@ -1003,8 +1021,8 @@ class AxiDrawClass( inkex.Effect ):
 						doWePlotThisPath = True
 					if (doWePlotThisPath):
 						self.pathcount += 1
-						pa = pl.split()
-						if not len( pa ):
+						pa = pl.replace(',',' ').split() # replace comma with space before splitting
+						if not pa:
 							continue
 						pathLength = len( pa )
 						if (pathLength < 4): # Minimum of x1,y1 x2,y2 required.
@@ -1014,6 +1032,7 @@ class AxiDrawClass( inkex.Effect ):
 						while (i < (pathLength - 1 )):
 							d += " L " + pa[i] + " " + pa[i + 1]
 							i += 2
+							
 						#Create (but do not add to SVG) a path to represent the polyline
 						newpath = inkex.etree.Element( inkex.addNS( 'path', 'svg' ) )
 						newpath.set( 'd', d )
@@ -1026,13 +1045,15 @@ class AxiDrawClass( inkex.Effect ):
 						self.plotPath( newpath, matNew )
 	
 				elif node.tag == inkex.addNS( 'polygon', 'svg' ) or node.tag == 'polygon':
-	
-					# Convert 
-					#  <polygon points="x1,y1 x2,y2 x3,y3 [...]"/> 
-					# to 
-					#   <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...] Z"/> 
-					# Note: we ignore polygons with no points
 
+					'''
+					Convert 
+					 <polygon points="x1,y1 x2,y2 x3,y3 [...]"/> 
+					to 
+					  <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...] Z"/> 
+					Note: we ignore polygons with no points
+					'''
+					
 					pl = node.get( 'points', '' ).strip()
 					if pl == '':
 						continue
@@ -1210,7 +1231,7 @@ class AxiDrawClass( inkex.Effect ):
 					continue
 
 	def DoWePlotLayer( self, strLayerName ):
-		"""
+		'''
 		Parse layer name for layer number and other properties.
 		
 		First: scan layer name for first non-numeric character,
@@ -1227,7 +1248,7 @@ class AxiDrawClass( inkex.Effect ):
 		"!" (leading character only)-- force a pause, as though the button were pressed.
 		
 		The escape sequences are described at: https://wiki.evilmadscientist.com/AxiDraw_Layer_Control
-		"""
+		'''
 
 		# Look at layer name.  Sample first character, then first two, and
 		# so on, until the string ends or the string no longer consists of digit characters only.
