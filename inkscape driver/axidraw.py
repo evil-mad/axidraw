@@ -190,7 +190,7 @@ class AxiDrawClass( inkex.Effect ):
 		self.pathDataPU = []	# pen-up path data for preview layers
 		self.pathDataPD = []	# pen-down path data for preview layers
 		self.pathDataPenUp = -1	# A value of -1 indicates an indeterminate state- requiring new "M" in path.
-		self.PreviewScaleFactor = 1.0 # Allow scaling in case of non-viewbox rendering
+# 		self.PreviewScaleFactor = 1.0 # Allow scaling in case of non-viewbox rendering
 		
 		self.velDataPlot = False
 		self.velDataTime = 0
@@ -538,7 +538,6 @@ class AxiDrawClass( inkex.Effect ):
 			inkex.errormsg( gettext.gettext('using File > Document Properties.'))
 			return
 
-		self.DocUnits = self.getDocumentUnit()
 		userUnitsWidth = plot_utils.unitsToUserUnits("1in")
 		self.DocUnitScaleFactor = plot_utils.userUnitToUnits(userUnitsWidth, self.DocUnits)
 
@@ -560,10 +559,13 @@ class AxiDrawClass( inkex.Effect ):
 			vinfo = viewbox.strip().replace( ',', ' ' ).split( ' ' )
 			Offset0 = -float(vinfo[0])
 			Offset1 = -float(vinfo[1])
-			if ( vinfo[2] != 0 ) and ( vinfo[3] != 0 ):
+			if ( vinfo[2] != 0 ):
 				# TODO: Handle a wider yet range of viewBox formats and values
 				sx = self.svgWidth / float( vinfo[2] )
-				sy = self.svgHeight / float( vinfo[3] )
+				if ( vinfo[3] != 0 ):
+					sy = self.svgHeight / float( vinfo[3] )
+				else:
+					sy = sx
 				self.DocUnitScaleFactor = 1.0 / sx # Scale preview to viewbox
 		else:
 			# Handle case of no viewbox provided. 
@@ -666,11 +668,35 @@ class AxiDrawClass( inkex.Effect ):
 				self.svg.append( self.previewLayer )
 
 				strokeWidth = "0.2mm"	# Adjust this here, in your preferred units.
-				uuWidth = self.unittouu(strokeWidth)	#TODO: Change over to use unitsToUserUnits routine from plot_utils
-
-				# 	Converted stroke width is given by self.uutounit(uuWidth, self.DocUnits):
-				pStyle = {'stroke-width':self.uutounit(uuWidth, self.DocUnits),'fill':'none','stroke-linejoin':'round','stroke-linecap':'round'}
 				
+				width_uu = plot_utils.unitsToUserUnits(strokeWidth) # Convert stroke width to user units (typ. px)
+				width_du = plot_utils.userUnitToUnits(width_uu, self.DocUnits) # Convert to document units (typ. mm)
+				
+				line_width_scale_factor = self.DocUnitScaleFactor / plot_utils.PX_PER_INCH
+
+				width_du = width_du * line_width_scale_factor # Apply scaling
+
+				'''
+				Important note: stroke-width is a css style element, and cannot accept scientific notation.
+				
+				In cases with large scaling, i.e., high values of self.DocUnitScaleFactor
+				resulting from the viewbox attribute of the SVG document, it may be necessary to use 
+				a _very small_ stroke width, so that the stroke width displayed on the screen
+				has a reasonable width after being displayed greatly magnified thanks to the viewbox.
+				
+				Use log10(the number) to determine the scale, and thus the precision needed.
+				'''
+				
+				log_ten = math.log10(width_du)
+				if log_ten > 0:	# For width_du > 1
+					width_string = "{:.3f}".format(width_du) + str(self.DocUnits)
+				else:
+					prec = int(math.ceil(-log_ten) + 3)
+					width_string = "{0:.{1}f}".format(width_du, prec) + str(self.DocUnits)
+									
+				pStyle = {'stroke-width':width_string,'fill':'none','stroke-linejoin':'round','stroke-linecap':'round'}
+				
+
 				nsPrefix = "plot"
 				if (self.options.previewType > 1):
 					pStyle.update({'stroke': 'rgb(255, 159, 159)'})  
@@ -2619,9 +2645,10 @@ class AxiDrawClass( inkex.Effect ):
 					self.virtualPenUp = False
 		
 	def ServoSetup( self ):
-		''' Pen position units range from 0% to 100%, which correspond to
-		    a typical timing range of 7500 - 25000 in units of 1/(12 MHz).
-		    1% corresponds to ~14.6 us, or 175 units of 1/(12 MHz).
+		''' 
+		Pen position units range from 0% to 100%, which correspond to
+		a typical timing range of 7500 - 25000 in units of 1/(12 MHz).
+		1% corresponds to ~14.6 us, or 175 units of 1/(12 MHz).
 		'''
 
 		if (self.UseCustomLayerPenHeight):
@@ -2639,13 +2666,15 @@ class AxiDrawClass( inkex.Effect ):
 			intTemp = int(round(axidraw_conf.ServoMin + servo_slope * penDownPos))
 			ebb_motion.setPenDownPos(self.serialPort, intTemp)
 	
-			''' Servo speed units are in units of %/second, referring to the
-				percentages above.  The EBB takes speeds in units of 1/(12 MHz) steps
-				per 24 ms.  Scaling as above, 1% of range in 1 second 
-				with SERVO_MAX = 28000  and  SERVO_MIN = 7500
-				corresponds to 205 steps change in 1 s
-				That gives 0.205 steps/ms, or 4.92 steps / 24 ms
-				Rounding this to 5 steps/24 ms is sufficient.		'''
+			''' 
+			Servo speed units are in units of %/second, referring to the
+			percentages above.  The EBB takes speeds in units of 1/(12 MHz) steps
+			per 24 ms.  Scaling as above, 1% of range in 1 second 
+			with SERVO_MAX = 28000  and  SERVO_MIN = 7500
+			corresponds to 205 steps change in 1 s
+			That gives 0.205 steps/ms, or 4.92 steps / 24 ms
+			Rounding this to 5 steps/24 ms is sufficient.
+			'''
 			
 			intTemp = 5 * self.options.penLiftRate
 			ebb_motion.setPenUpRate(self.serialPort, intTemp)
@@ -2669,8 +2698,13 @@ class AxiDrawClass( inkex.Effect ):
 		Use a default value in case the property is not present or is
 		expressed in units of percentages.
 		'''
+
 		self.svgHeight = plot_utils.getLengthInches( self, 'height' )
 		self.svgWidth = plot_utils.getLengthInches( self, 'width' )
+		
+		value, units = plot_utils.parseLengthWithUnits( self.svg.get('width') )
+		self.DocUnits = units
+		
 		if (self.options.autoRotate) and (self.svgHeight > self.svgWidth ):
 			self.printPortrait = True
 		if ( self.svgHeight == None ) or ( self.svgWidth == None ):
