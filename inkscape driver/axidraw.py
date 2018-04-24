@@ -2702,8 +2702,10 @@ class AxiDrawClass( inkex.Effect ):
 		self.svgHeight = plot_utils.getLengthInches( self, 'height' )
 		self.svgWidth = plot_utils.getLengthInches( self, 'width' )
 		
-		value, units = plot_utils.parseLengthWithUnits( self.svg.get('width') )
-		self.DocUnits = units
+		width_string = self.svg.get('width')
+		if width_string:
+			value, units = plot_utils.parseLengthWithUnits(width_string)
+			self.DocUnits = units
 		
 		if (self.options.autoRotate) and (self.svgHeight > self.svgWidth ):
 			self.printPortrait = True
