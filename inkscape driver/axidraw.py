@@ -23,28 +23,28 @@
 #
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 
+import copy
+import gettext
+import math
 import os
 import sys
+import time
+from array import array
 
 libpath = os.path.join('axidraw', 'lib')
 sys.path.append(libpath)
 sys.path.append('lib')
 
+import cubicsuperpath
+import ebb_motion  # Requires v 0.13 in plotink
+import ebb_serial  # Requires v 0.9 in plotink:     https://github.com/evil-mad/plotink
 import inkex
-from simpletransform import *
+import plot_utils  # Requires v 0.9 in plotink
 import simplepath
-import math
-from array import *
-import gettext
-import serial
-import string
-import time
+import simplestyle
+from simpletransform import applyTransformToPath, composeTransform, parseTransform
 
-import ebb_serial    # Requires v 0.9 in plotink:     https://github.com/evil-mad/plotink
-import ebb_motion    # Requires v 0.13 in plotink
-import plot_utils    # Requires v 0.9 in plotink
-
-import axidraw_conf    # Some settings can be changed here.
+import axidraw_conf  # Some settings can be changed here.
 
 try:
     xrange = xrange # We have Python 2
@@ -1789,9 +1789,9 @@ class AxiDrawClass( inkex.Effect ):
 
 #         if spewTrajectoryDebugData:
 #             inkex.errormsg( 'List results for this input path:')
-#             for i in xrange(0, TrajLength-1):            
+#             for i in xrange(0, TrajLength-1):
 #                 inkex.errormsg( 'i: %1.0f' %(i))
-#                 inkex.errormsg( 'x: %1.3f,  y: %1.3f' %(trimmedPath[i][0],trimmedPath[i][1]))    
+#                 inkex.errormsg( 'x: %1.3f,  y: %1.3f' %(trimmedPath[i][0],trimmedPath[i][1]))
 #                 inkex.errormsg( 'distance: %1.3f' %(TrajDists[i+1]))
 #                 inkex.errormsg( 'TrajVels[i]: %1.3f' %(TrajVels[i]))
 #                 inkex.errormsg( 'TrajVels[i+1]: %1.3f\n' %(TrajVels[i+1]))
@@ -2431,7 +2431,7 @@ class AxiDrawClass( inkex.Effect ):
         else:
             strButton = ebb_motion.QueryPRGButton(self.serialPort)    #Query if button pressed
 
-#        # To test corner cases of pause and resume cycles, one may manually force a pause:    
+#        # To test corner cases of pause and resume cycles, one may manually force a pause:
 #         if (self.options.mode == "plot") and (self.nodeCount == 24) and (self.options.row == 2):
 #             self.forcePause = True
 
