@@ -353,7 +353,7 @@ class AxiDrawClass(inkex.Effect):
 
     def resumePlotSetup(self):
         self.layer_found = False
-        if self.svg_layer__old < 101 and self.svg_layer__old >= 0:
+        if 0 <= self.svg_layer__old < 101:
             self.options.layerNumber = self.svg_layer__old
             self.print_in_layers_mode = True
             self.plot_current_layer = False
@@ -1381,12 +1381,12 @@ class AxiDrawClass(inkex.Effect):
                                             self.PauseResumeCheck()  # Check if pause button was pressed while we were sleeping
 
                             if key == "+h":
-                                if parameter_int >= 0 and parameter_int <= 100:
+                                if 0 <= parameter_int <= 100:
                                     self.use_custom_layer_pen_height = True
                                     self.layer_pen_down_position = parameter_int
 
                             if key == "+s":
-                                if parameter_int > 0 and parameter_int <= 100:
+                                if 0 < parameter_int <= 100:
                                     self.use_custom_layer_speed = True
                                     self.layer_pen_down_speed = parameter_int
 
