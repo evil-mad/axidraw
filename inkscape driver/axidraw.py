@@ -1283,7 +1283,7 @@ class AxiDrawClass(inkex.Effect):
             current_layer_name = str_layer_name.encode('ascii', 'ignore')  # Drop non-ascii characters
         else:
             current_layer_name = str(str_layer_name)
-        current_layer_name.lstrip  # Remove leading whitespace
+        current_layer_name.lstrip()  # Remove leading whitespace
         self.plot_current_layer = True  # Temporarily assume that we are plotting the layer
 
         max_length = len(current_layer_name)
