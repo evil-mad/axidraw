@@ -165,10 +165,10 @@ class AxiDrawClass(inkex.Effect):
         self.xBoundsMin = axidraw_conf.StartPosX
         self.yBoundsMin = axidraw_conf.StartPosY
 
-        if (self.options.model == 2):
+        if self.options.model == 2:
             self.xBoundsMax = axidraw_conf.XTravel_V3A3
             self.yBoundsMax = axidraw_conf.YTravel_V3A3
-        elif (self.options.model == 3):
+        elif self.options.model == 3:
             self.xBoundsMax = axidraw_conf.XTravel_V3XLX
             self.yBoundsMax = axidraw_conf.YTravel_V3XLX
         else:
@@ -216,18 +216,18 @@ class AxiDrawClass(inkex.Effect):
         except AttributeError:
             self.CalledExternally = False
 
-        if (self.options.mode == "options"):
+        if self.options.mode == "options":
             return
-        if (self.options.mode == "timing"):
+        if self.options.mode == "timing":
             return
-        if (self.options.mode == "version"):
+        if self.options.mode == "version":
             # Return the version of _this python script_.
             inkex.errormsg(gettext.gettext(self.versionString))
             return
-        if (self.options.mode == "manual"):
-            if (self.options.manualType == "none"):
+        if self.options.mode == "manual":
+            if self.options.manualType == "none":
                 return  # No option selected. Do nothing and return no error.
-            elif (self.options.manualType == "strip-data"):
+            elif self.options.manualType == "strip-data":
                 self.svg = self.document.getroot()
                 for node in self.svg.xpath('//svg:WCB', namespaces=inkex.NSS):
                     self.svg.remove(node)
@@ -235,7 +235,7 @@ class AxiDrawClass(inkex.Effect):
                     self.svg.remove(node)
                 inkex.errormsg(gettext.gettext("I've removed all AxiDraw data from this SVG file. Have a great day!"))
                 return
-        if (self.options.mode == "fwversion"):
+        if self.options.mode == "fwversion":
             self.options.mode = "manual"  # Use "manual" command mechanism to handle fwversion request.
             self.options.manualType = "fwversion"
 
@@ -252,18 +252,18 @@ class AxiDrawClass(inkex.Effect):
 
         ResumeDataNeedsUpdating = False
 
-        if (self.options.copyDelay < 0):
+        if self.options.copyDelay < 0:
             self.options.copyDelay = 0
 
         if self.options.mode == "plot":
             self.copiesToPlot = self.options.copiesOfDocument
-            if (self.copiesToPlot == 0):
+            if self.copiesToPlot == 0:
                 self.copiesToPlot = -1
                 if self.options.previewOnly:  # Special case: 0 (continuous copies) selected, but running in preview mode.
                     self.copiesToPlot = 1  # In this case, revert back to single copy, since there's no way to terminate.
                     # Otherwise, we enter an endless loop of plotting without a way to cancel.
                     # (Canceling is initiated through the USB/button press!)
-            while (self.copiesToPlot != 0):
+            while self.copiesToPlot != 0:
                 self.LayersFoundToPlot = False
                 ResumeDataNeedsUpdating = True
                 self.svgRandSeed = round(time.time() * 100) / 100  # New random seed for new plot
@@ -280,9 +280,9 @@ class AxiDrawClass(inkex.Effect):
                 self.delayBetweenCopies = True  # Indicate that we are currently delaying between copies
 
                 timeCounter = 10 * self.options.copyDelay
-                while (timeCounter > 0):
+                while timeCounter > 0:
                     timeCounter = timeCounter - 1
-                    if ((self.copiesToPlot != 0) and (self.bStopped == False)):  # Delay if we're between copies, not after the last or paused.
+                    if (self.copiesToPlot != 0) and (self.bStopped == False):  # Delay if we're between copies, not after the last or paused.
                         if self.options.previewOnly:
                             self.ptEstimate += 100
                         else:
@@ -294,8 +294,8 @@ class AxiDrawClass(inkex.Effect):
             self.resumePlotSetup()
             if self.resumeMode:
                 self.plotDocument()
-            elif (self.options.resumeType == "justGoHome"):
-                if ((self.svgDataRead == False) or ((self.svgLastKnownPosX_Old == 0) and (self.svgLastKnownPosY_Old == 0))):
+            elif self.options.resumeType == "justGoHome":
+                if (self.svgDataRead == False) or ((self.svgLastKnownPosX_Old == 0) and (self.svgLastKnownPosY_Old == 0)):
                     inkex.errormsg(gettext.gettext("No resume data found; unable to return to home position."))
                 else:
                     self.plotDocument()
@@ -311,11 +311,11 @@ class AxiDrawClass(inkex.Effect):
 
         elif self.options.mode == "layers":
             self.copiesToPlot = self.options.copiesOfLayer
-            if (self.copiesToPlot == 0):
+            if self.copiesToPlot == 0:
                 self.copiesToPlot = -1
                 if self.options.previewOnly:  # Special case: 0 (continuous copies) selected, but running in preview mode.
                     self.copiesToPlot = 1  # In this case, revert back to single copy, since there's no way to terminate.
-            while (self.copiesToPlot != 0):
+            while self.copiesToPlot != 0:
                 ResumeDataNeedsUpdating = True
                 self.svgRandSeed = time.time()  # New random seed for new plot
                 self.PrintInLayersMode = True
@@ -329,9 +329,9 @@ class AxiDrawClass(inkex.Effect):
                 self.plotDocument()
                 self.delayBetweenCopies = True  # Indicate that we are currently delaying between copies
                 timeCounter = 10 * self.options.copyDelay
-                while (timeCounter > 0):
+                while timeCounter > 0:
                     timeCounter = timeCounter - 1
-                    if ((self.copiesToPlot != 0) and (self.bStopped == False)):
+                    if (self.copiesToPlot != 0) and (self.bStopped == False):
                         if self.options.previewOnly:
                             self.ptEstimate += 100
                         else:
@@ -358,12 +358,12 @@ class AxiDrawClass(inkex.Effect):
             self.PrintInLayersMode = True
             self.plotCurrentLayer = False
             self.LayerFound = True
-        elif (self.svgLayer_Old == 12345):  # Plot all layers
+        elif self.svgLayer_Old == 12345:  # Plot all layers
             self.PrintInLayersMode = False
             self.plotCurrentLayer = True
             self.LayerFound = True
-        if (self.LayerFound):
-            if (self.svgNodeCount_Old > 0):
+        if self.LayerFound:
+            if self.svgNodeCount_Old > 0:
                 self.nodeTarget = self.svgNodeCount_Old
                 self.svgLayer = self.svgLayer_Old
                 self.ServoSetupWrapper()
@@ -412,10 +412,10 @@ class AxiDrawClass(inkex.Effect):
                 pass  # Leave as default if not found
 
     def UpdateSVGWCBData(self, aNodeList):
-        if (not self.svgDataRead):
+        if not self.svgDataRead:
             WCBdata = inkex.etree.SubElement(self.svg, 'WCB')
             self.svgDataRead = True  # Ensure that we don't keep adding WCB elements
-        if (not self.svgDataWritten):
+        if not self.svgDataWritten:
             for node in aNodeList:
                 if node.tag == 'svg':
                     self.UpdateSVGWCBData(node)
@@ -424,11 +424,11 @@ class AxiDrawClass(inkex.Effect):
                     node.set('node', str(self.svgNodeCount))
                     node.set('lastpath', str(self.svgLastPath))
                     node.set('lastpathnc', str(self.svgLastPathNC))
-                    node.set('lastknownposx', str((self.svgLastKnownPosX)))
-                    node.set('lastknownposy', str((self.svgLastKnownPosY)))
-                    node.set('pausedposx', str((self.svgPausedPosX)))
-                    node.set('pausedposy', str((self.svgPausedPosY)))
-                    node.set('randseed', str((self.svgRandSeed)))
+                    node.set('lastknownposx', str(self.svgLastKnownPosX))
+                    node.set('lastknownposy', str(self.svgLastKnownPosY))
+                    node.set('pausedposx', str(self.svgPausedPosX))
+                    node.set('pausedposy', str(self.svgPausedPosY))
+                    node.set('randseed', str(self.svgRandSeed))
                     node.set('application', "Axidraw")  # Name of this program
                     self.svgDataWritten = True
 
@@ -527,7 +527,7 @@ class AxiDrawClass(inkex.Effect):
         # Plot the actual SVG document, if so selected in the interface
         # parse the svg data as a series of line segments and send each segment to be plotted
 
-        if (not self.getDocProps()):
+        if not self.getDocProps():
             # Error: This document appears to have inappropriate (or missing) dimensions.
             inkex.errormsg(gettext.gettext('This document does not have valid dimensions.\r'))
             inkex.errormsg(gettext.gettext('The document dimensions must be in either millimeters (mm) or inches (in).\r\r'))
@@ -558,10 +558,10 @@ class AxiDrawClass(inkex.Effect):
             vinfo = viewbox.strip().replace(',', ' ').split(' ')
             Offset0 = -float(vinfo[0])
             Offset1 = -float(vinfo[1])
-            if (vinfo[2] != 0):
+            if vinfo[2] != 0:
                 # TODO: Handle a wider yet range of viewBox formats and values
                 sx = self.svgWidth / float(vinfo[2])
-                if (vinfo[3] != 0):
+                if vinfo[3] != 0:
                     sy = self.svgHeight / float(vinfo[3])
                 else:
                     sy = sx
@@ -599,7 +599,7 @@ class AxiDrawClass(inkex.Effect):
             self.penRaise()  # Always end with pen-up
 
             # Return to home after end of normal plot:
-            if ((not self.bStopped) and (self.ptFirst)):
+            if (not self.bStopped) and self.ptFirst:
                 self.xBoundsMin = axidraw_conf.StartPosX
                 self.yBoundsMin = axidraw_conf.StartPosY
                 fX = self.ptFirst[0]
@@ -626,7 +626,7 @@ class AxiDrawClass(inkex.Effect):
                 self.document = copy.deepcopy(self.original_document)
                 self.svg = self.document.getroot()
 
-            if (not self.bStopped):
+            if not self.bStopped:
                 if self.options.mode in ["plot", "layers", "resume"]:
                     # Clear saved plot data from the SVG file,
                     # IF we have _successfully completed_ a normal plot from the plot, layer, or resume mode.
@@ -640,19 +640,19 @@ class AxiDrawClass(inkex.Effect):
                     self.svgPausedPosY = 0
                     self.svgRandSeed = 0
 
-            if (self.warnOutOfBounds):
+            if self.warnOutOfBounds:
                 inkex.errormsg(gettext.gettext('Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help.'))
 
             if self.options.previewOnly:
                 # Remove old preview layers, whenever preview mode is enabled
                 for node in self.svg:
                     if node.tag == inkex.addNS('g', 'svg') or node.tag == 'g':
-                        if (node.get(inkex.addNS('groupmode', 'inkscape')) == 'layer'):
+                        if node.get(inkex.addNS('groupmode', 'inkscape')) == 'layer':
                             LayerName = node.get(inkex.addNS('label', 'inkscape'))
                             if LayerName == '% Preview':
                                 self.svg.remove(node)
 
-            if (self.options.previewType > 0):  # Render preview. Only possible when in preview mode.
+            if self.options.previewType > 0:  # Render preview. Only possible when in preview mode.
                 self.previewLayer = inkex.etree.Element(inkex.addNS('g', 'svg'))
                 self.previewSLU = inkex.etree.SubElement(self.previewLayer, inkex.addNS('g', 'svg'))
                 self.previewSLD = inkex.etree.SubElement(self.previewLayer, inkex.addNS('g', 'svg'))
@@ -695,7 +695,7 @@ class AxiDrawClass(inkex.Effect):
                 pStyle = {'stroke-width': width_string, 'fill': 'none', 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}
 
                 nsPrefix = "plot"
-                if (self.options.previewType > 1):
+                if self.options.previewType > 1:
                     pStyle.update({'stroke': 'rgb(255, 159, 159)'})
                     path_attrs = {
                         'style': simplestyle.formatStyle(pStyle),
@@ -704,7 +704,7 @@ class AxiDrawClass(inkex.Effect):
                     inkex.etree.SubElement(self.previewSLU,
                                            inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
-                if ((self.options.previewType == 1) or (self.options.previewType == 3)):
+                if (self.options.previewType == 1) or (self.options.previewType == 3):
                     pStyle.update({'stroke': 'blue'})
                     path_attrs = {
                         'style': simplestyle.formatStyle(pStyle),
@@ -713,7 +713,7 @@ class AxiDrawClass(inkex.Effect):
                     inkex.etree.SubElement(self.previewSLD,
                                            inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
-                if ((self.options.previewType > 0) and self.velDataPlot):  # Preview enabled & do velocity Plot
+                if (self.options.previewType > 0) and self.velDataPlot:  # Preview enabled & do velocity Plot
                     self.velDataChart1.insert(0, "M")
                     self.velDataChart2.insert(0, "M")
                     self.velDataChartT.insert(0, "M")
@@ -742,12 +742,12 @@ class AxiDrawClass(inkex.Effect):
                     inkex.etree.SubElement(self.previewLayer,
                                            inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
-            if (self.options.reportTime) and (not self.CalledExternally):
-                if (self.copiesToPlot == 0):
+            if self.options.reportTime and (not self.CalledExternally):
+                if self.copiesToPlot == 0:
                     if self.options.previewOnly:
                         m, s = divmod(self.ptEstimate / 1000.0, 60)
                         h, m = divmod(m, 60)
-                        if (h > 0):
+                        if h > 0:
                             inkex.errormsg("Estimated print time: %d:%02d:%02d (Hours, minutes, seconds)" % (h, m, s))
                         else:
                             inkex.errormsg("Estimated print time: %02d:%02d (minutes, seconds)" % (m, s))
@@ -760,10 +760,10 @@ class AxiDrawClass(inkex.Effect):
                     if self.options.previewOnly:
                         inkex.errormsg("Length of path to draw: %1.2f m." % downDist)
                         inkex.errormsg("Total movement distance: %1.2f m." % totDist)
-                        if (self.options.previewType > 0):
+                        if self.options.previewType > 0:
                             inkex.errormsg("This estimate took: %d:%02d:%02d (Hours, minutes, seconds)" % (h, m, s))
                     else:
-                        if (h > 0):
+                        if h > 0:
                             inkex.errormsg("Elapsed time: %d:%02d:%02d (Hours, minutes, seconds)" % (h, m, s))
                         else:
                             inkex.errormsg("Elapsed time: %02d:%02d (minutes, seconds)" % (m, s))
@@ -829,7 +829,7 @@ class AxiDrawClass(inkex.Effect):
                 oldplotCurrentLayer = self.plotCurrentLayer
                 oldLayerName = self.sCurrentLayerName
 
-                if (node.get(inkex.addNS('groupmode', 'inkscape')) == 'layer'):
+                if node.get(inkex.addNS('groupmode', 'inkscape')) == 'layer':
                     self.sCurrentLayerName = node.get(inkex.addNS('label', 'inkscape'))
                     self.DoWePlotLayer(self.sCurrentLayerName)
                     self.penRaise()
@@ -839,11 +839,11 @@ class AxiDrawClass(inkex.Effect):
                 self.UseCustomLayerPenHeight = oldUseCustomLayerPenHeight
                 self.UseCustomLayerSpeed = oldUseCustomLayerSpeed
 
-                if (self.LayerPenDownSpeed != oldLayerPenDownSpeed):
+                if self.LayerPenDownSpeed != oldLayerPenDownSpeed:
                     self.LayerPenDownSpeed = oldLayerPenDownSpeed
                     self.EnableMotors()  # Set speed value variables for this layer.
 
-                if (self.LayerPenDownPosition != oldLayerPenDownPosition):
+                if self.LayerPenDownPosition != oldLayerPenDownPosition:
                     self.LayerPenDownPosition = oldLayerPenDownPosition
                     self.ServoSetup()  # Set pen height value variables for this layer.
 
@@ -853,7 +853,7 @@ class AxiDrawClass(inkex.Effect):
             elif node.tag == inkex.addNS('symbol', 'svg') or node.tag == 'symbol':
                 # A symbol is much like a group, except that it should only be rendered when called within a "use" tag.
 
-                if (self.useTagNestLevel > 0):
+                if self.useTagNestLevel > 0:
                     self.recursivelyTraverseSvg(node, matNew, parent_visibility=visibility)
 
             elif node.tag == inkex.addNS('a', 'svg') or node.tag == 'a':
@@ -911,15 +911,15 @@ class AxiDrawClass(inkex.Effect):
                     '''
 
                     doWePlotThisPath = False
-                    if (self.resumeMode):
-                        if (self.pathcount < self.svgLastPath_Old):  # Fully plotted; skip.
+                    if self.resumeMode:
+                        if self.pathcount < self.svgLastPath_Old:  # Fully plotted; skip.
                             self.pathcount += 1
-                        elif (self.pathcount == self.svgLastPath_Old):  # First partially-plotted path
+                        elif self.pathcount == self.svgLastPath_Old:  # First partially-plotted path
                             self.nodeCount = self.svgLastPathNC_Old  # nodeCount after last completed path
                             doWePlotThisPath = True
                     else:
                         doWePlotThisPath = True
-                    if (doWePlotThisPath):
+                    if doWePlotThisPath:
                         self.pathcount += 1
                         self.plotPath(node, matNew)
 
@@ -939,15 +939,15 @@ class AxiDrawClass(inkex.Effect):
                     '''
 
                     doWePlotThisPath = False
-                    if (self.resumeMode):
-                        if (self.pathcount < self.svgLastPath_Old):  # Fully plotted; skip.
+                    if self.resumeMode:
+                        if self.pathcount < self.svgLastPath_Old:  # Fully plotted; skip.
                             self.pathcount += 1
-                        elif (self.pathcount == self.svgLastPath_Old):  # First partially-plotted path
+                        elif self.pathcount == self.svgLastPath_Old:  # First partially-plotted path
                             self.nodeCount = self.svgLastPathNC_Old  # nodeCount after last completed path
                             doWePlotThisPath = True
                     else:
                         doWePlotThisPath = True
-                    if (doWePlotThisPath):
+                    if doWePlotThisPath:
                         self.pathcount += 1
                         # Create (but do not add to SVG) a path with the outline of the rectangle
                         newpath = inkex.etree.Element(inkex.addNS('path', 'svg'))
@@ -984,15 +984,15 @@ class AxiDrawClass(inkex.Effect):
                     '''
 
                     doWePlotThisPath = False
-                    if (self.resumeMode):
-                        if (self.pathcount < self.svgLastPath_Old):  # Fully plotted; skip.
+                    if self.resumeMode:
+                        if self.pathcount < self.svgLastPath_Old:  # Fully plotted; skip.
                             self.pathcount += 1
-                        elif (self.pathcount == self.svgLastPath_Old):  # First partially-plotted path
+                        elif self.pathcount == self.svgLastPath_Old:  # First partially-plotted path
                             self.nodeCount = self.svgLastPathNC_Old  # nodeCount after last completed path
                             doWePlotThisPath = True
                     else:
                         doWePlotThisPath = True
-                    if (doWePlotThisPath):
+                    if doWePlotThisPath:
                         self.pathcount += 1
                         # Create (but do not add to SVG) a path to contain the line
                         newpath = inkex.etree.Element(inkex.addNS('path', 'svg'))
@@ -1033,25 +1033,25 @@ class AxiDrawClass(inkex.Effect):
                     # self.nodeCount equal to self.svgLastPathNC
 
                     doWePlotThisPath = False
-                    if (self.resumeMode):
-                        if (self.pathcount < self.svgLastPath_Old):  # Fully plotted; skip.
+                    if self.resumeMode:
+                        if self.pathcount < self.svgLastPath_Old:  # Fully plotted; skip.
                             self.pathcount += 1
-                        elif (self.pathcount == self.svgLastPath_Old):  # First partially-plotted path
+                        elif self.pathcount == self.svgLastPath_Old:  # First partially-plotted path
                             self.nodeCount = self.svgLastPathNC_Old  # nodeCount after last completed path
                             doWePlotThisPath = True
                     else:
                         doWePlotThisPath = True
-                    if (doWePlotThisPath):
+                    if doWePlotThisPath:
                         self.pathcount += 1
                         pa = pl.replace(',', ' ').split()  # replace comma with space before splitting
                         if not pa:
                             continue
                         pathLength = len(pa)
-                        if (pathLength < 4):  # Minimum of x1,y1 x2,y2 required.
+                        if pathLength < 4:  # Minimum of x1,y1 x2,y2 required.
                             continue
                         d = "M " + pa[0] + " " + pa[1]
                         i = 2
-                        while (i < (pathLength - 1)):
+                        while i < (pathLength - 1):
                             d += " L " + pa[i] + " " + pa[i + 1]
                             i += 2
 
@@ -1085,15 +1085,15 @@ class AxiDrawClass(inkex.Effect):
                     #    self.nodeCount equal to self.svgLastPathNC
 
                     doWePlotThisPath = False
-                    if (self.resumeMode):
-                        if (self.pathcount < self.svgLastPath_Old):  # Fully plotted; skip.
+                    if self.resumeMode:
+                        if self.pathcount < self.svgLastPath_Old:  # Fully plotted; skip.
                             self.pathcount += 1
-                        elif (self.pathcount == self.svgLastPath_Old):  # First partially-plotted path
+                        elif self.pathcount == self.svgLastPath_Old:  # First partially-plotted path
                             self.nodeCount = self.svgLastPathNC_Old  # nodeCount after last completed path
                             doWePlotThisPath = True
                     else:
                         doWePlotThisPath = True
-                    if (doWePlotThisPath):
+                    if doWePlotThisPath:
                         self.pathcount += 1
                         pa = pl.split()
                         if not len(pa):
@@ -1140,17 +1140,17 @@ class AxiDrawClass(inkex.Effect):
                     #    self.nodeCount equal to self.svgLastPathNC
 
                     doWePlotThisPath = False
-                    if (self.resumeMode):
-                        if (self.pathcount < self.svgLastPath_Old):
+                    if self.resumeMode:
+                        if self.pathcount < self.svgLastPath_Old:
                             # This path was *completely plotted* already; skip.
                             self.pathcount += 1
-                        elif (self.pathcount == self.svgLastPath_Old):
+                        elif self.pathcount == self.svgLastPath_Old:
                             # this path is the first *not completely* plotted path:
                             self.nodeCount = self.svgLastPathNC_Old  # nodeCount after last completed path
                             doWePlotThisPath = True
                     else:
                         doWePlotThisPath = True
-                    if (doWePlotThisPath):
+                    if doWePlotThisPath:
                         self.pathcount += 1
 
                         cx = float(node.get('cx', '0'))
@@ -1191,8 +1191,8 @@ class AxiDrawClass(inkex.Effect):
 
                 elif node.tag in [inkex.addNS('text', 'svg'), 'text',
                                   inkex.addNS('flowRoot', 'svg'), 'flowRoot']:
-                    if ('text' not in self.warnings) and (self.plotCurrentLayer):
-                        if (self.sCurrentLayerName == ''):
+                    if ('text' not in self.warnings) and self.plotCurrentLayer:
+                        if self.sCurrentLayerName == '':
                             tempText = '.'
                         else:
                             tempText = ', found in a \nlayer named: "' + self.sCurrentLayerName + '" .'
@@ -1204,8 +1204,8 @@ class AxiDrawClass(inkex.Effect):
                         self.warnings['text'] = 1
                     continue
                 elif node.tag == inkex.addNS('image', 'svg') or node.tag == 'image':
-                    if ('image' not in self.warnings) and (self.plotCurrentLayer):
-                        if (self.sCurrentLayerName == ''):
+                    if ('image' not in self.warnings) and self.plotCurrentLayer:
+                        if self.sCurrentLayerName == '':
                             tempText = ''
                         else:
                             tempText = ' in layer "' + self.sCurrentLayerName + '"'
@@ -1240,7 +1240,7 @@ class AxiDrawClass(inkex.Effect):
                     # be very useful.
                     continue
                 else:
-                    if (str(node.tag) not in self.warnings) and (self.plotCurrentLayer):
+                    if (str(node.tag) not in self.warnings) and self.plotCurrentLayer:
                         t = str(node.tag).split('}')
                         if self.sCurrentLayerName == "":
                             layerDescription = "found in file. "
@@ -1297,13 +1297,13 @@ class AxiDrawClass(inkex.Effect):
                 # may be treated as a _single_ pause when resuming.
 
                 doWePauseNow = False
-                if (self.resumeMode):
-                    if (self.pathcount < self.svgLastPath_Old):  # Fully plotted; skip.
+                if self.resumeMode:
+                    if self.pathcount < self.svgLastPath_Old:  # Fully plotted; skip.
                         # This pause was *already executed*, and we are resuming past it. Skip.
                         self.pathcount += 1
                 else:
                     doWePauseNow = True
-                if (doWePauseNow):
+                if doWePauseNow:
                     self.pathcount += 1  # This action counts as a "path" from the standpoint of pause/resume
 
                     # Record this as though it were a completed path:
@@ -1315,22 +1315,22 @@ class AxiDrawClass(inkex.Effect):
 
             while stringPos <= MaxLength:
                 LayerNameFragment = CurrentLayerName[:stringPos]
-                if (LayerNameFragment.isdigit()):
+                if LayerNameFragment.isdigit():
                     TempNumString = CurrentLayerName[:stringPos]  # Store longest numeric string so far
                     stringPos = stringPos + 1
                 else:
                     break
 
-        if (self.PrintInLayersMode):  # Also true if resuming a print that was of a single layer.
-            if (str.isdigit(TempNumString)):
+        if self.PrintInLayersMode:  # Also true if resuming a print that was of a single layer.
+            if str.isdigit(TempNumString):
                 layerNameInt = int(float(TempNumString))
-                if (self.svgLayer == layerNameInt):
+                if self.svgLayer == layerNameInt:
                     layerMatch = True  # Match! The current layer IS named.
 
-            if (layerMatch == False):
+            if layerMatch == False:
                 self.plotCurrentLayer = False
 
-        if (self.plotCurrentLayer == True):
+        if self.plotCurrentLayer == True:
             self.LayersFoundToPlot = True
 
             # End of part 1, current layer to see if we print it.
@@ -1345,7 +1345,7 @@ class AxiDrawClass(inkex.Effect):
             self.LayerPenDownPosition = -1
             self.LayerPenDownSpeed = -1
 
-            if (stringPos > 0):
+            if stringPos > 0:
                 stringPos = stringPos - 1
 
             if MaxLength > stringPos + 2:
@@ -1362,16 +1362,16 @@ class AxiDrawClass(inkex.Effect):
                                     stringPos = stringPos + 1
                                 else:
                                     break
-                        if (str.isdigit(TempNumString)):
+                        if str.isdigit(TempNumString):
                             parameterInt = int(float(TempNumString))
 
-                            if (key == "+d"):
-                                if (parameterInt > 0):
+                            if key == "+d":
+                                if parameterInt > 0:
                                     # Delay requested before plotting this layer. Delay times are in milliseconds.
                                     timeRemaining = float(parameterInt) / 1000.0  # Convert to seconds
 
-                                    while (timeRemaining > 0):
-                                        if (timeRemaining < 0.15):
+                                    while timeRemaining > 0:
+                                        if timeRemaining < 0.15:
                                             time.sleep(timeRemaining)  # Less than 150 ms remaining to be paused. Do it all at once.
                                             timeRemaining = 0
                                             self.PauseResumeCheck()  # Check if pause button was pressed while we were sleeping
@@ -1380,13 +1380,13 @@ class AxiDrawClass(inkex.Effect):
                                             timeRemaining = timeRemaining - 0.1
                                             self.PauseResumeCheck()  # Check if pause button was pressed while we were sleeping
 
-                            if (key == "+h"):
-                                if ((parameterInt >= 0) and (parameterInt <= 100)):
+                            if key == "+h":
+                                if (parameterInt >= 0) and (parameterInt <= 100):
                                     self.UseCustomLayerPenHeight = True
                                     self.LayerPenDownPosition = parameterInt
 
-                            if (key == "+s"):
-                                if ((parameterInt > 0) and (parameterInt <= 100)):
+                            if key == "+s":
+                                if (parameterInt > 0) and (parameterInt <= 100):
                                     self.UseCustomLayerSpeed = True
                                     self.LayerPenDownSpeed = parameterInt
 
@@ -1394,9 +1394,9 @@ class AxiDrawClass(inkex.Effect):
                     else:
                         break  # exit loop.
 
-            if (self.LayerPenDownSpeed != oldSpeed):
+            if self.LayerPenDownSpeed != oldSpeed:
                 self.EnableMotors()  # Set speed value variables for this layer.
-            if (self.LayerPenDownPosition != oldPenDown):
+            if self.LayerPenDownPosition != oldPenDown:
                 self.ServoSetup()  # Set pen down height for this layer.
                 # This new value will be used when we next lower the pen. (It's up between layers.)
 
@@ -1415,8 +1415,8 @@ class AxiDrawClass(inkex.Effect):
             if len(simplepath.parsePath(d)) == 0:
                 inkex.errormsg('path length is zero, will not be plotting this path.')
 
-        if (len(d) > 3000):  # Raise pen when computing extremely long paths.
-            if (self.penUp != True):  # skip if pen is already up
+        if len(d) > 3000:  # Raise pen when computing extremely long paths.
+            if self.penUp != True:  # skip if pen is already up
                 self.penRaise()
 
         if len(simplepath.parsePath(d)) == 0:
@@ -1440,15 +1440,15 @@ class AxiDrawClass(inkex.Effect):
                     for csp in sp:
                         if self.bStopped:
                             return
-                        if (self.printPortrait):
+                        if self.printPortrait:
                             fX = float(csp[1][1])  # Flipped X/Y
-                            fY = (self.svgWidth) - float(csp[1][0])
+                            fY = self.svgWidth - float(csp[1][0])
                         else:
                             fX = float(csp[1][0])  # Set move destination
                             fY = float(csp[1][1])
 
                         if nIndex == 0:
-                            if (plot_utils.distance(fX - self.fCurrX, fY - self.fCurrY) > axidraw_conf.MinGap):
+                            if plot_utils.distance(fX - self.fCurrX, fY - self.fCurrY) > axidraw_conf.MinGap:
                                 self.penRaise()
                                 self.plotSegmentWithVelocity(fX, fY, 0, 0)  # Pen up straight move, zero velocity at endpoints
                             else:
@@ -1462,7 +1462,7 @@ class AxiDrawClass(inkex.Effect):
 
                     self.PlanTrajectory(singlePath)
 
-            if (not self.bStopped):  # an "index" for resuming plots quickly-- record last complete path
+            if not self.bStopped:  # an "index" for resuming plots quickly-- record last complete path
                 self.svgLastPath = self.pathcount  # The number of the last path completed
                 self.svgLastPathNC = self.nodeCount  # the node count after the last path was completed.
 
@@ -1484,20 +1484,20 @@ class AxiDrawClass(inkex.Effect):
 
         if self.bStopped:
             return
-        if (self.fCurrX is None):
+        if self.fCurrX is None:
             return
 
         # check page size limits:
-        if (self.ignoreLimits == False):
+        if self.ignoreLimits == False:
             tolerance = axidraw_conf.BoundsTolerance  # Truncate negligible violation of boundaries without throwing an error.
             for xy in inputPath:
                 xy[0], xBounded = plot_utils.checkLimitsTol(xy[0], self.xBoundsMin, self.xBoundsMax, tolerance)
                 xy[1], yBounded = plot_utils.checkLimitsTol(xy[1], self.yBoundsMin, self.yBoundsMax, tolerance)
-                if (xBounded or yBounded):
+                if xBounded or yBounded:
                     self.warnOutOfBounds = True
 
         # Handle simple segments (lines) that do not require any complex planning:
-        if (len(inputPath) < 3):
+        if len(inputPath) < 3:
             if spewTrajectoryDebugData:
                 inkex.errormsg('Drawing straight line, not a curve.')  # This is the "SHORTPATH ESCAPE"
                 inkex.errormsg('plotSegmentWithVelocity({}, {}, {}, {})'.format(xy[0], xy[1], 0, 0))
@@ -1515,7 +1515,7 @@ class AxiDrawClass(inkex.Effect):
             inkex.errormsg('\nTrajLength: ' + str(TrajLength))
 
         speedLimit = self.PenDownSpeed  # speedLimit is maximum travel rate, in inches/second, in the XY  plane.
-        if (self.penUp):
+        if self.penUp:
             speedLimit = self.penUpSpeed  # Unlikely case, but handle it anyway...
 
         if spewTrajectoryDebugData:
@@ -1530,7 +1530,7 @@ class AxiDrawClass(inkex.Effect):
         TrajDists.append(0.0)  # First value, at time t = 0
         TrajVels.append(0.0)  # First value, at time t = 0
 
-        if (self.options.resolution == 1):  # High-resolution mode
+        if self.options.resolution == 1:  # High-resolution mode
             minDist = axidraw_conf.MaxStepDist_HR  # Skip segments likely to be shorter than one step
         else:
             minDist = axidraw_conf.MaxStepDist_LR  # Skip segments likely to be shorter than one step
@@ -1545,7 +1545,7 @@ class AxiDrawClass(inkex.Effect):
 
             tmpDist = plot_utils.distance(tmpDistX, tmpDistY)
 
-            if (tmpDist >= minDist):
+            if tmpDist >= minDist:
                 TrajDists.append(tmpDist)
 
                 TrajVectors.append([tmpDistX / tmpDist, tmpDistY / tmpDist])  # Normalized unit vectors for computing cosine factor
@@ -1566,13 +1566,13 @@ class AxiDrawClass(inkex.Effect):
         TrajLength = len(TrajDists)
 
         # Handle zero-segment plot:
-        if (TrajLength < 2):
+        if TrajLength < 2:
             if spewTrajectoryDebugData:
                 inkex.errormsg('\nSkipped a path element that did not have any well-defined segments.')
             return
 
         # Handle simple segments (lines) that do not require any complex planning (after removing zero-length elements):
-        if (TrajLength < 3):
+        if TrajLength < 3:
             if spewTrajectoryDebugData:
                 inkex.errormsg('\nDrawing straight line, not a curve.')
             self.plotSegmentWithVelocity(trimmedPath[0][0], trimmedPath[0][1], 0, 0)
@@ -1687,7 +1687,7 @@ class AxiDrawClass(inkex.Effect):
             acceleration only, without concern about cornering, nor deceleration.
             '''
 
-            if (Dcurrent > accelDist):
+            if Dcurrent > accelDist:
                 # There _is_ enough distance in the segment for us to either
                 # accelerate to maximum speed or come to a full stop before this vertex.
                 VcurrentMax = speedLimit
@@ -1699,7 +1699,7 @@ class AxiDrawClass(inkex.Effect):
                 # Calculate how much we *can* swing the velocity by:
 
                 VcurrentMax = plot_utils.vFinal_Vi_A_Dx(VPrevExit, accelRate, Dcurrent)
-                if (VcurrentMax > speedLimit):
+                if VcurrentMax > speedLimit:
                     VcurrentMax = speedLimit
 
                 if spewTrajectoryDebugData:
@@ -1725,13 +1725,13 @@ class AxiDrawClass(inkex.Effect):
 
             rootFactor = math.sqrt((1 - cosineFactor) / 2)
             denominator = 1 - rootFactor
-            if (denominator > 0.0001):
+            if denominator > 0.0001:
                 Rfactor = (delta * rootFactor) / denominator
             else:
                 Rfactor = 100000
             VjunctionMax = math.sqrt(accelRate * Rfactor)
 
-            if (VcurrentMax > VjunctionMax):
+            if VcurrentMax > VjunctionMax:
                 VcurrentMax = VjunctionMax
 
             TrajVels.append(VcurrentMax)  # "Forward-going" speed limit for velocity at this particular vertex.
@@ -1771,7 +1771,7 @@ class AxiDrawClass(inkex.Effect):
                     inkex.errormsg('VInit Calc: (Vfinal = %1.3f, accelRate = %1.3f, SegLength = %1.3f) '
                                    % (Vfinal, accelRate, SegLength))
 
-                if (VInitMax < Vinitial):
+                if VInitMax < Vinitial:
                     Vinitial = VInitMax
                 TrajVels[i - 1] = Vinitial
 
@@ -1852,20 +1852,20 @@ class AxiDrawClass(inkex.Effect):
                 inkex.errormsg(' -> NOTE: Stopped by button press.')
 
         ConstantVelMode = False
-        if (self.options.constSpeed and not self.penUp):
+        if self.options.constSpeed and not self.penUp:
             ConstantVelMode = True
 
         if self.bStopped:
             self.copiesToPlot = 0
             return
-        if (self.fCurrX is None):
+        if self.fCurrX is None:
             return
 
-        if (self.ignoreLimits == False):  # check page size limits:
+        if self.ignoreLimits == False:  # check page size limits:
             tolerance = axidraw_conf.BoundsTolerance  # Truncate up to 1 step at boundaries without throwing an error.
             xDest, xBounded = plot_utils.checkLimitsTol(xDest, self.xBoundsMin, self.xBoundsMax, tolerance)
             yDest, yBounded = plot_utils.checkLimitsTol(yDest, self.yBoundsMin, self.yBoundsMax, tolerance)
-            if (xBounded or yBounded):
+            if xBounded or yBounded:
                 self.warnOutOfBounds = True
 
         deltaXinches = xDest - self.fCurrX
@@ -1895,7 +1895,7 @@ class AxiDrawClass(inkex.Effect):
         deltaXinchesRounded = (motorDist1Rounded + motorDist2Rounded)
         deltaYinchesRounded = (motorDist1Rounded - motorDist2Rounded)
 
-        if ((abs(motorSteps1) < 1) and (abs(motorSteps2) < 1)):  # If total movement is less than one step, skip this movement.
+        if (abs(motorSteps1) < 1) and (abs(motorSteps2) < 1):  # If total movement is less than one step, skip this movement.
             return
 
         segmentLengthInches = plot_utils.distance(deltaXinchesRounded, deltaYinchesRounded)
@@ -1913,7 +1913,7 @@ class AxiDrawClass(inkex.Effect):
                 inkex.errormsg('Vi_InchesPerSec: {}'.format(Vi_InchesPerSec))
                 inkex.errormsg('Vf_InchesPerSec: {}\n'.format(Vf_InchesPerSec))
 
-        if (self.options.reportTime):  # Also keep track of distance:
+        if self.options.reportTime:  # Also keep track of distance:
             if self.penUp:
                 self.penUpTravelInches = self.penUpTravelInches + segmentLengthInches
             else:
@@ -1922,7 +1922,7 @@ class AxiDrawClass(inkex.Effect):
         # Maximum travel speeds:
         # & acceleration/deceleration rate: (Maximum speed) / (time to reach that speed)
 
-        if (self.penUp):
+        if self.penUp:
             speedLimit = self.penUpSpeed
         else:
             speedLimit = self.PenDownSpeed
@@ -1939,9 +1939,9 @@ class AxiDrawClass(inkex.Effect):
         # Distance that is required to reach full speed, from zero speed:  x = 1/2 a t^2
         accelDist = 0.5 * accelRate * tMax * tMax
 
-        if (Vi_InchesPerSec > speedLimit):
+        if Vi_InchesPerSec > speedLimit:
             Vi_InchesPerSec = speedLimit
-        if (Vf_InchesPerSec > speedLimit):
+        if Vf_InchesPerSec > speedLimit:
             Vf_InchesPerSec = speedLimit
 
         if spewSegmentDebugData:
@@ -2022,8 +2022,8 @@ class AxiDrawClass(inkex.Effect):
         
         '''
 
-        if (ConstantVelMode == False) or (self.penUp):  # Allow accel when pen is up.
-            if (segmentLengthInches > (accelDistMax + decelDistMax + timeSlice * speedLimit)):
+        if (ConstantVelMode == False) or self.penUp:  # Allow accel when pen is up.
+            if segmentLengthInches > (accelDistMax + decelDistMax + timeSlice * speedLimit):
                 ''' 
                 Case 1: 'Trapezoid'
                 '''
@@ -2035,7 +2035,7 @@ class AxiDrawClass(inkex.Effect):
                 intervals = int(math.floor(tAccelMax / timeSlice))  # Number of intervals during acceleration
 
                 # If intervals == 0, then we are already at (or nearly at) full speed.
-                if (intervals > 0):
+                if intervals > 0:
                     timePerInterval = tAccelMax / intervals
 
                     velocityStepSize = (speedMax - Vi_InchesPerSec) / (intervals + 1.0)
@@ -2055,7 +2055,7 @@ class AxiDrawClass(inkex.Effect):
                 # Add a center "coasting" speed interval IF there is time for it.
                 coastingDistance = segmentLengthInches - (accelDistMax + decelDistMax)
 
-                if (coastingDistance > (timeSlice * speedMax)):
+                if coastingDistance > (timeSlice * speedMax):
                     # There is enough time for (at least) one interval at full cruising speed.
                     velocity = speedMax
                     cruisingTime = coastingDistance / velocity
@@ -2069,7 +2069,7 @@ class AxiDrawClass(inkex.Effect):
 
                 intervals = int(math.floor(tDecelMax / timeSlice))  # Number of intervals during deceleration
 
-                if (intervals > 0):
+                if intervals > 0:
                     timePerInterval = tDecelMax / intervals
                     velocityStepSize = (speedMax - Vf_InchesPerSec) / (intervals + 1.0)
 
@@ -2140,10 +2140,10 @@ class AxiDrawClass(inkex.Effect):
                 if spewSegmentDebugData:
                     inkex.errormsg('\nType 2: Triangle')
 
-                if (segmentLengthInches >= 0.9 * (accelDistMax + decelDistMax)):
+                if segmentLengthInches >= 0.9 * (accelDistMax + decelDistMax):
                     accelRateLocal = 0.9 * ((accelDistMax + decelDistMax) / segmentLengthInches) * accelRate
 
-                    if ((accelDistMax + decelDistMax) == 0):
+                    if (accelDistMax + decelDistMax) == 0:
                         accelRateLocal = accelRate  # prevent possible divide by zero case, if already at full speed
 
                     if spewSegmentDebugData:
@@ -2151,7 +2151,7 @@ class AxiDrawClass(inkex.Effect):
                 else:
                     accelRateLocal = accelRate
 
-                if (accelRateLocal > 0):  # Handle edge cases including when we are already at maximum speed
+                if accelRateLocal > 0:  # Handle edge cases including when we are already at maximum speed
                     Ta = (math.sqrt(2 * Vi_InchesPerSec * Vi_InchesPerSec + 2 * Vf_InchesPerSec * Vf_InchesPerSec + 4 * accelRateLocal * segmentLengthInches)
                           - 2 * Vi_InchesPerSec) / (2 * accelRateLocal)
                 else:
@@ -2163,18 +2163,18 @@ class AxiDrawClass(inkex.Effect):
 
                 intervals = int(math.floor(Ta / timeSlice))  # Number of intervals during acceleration
 
-                if (intervals == 0):
+                if intervals == 0:
                     Ta = 0
 
-                if (accelRateLocal > 0):  # Handle edge cases including when we are already at maximum speed
+                if accelRateLocal > 0:  # Handle edge cases including when we are already at maximum speed
                     Td = Ta - (Vf_InchesPerSec - Vi_InchesPerSec) / accelRateLocal
                 else:
                     Td = 0
 
                 Dintervals = int(math.floor(Td / timeSlice))  # Number of intervals during acceleration
 
-                if ((intervals + Dintervals) > 4):
-                    if (intervals > 0):
+                if (intervals + Dintervals) > 4:
+                    if intervals > 0:
                         if spewSegmentDebugData:
                             inkex.errormsg('Triangle intervals UP: ' + str(intervals))
 
@@ -2194,7 +2194,7 @@ class AxiDrawClass(inkex.Effect):
                         if spewSegmentDebugData:
                             inkex.errormsg('Note: Skipping accel phase in triangle.')
 
-                    if (Dintervals > 0):
+                    if Dintervals > 0:
                         if spewSegmentDebugData:
                             inkex.errormsg('Triangle intervals Down: ' + str(Dintervals))
 
@@ -2238,18 +2238,18 @@ class AxiDrawClass(inkex.Effect):
 
                     localAccel = (Vf_InchesPerSec * Vf_InchesPerSec - Vi_InchesPerSec * Vi_InchesPerSec) / (2.0 * segmentLengthInches)
 
-                    if (localAccel > accelRate):
+                    if localAccel > accelRate:
                         localAccel = accelRate
-                    elif (localAccel < -accelRate):
+                    elif localAccel < -accelRate:
                         localAccel = -accelRate
-                    if (localAccel == 0):
+                    if localAccel == 0:
                         # Initial velocity = final velocity -> Skip to constant velocity routine.
                         ConstantVelMode = True
                     else:
                         tSegment = (Vf_InchesPerSec - Vi_InchesPerSec) / localAccel
 
                         intervals = int(math.floor(tSegment / timeSlice))  # Number of intervals during deceleration
-                        if (intervals > 1):
+                        if intervals > 1:
                             timePerInterval = tSegment / intervals
                             velocityStepSize = (Vf_InchesPerSec - Vi_InchesPerSec) / (intervals + 1.0)
                             # For six time intervals of acceleration, first interval is at velocity (max/7)
@@ -2267,7 +2267,7 @@ class AxiDrawClass(inkex.Effect):
                             Vi_InchesPerSec = Vmax  # These are _slow_ segments-- use fastest possible interpretation.
                             ConstantVelMode = True
 
-        if (ConstantVelMode):
+        if ConstantVelMode:
             '''
             Case 4: 'Constant Velocity mode'
             '''
@@ -2276,13 +2276,13 @@ class AxiDrawClass(inkex.Effect):
                 inkex.errormsg('-> [Constant Velocity Mode Segment]' + '\n')
             # Single segment with constant velocity.
 
-            if (self.options.constSpeed and not self.penUp):
+            if self.options.constSpeed and not self.penUp:
                 velocity = self.PenDownSpeed  # Constant pen-down speed
-            elif (Vf_InchesPerSec > Vi_InchesPerSec):
+            elif Vf_InchesPerSec > Vi_InchesPerSec:
                 velocity = Vf_InchesPerSec
-            elif (Vi_InchesPerSec > Vf_InchesPerSec):
+            elif Vi_InchesPerSec > Vf_InchesPerSec:
                 velocity = Vi_InchesPerSec
-            elif (Vi_InchesPerSec > 0):  # Allow case of two are equal, but nonzero
+            elif Vi_InchesPerSec > 0:  # Allow case of two are equal, but nonzero
                 velocity = Vi_InchesPerSec
             else:  # Both endpoints are equal to zero.
                 velocity = self.PenDownSpeed / 10  # TODO: Check this method. May be better to level it out to same value as others.
@@ -2328,22 +2328,22 @@ class AxiDrawClass(inkex.Effect):
             moveTime = durationArray[index] - prevTime
             prevTime = durationArray[index]
 
-            if (moveTime < 1):
+            if moveTime < 1:
                 moveTime = 1  # don't allow zero-time moves.
 
-            if (abs(float(moveSteps1) / float(moveTime)) < 0.002):
+            if abs(float(moveSteps1) / float(moveTime)) < 0.002:
                 moveSteps1 = 0  # don't allow too-slow movements of this axis
-            if (abs(float(moveSteps2) / float(moveTime)) < 0.002):
+            if abs(float(moveSteps2) / float(moveTime)) < 0.002:
                 moveSteps2 = 0  # don't allow too-slow movements of this axis
 
             # Don't allow too fast movements of either axis: Catch rounding errors that could cause an overspeed event
-            while ((abs(float(moveSteps1) / float(moveTime)) >= axidraw_conf.MaxStepRate) or (abs(float(moveSteps2) / float(moveTime)) >= axidraw_conf.MaxStepRate)):
+            while (abs(float(moveSteps1) / float(moveTime)) >= axidraw_conf.MaxStepRate) or (abs(float(moveSteps2) / float(moveTime)) >= axidraw_conf.MaxStepRate):
                 moveTime = moveTime + 1
 
             prevMotor1 += moveSteps1
             prevMotor2 += moveSteps2
 
-            if ((moveSteps1 != 0) or (moveSteps2 != 0)):  # if at least one motor step is required for this move.
+            if (moveSteps1 != 0) or (moveSteps2 != 0):  # if at least one motor step is required for this move.
 
                 motorDist1Temp = float(moveSteps1) / (self.StepScaleFactor * 2.0)
                 motorDist2Temp = float(moveSteps2) / (self.StepScaleFactor * 2.0)
@@ -2359,15 +2359,15 @@ class AxiDrawClass(inkex.Effect):
 
                     if self.options.previewOnly:
                         self.ptEstimate += moveTime
-                        if (self.options.previewType > 0):  # Generate preview paths
-                            if (self.velDataPlot):
+                        if self.options.previewType > 0:  # Generate preview paths
+                            if self.velDataPlot:
                                 velocityLocal1 = moveSteps1 / float(moveTime)
                                 velocityLocal2 = moveSteps2 / float(moveTime)
                                 velocityLocal = plot_utils.distance(moveSteps1, moveSteps2) / float(moveTime)
                                 self.updateVCharts(velocityLocal1, velocityLocal2, velocityLocal)
                                 self.velDataTime += moveTime
                                 self.updateVCharts(velocityLocal1, velocityLocal2, velocityLocal)
-                            if (self.printPortrait):
+                            if self.printPortrait:
                                 xNewt = self.DocUnitScaleFactor * (self.svgWidth - fNewY)
                                 yNewt = self.DocUnitScaleFactor * fNewX
                                 xOldt = self.DocUnitScaleFactor * (self.svgWidth - self.fCurrY)
@@ -2378,29 +2378,29 @@ class AxiDrawClass(inkex.Effect):
                                 xOldt = self.DocUnitScaleFactor * self.fCurrX
                                 yOldt = self.DocUnitScaleFactor * self.fCurrY
                             if self.penUp:
-                                if (self.options.previewType > 1):  # previewType is 2 or 3. Show pen-up movement
-                                    if (self.pathDataPenUp != 1):
+                                if self.options.previewType > 1:  # previewType is 2 or 3. Show pen-up movement
+                                    if self.pathDataPenUp != 1:
                                         self.pathDataPU.append("M%0.3f %0.3f" % (xOldt, yOldt))
                                         self.pathDataPenUp = 1  # Reset pen state indicator
                                     self.pathDataPU.append(" %0.3f %0.3f" % (xNewt, yNewt))
                             else:
-                                if ((self.options.previewType == 1) or (self.options.previewType == 3)):  # If 1 or 3, show pen-down movement
-                                    if (self.pathDataPenUp != 0):
+                                if (self.options.previewType == 1) or (self.options.previewType == 3):  # If 1 or 3, show pen-down movement
+                                    if self.pathDataPenUp != 0:
                                         self.pathDataPD.append("M%0.3f %0.3f" % (xOldt, yOldt))
                                         self.pathDataPenUp = 0  # Reset pen state indicator
                                     self.pathDataPD.append(" %0.3f %0.3f" % (xNewt, yNewt))
                     else:
                         ebb_motion.doXYMove(self.serialPort, moveSteps2, moveSteps1, moveTime)
-                        if (moveTime > 50):
+                        if moveTime > 50:
                             if self.options.mode != "manual":
                                 time.sleep(float(moveTime - 10) / 1000.0)  # pause before issuing next command
 
                     if spewSegmentDebugData:
                         inkex.errormsg('XY move:({}, {}), in {} ms'.format(moveSteps1, moveSteps2, moveTime))
                         inkex.errormsg('fNew(X,Y) :({:.2}, {:.2})'.format(fNewX, fNewY))
-                        if ((moveSteps1 / moveTime) >= axidraw_conf.MaxStepRate):
+                        if (moveSteps1 / moveTime) >= axidraw_conf.MaxStepRate:
                             inkex.errormsg('Motor 1 overspeed error.')
-                        if ((moveSteps2 / moveTime) >= axidraw_conf.MaxStepRate):
+                        if (moveSteps2 / moveTime) >= axidraw_conf.MaxStepRate:
                             inkex.errormsg('Motor 2 overspeed error.')
 
                     self.fCurrX = fNewX  # Update current position
@@ -2427,7 +2427,7 @@ class AxiDrawClass(inkex.Effect):
         #         if (self.options.mode == "plot") and (self.nodeCount == 24) and (self.options.row == 2):
         #             self.forcePause = True
 
-        if (self.forcePause):
+        if self.forcePause:
             strButton = ['1']  # simulate pause button press
 
         try:
@@ -2438,15 +2438,15 @@ class AxiDrawClass(inkex.Effect):
             if self.spewDebugdata:
                 inkex.errormsg('\n (USB Connectivity lost after node number : ' + str(self.nodeCount) + ')')
 
-        if ((pauseState == '1') and (self.delayBetweenCopies == False)):
-            if (self.forcePause):
+        if (pauseState == '1') and (self.delayBetweenCopies == False):
+            if self.forcePause:
                 inkex.errormsg('Plot paused by layer name control.')
             else:
                 inkex.errormsg('Plot paused by button press.')
             if self.spewDebugdata:
                 inkex.errormsg('\n (Paused after node number : ' + str(self.nodeCount) + ')')
 
-        if (self.forcePause):
+        if self.forcePause:
             self.forcePause = False  # Clear the flag
 
         if (pauseState == '1') or (pauseState == '2'):  # Stop plot
@@ -2454,7 +2454,7 @@ class AxiDrawClass(inkex.Effect):
             self.svgPausedPosX = self.fCurrX - axidraw_conf.StartPosX
             self.svgPausedPosY = self.fCurrY - axidraw_conf.StartPosY
             self.penRaise()
-            if (self.delayBetweenCopies == False):  # Only say this if we're not in the delay between copies.
+            if self.delayBetweenCopies == False:  # Only say this if we're not in the delay between copies.
                 inkex.errormsg('Use the "resume" feature to continue.')
             self.bStopped = True
             return  # Note: This segment is not plotted.
@@ -2462,13 +2462,13 @@ class AxiDrawClass(inkex.Effect):
         self.nodeCount += 1  # This whole segment move counts as ONE pause/resume node in our plot
 
         if self.resumeMode:
-            if (self.nodeCount >= (self.nodeTarget)):
+            if self.nodeCount >= self.nodeTarget:
                 self.resumeMode = False
                 if self.spewDebugdata:
                     inkex.errormsg('\nRESUMING PLOT at node : ' + str(self.nodeCount))
                     inkex.errormsg('\nself.virtualPenUp : ' + str(self.virtualPenUp))
                     inkex.errormsg('\nself.penUp : ' + str(self.penUp))
-                if (not self.virtualPenUp):  # This is the point where we switch from virtual to real pen
+                if not self.virtualPenUp:  # This is the point where we switch from virtual to real pen
                     self.penLower()
 
     def serialConnect(self):
@@ -2501,7 +2501,7 @@ class AxiDrawClass(inkex.Effect):
         those two options on and off.
         '''
 
-        if (self.UseCustomLayerSpeed):
+        if self.UseCustomLayerSpeed:
             LocalPenDownSpeed = self.LayerPenDownSpeed
         else:
             LocalPenDownSpeed = self.options.penDownSpeed
@@ -2509,23 +2509,23 @@ class AxiDrawClass(inkex.Effect):
         LocalPenDownSpeed = plot_utils.constrainLimits(LocalPenDownSpeed, 1, 110)  # Constrain input values
         self.options.penUpSpeed = plot_utils.constrainLimits(self.options.penUpSpeed, 1, 110)  # Constrain input values
 
-        if (self.options.resolution == 1):  # High-resolution ("Super") mode
-            if not (self.options.previewOnly):
+        if self.options.resolution == 1:  # High-resolution ("Super") mode
+            if not self.options.previewOnly:
                 ebb_motion.sendEnableMotors(self.serialPort, 1)  # 16X microstepping
             self.StepScaleFactor = 2.0 * axidraw_conf.NativeResFactor
             self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
             self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
 
         else:  # i.e., self.options.resolution == 2; Low-resolution ("Normal") mode
-            if not (self.options.previewOnly):
+            if not self.options.previewOnly:
                 ebb_motion.sendEnableMotors(self.serialPort, 2)  # 8X microstepping
             self.StepScaleFactor = axidraw_conf.NativeResFactor
             # In low-resolution mode, allow faster pen-up moves. Keep maximum pen-down speed the same.
             self.penUpSpeed = self.options.penUpSpeed * axidraw_conf.SpeedLimXY_LR / 110.0  # Speed given as maximum inches/second in XY plane
             self.PenDownSpeed = LocalPenDownSpeed * axidraw_conf.SpeedLimXY_LR / 110.0  # Speed given as maximum inches/second in XY plane
 
-        if (self.options.constSpeed):
-            if (self.options.resolution == 1):  # High-resolution ("Super") mode
+        if self.options.constSpeed:
+            if self.options.resolution == 1:  # High-resolution ("Super") mode
                 self.PenDownSpeed = self.PenDownSpeed * axidraw_conf.ConstSpeedFactor_LR
             else:
                 self.PenDownSpeed = self.PenDownSpeed * axidraw_conf.ConstSpeedFactor_HR
@@ -2537,7 +2537,7 @@ class AxiDrawClass(inkex.Effect):
     def penRaise(self):
         self.virtualPenUp = True  # Virtual pen keeps track of state for resuming plotting.
         if (not self.resumeMode) and (self.penUp != True):  # skip if pen is already up, or if we're resuming.
-            if (self.UseCustomLayerPenHeight):
+            if self.UseCustomLayerPenHeight:
                 penDownPos = self.LayerPenDownPosition
             else:
                 penDownPos = self.options.penDownPosition
@@ -2546,10 +2546,10 @@ class AxiDrawClass(inkex.Effect):
 
             vDistance = float(self.options.penUpPosition - penDownPos)
             vTime = int((1000.0 * vDistance) / self.options.penLiftRate)
-            if (vTime < 0):  # Handle case that penDownPosition is above penUpPosition
+            if vTime < 0:  # Handle case that penDownPosition is above penUpPosition
                 vTime = -vTime
             vTime += self.options.penLiftDelay
-            if (vTime < 0):  # Do not allow negative delay times
+            if vTime < 0:  # Do not allow negative delay times
                 vTime = 0
             if self.options.previewOnly:
                 self.updateVCharts(0, 0, 0)
@@ -2559,26 +2559,26 @@ class AxiDrawClass(inkex.Effect):
             else:
                 ebb_motion.sendPenUp(self.serialPort, vTime)
                 # ebb_motion.PBOutValue( self.serialPort, 3, 0 )    # I/O Pin B3 output: low
-                if (vTime > 50):
-                    if ((self.options.mode != "manual") and (self.options.mode != "setup")):
+                if vTime > 50:
+                    if (self.options.mode != "manual") and (self.options.mode != "setup"):
                         time.sleep(float(vTime - 10) / 1000.0)  # pause before issuing next command
             self.penUp = True
         self.pathDataPenUp = -1
 
     def penLower(self):
         self.virtualPenUp = False  # Virtual pen keeps track of state for resuming plotting.
-        if (self.penUp != False):  # skip if pen is already down
-            if ((not self.resumeMode) and (not self.bStopped)):  # skip if resuming or stopped
-                if (self.UseCustomLayerPenHeight):
+        if self.penUp != False:  # skip if pen is already down
+            if (not self.resumeMode) and (not self.bStopped):  # skip if resuming or stopped
+                if self.UseCustomLayerPenHeight:
                     penDownPos = self.LayerPenDownPosition
                 else:
                     penDownPos = self.options.penDownPosition
                 vDistance = float(self.options.penUpPosition - penDownPos)
                 vTime = int((1000.0 * vDistance) / self.options.penLowerRate)
-                if (vTime < 0):  # Handle case that penDownPosition is above penUpPosition
+                if vTime < 0:  # Handle case that penDownPosition is above penUpPosition
                     vTime = -vTime
                 vTime += self.options.penLowerDelay
-                if (vTime < 0):  # Do not allow negative delay times
+                if vTime < 0:  # Do not allow negative delay times
                     vTime = 0
                 if self.options.previewOnly:
                     self.updateVCharts(0, 0, 0)
@@ -2588,7 +2588,7 @@ class AxiDrawClass(inkex.Effect):
                 else:
                     ebb_motion.sendPenDown(self.serialPort, vTime)
                     # ebb_motion.PBOutValue( self.serialPort, 3, 1 )    # I/O Pin B3 output: high
-                    if (vTime > 50):
+                    if vTime > 50:
                         if self.options.mode != "manual":
                             time.sleep(float(vTime - 10) / 1000.0)  # pause before issuing next command
                 self.penUp = False
@@ -2607,7 +2607,7 @@ class AxiDrawClass(inkex.Effect):
             self.penUp = True  # A fine assumption when in preview mode
             self.virtualPenUp = True  #
         else:  # Need to figure out if we're in the pen-up or pen-down state... or neither!
-            if (ebb_motion.queryEBBLV(self.serialPort) == 0):
+            if ebb_motion.queryEBBLV(self.serialPort) == 0:
 
                 # When the EBB is reset, it goes to its default "pen up" position, for which
                 # QueryPenUp will tell us that the EBB believes it is in the pen-up position.
@@ -2642,12 +2642,12 @@ class AxiDrawClass(inkex.Effect):
         1% corresponds to ~14.6 us, or 175 units of 1/(12 MHz).
         '''
 
-        if (self.UseCustomLayerPenHeight):
+        if self.UseCustomLayerPenHeight:
             penDownPos = self.LayerPenDownPosition
         else:
             penDownPos = self.options.penDownPosition
 
-        if not (self.options.previewOnly):
+        if not self.options.previewOnly:
             servo_range = axidraw_conf.ServoMax - axidraw_conf.ServoMin
             servo_slope = float(servo_range) / 100.0
 
@@ -2674,12 +2674,12 @@ class AxiDrawClass(inkex.Effect):
             ebb_motion.setPenDownRate(self.serialPort, intTemp)
 
     def queryEBBVoltage(self):  # Check that power supply is detected.
-        if (axidraw_conf.SkipVoltageCheck):
+        if axidraw_conf.SkipVoltageCheck:
             return
         if (self.serialPort is not None) and (not self.options.previewOnly):
             voltageOK = ebb_motion.queryVoltage(self.serialPort)
-            if (voltageOK == False):
-                if ('voltage' not in self.warnings):
+            if voltageOK == False:
+                if 'voltage' not in self.warnings:
                     inkex.errormsg(gettext.gettext('Warning: Low voltage detected.\nCheck that power supply is plugged in.'))
                     self.warnings['voltage'] = 1
 
@@ -2698,7 +2698,7 @@ class AxiDrawClass(inkex.Effect):
             value, units = plot_utils.parseLengthWithUnits(width_string)
             self.DocUnits = units
 
-        if (self.options.autoRotate) and (self.svgHeight > self.svgWidth):
+        if self.options.autoRotate and (self.svgHeight > self.svgWidth):
             self.printPortrait = True
         if (self.svgHeight == None) or (self.svgWidth == None):
             return False
