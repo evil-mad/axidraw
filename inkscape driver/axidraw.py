@@ -300,12 +300,12 @@ class AxiDrawClass(inkex.Effect):
                     inkex.errormsg(gettext.gettext("No resume data found; unable to return to home position."))
                 else:
                     self.plotDocument()
-                    self.svg_node_count = self.svg_node_count__old  # Write old values back to file, to resume later.
-                    self.svg_last_path = self.svg_last_path__old
+                    self.svg_node_count = self.svg_node_count_old  # Write old values back to file, to resume later.
+                    self.svg_last_path = self.svg_last_path_old
                     self.svg_last_path_nc = self.svg_last_path_nc_old
                     self.svg_paused_pos_x = self.svg_paused_pos_x_old
                     self.svg_paused_pos_y = self.svg_paused_pos_y_old
-                    self.svg_layer = self.svg_layer__old
+                    self.svg_layer = self.svg_layer_old
                     self.svg_rand_seed = self.svg_rand_seed_old
             else:
                 inkex.errormsg(gettext.gettext("No in-progress plot data found in file."))
@@ -354,19 +354,19 @@ class AxiDrawClass(inkex.Effect):
 
     def resumePlotSetup(self):
         self.layer_found = False
-        if 0 <= self.svg_layer__old < 101:
-            self.options.layerNumber = self.svg_layer__old
+        if 0 <= self.svg_layer_old < 101:
+            self.options.layerNumber = self.svg_layer_old
             self.print_in_layers_mode = True
             self.plot_current_layer = False
             self.layer_found = True
-        elif self.svg_layer__old == 12345:  # Plot all layers
+        elif self.svg_layer_old == 12345:  # Plot all layers
             self.print_in_layers_mode = False
             self.plot_current_layer = True
             self.layer_found = True
         if self.layer_found:
-            if self.svg_node_count__old > 0:
-                self.node_target = self.svg_node_count__old
-                self.svg_layer = self.svg_layer__old
+            if self.svg_node_count_old > 0:
+                self.node_target = self.svg_node_count_old
+                self.svg_layer = self.svg_layer_old
                 self.ServoSetupWrapper()
                 self.penRaise()
                 self.EnableMotors()  # Set plotting resolution
@@ -392,9 +392,9 @@ class AxiDrawClass(inkex.Effect):
                 wcb_node = node
         if wcb_node is not None:
             try:
-                self.svg_layer__old = int(wcb_node.get('layer'))
-                self.svg_node_count__old = int(wcb_node.get('node'))
-                self.svg_last_path__old = int(wcb_node.get('lastpath'))
+                self.svg_layer_old = int(wcb_node.get('layer'))
+                self.svg_node_count_old = int(wcb_node.get('node'))
+                self.svg_last_path_old = int(wcb_node.get('lastpath'))
                 self.svg_last_path_nc_old = int(wcb_node.get('lastpathnc'))
                 self.svg_last_known_pos_x_old = float(wcb_node.get('lastknownposx'))
                 self.svg_last_known_pos_y_old = float(wcb_node.get('lastknownposy'))
@@ -913,9 +913,9 @@ class AxiDrawClass(inkex.Effect):
 
                     do_we_plot_this_path = False
                     if self.resume_mode:
-                        if self.pathcount < self.svg_last_path__old:  # Fully plotted; skip.
+                        if self.pathcount < self.svg_last_path_old:  # Fully plotted; skip.
                             self.pathcount += 1
-                        elif self.pathcount == self.svg_last_path__old:  # First partially-plotted path
+                        elif self.pathcount == self.svg_last_path_old:  # First partially-plotted path
                             self.node_count = self.svg_last_path_nc_old  # node_count after last completed path
                             do_we_plot_this_path = True
                     else:
@@ -941,9 +941,9 @@ class AxiDrawClass(inkex.Effect):
 
                     do_we_plot_this_path = False
                     if self.resume_mode:
-                        if self.pathcount < self.svg_last_path__old:  # Fully plotted; skip.
+                        if self.pathcount < self.svg_last_path_old:  # Fully plotted; skip.
                             self.pathcount += 1
-                        elif self.pathcount == self.svg_last_path__old:  # First partially-plotted path
+                        elif self.pathcount == self.svg_last_path_old:  # First partially-plotted path
                             self.node_count = self.svg_last_path_nc_old  # node_count after last completed path
                             do_we_plot_this_path = True
                     else:
@@ -986,9 +986,9 @@ class AxiDrawClass(inkex.Effect):
 
                     do_we_plot_this_path = False
                     if self.resume_mode:
-                        if self.pathcount < self.svg_last_path__old:  # Fully plotted; skip.
+                        if self.pathcount < self.svg_last_path_old:  # Fully plotted; skip.
                             self.pathcount += 1
-                        elif self.pathcount == self.svg_last_path__old:  # First partially-plotted path
+                        elif self.pathcount == self.svg_last_path_old:  # First partially-plotted path
                             self.node_count = self.svg_last_path_nc_old  # node_count after last completed path
                             do_we_plot_this_path = True
                     else:
@@ -1035,9 +1035,9 @@ class AxiDrawClass(inkex.Effect):
 
                     do_we_plot_this_path = False
                     if self.resume_mode:
-                        if self.pathcount < self.svg_last_path__old:  # Fully plotted; skip.
+                        if self.pathcount < self.svg_last_path_old:  # Fully plotted; skip.
                             self.pathcount += 1
-                        elif self.pathcount == self.svg_last_path__old:  # First partially-plotted path
+                        elif self.pathcount == self.svg_last_path_old:  # First partially-plotted path
                             self.node_count = self.svg_last_path_nc_old  # node_count after last completed path
                             do_we_plot_this_path = True
                     else:
@@ -1087,9 +1087,9 @@ class AxiDrawClass(inkex.Effect):
 
                     do_we_plot_this_path = False
                     if self.resume_mode:
-                        if self.pathcount < self.svg_last_path__old:  # Fully plotted; skip.
+                        if self.pathcount < self.svg_last_path_old:  # Fully plotted; skip.
                             self.pathcount += 1
-                        elif self.pathcount == self.svg_last_path__old:  # First partially-plotted path
+                        elif self.pathcount == self.svg_last_path_old:  # First partially-plotted path
                             self.node_count = self.svg_last_path_nc_old  # node_count after last completed path
                             do_we_plot_this_path = True
                     else:
@@ -1142,10 +1142,10 @@ class AxiDrawClass(inkex.Effect):
 
                     do_we_plot_this_path = False
                     if self.resume_mode:
-                        if self.pathcount < self.svg_last_path__old:
+                        if self.pathcount < self.svg_last_path_old:
                             # This path was *completely plotted* already; skip.
                             self.pathcount += 1
-                        elif self.pathcount == self.svg_last_path__old:
+                        elif self.pathcount == self.svg_last_path_old:
                             # this path is the first *not completely* plotted path:
                             self.node_count = self.svg_last_path_nc_old  # node_count after last completed path
                             do_we_plot_this_path = True
@@ -1299,7 +1299,7 @@ class AxiDrawClass(inkex.Effect):
 
                 do_we_pause_now = False
                 if self.resume_mode:
-                    if self.pathcount < self.svg_last_path__old:  # Fully plotted; skip.
+                    if self.pathcount < self.svg_last_path_old:  # Fully plotted; skip.
                         # This pause was *already executed*, and we are resuming past it. Skip.
                         self.pathcount += 1
                 else:
