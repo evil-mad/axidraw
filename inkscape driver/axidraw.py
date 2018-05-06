@@ -105,7 +105,7 @@ class AxiDrawClass(inkex.Effect):
         self.svgApplication_Old = ""
 
     def effect(self):
-        '''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
+        """Main entry point: check to see which mode/tab is selected, and act accordingly."""
 
         self.versionString = "AxiDraw Control - Version 1.7.8, 2018-04-22."
         self.spewDebugdata = False
@@ -433,9 +433,9 @@ class AxiDrawClass(inkex.Effect):
                     self.svgDataWritten = True
 
     def setupCommand(self):
-        '''
+        """
         Execute commands from the "setup" mode
-        '''
+        """
 
         if self.options.previewOnly:
             inkex.errormsg('Command unavailable while in preview mode.')
@@ -455,9 +455,9 @@ class AxiDrawClass(inkex.Effect):
             ebb_motion.TogglePen(self.serialPort)
 
     def manualCommand(self):
-        '''
+        """
         Execute commands in the "manual" mode/tab
-        '''
+        """
 
         # First: Commands that require serial but not power:
         if self.options.previewOnly:
@@ -777,7 +777,7 @@ class AxiDrawClass(inkex.Effect):
     def recursivelyTraverseSvg(self, aNodeList,
                                mat_current=None,
                                parent_visibility='visible'):
-        '''
+        """
         Recursively traverse the svg file to plot out all of the
         paths.  The function keeps track of the composite transformation
         that should be applied to each path.
@@ -786,7 +786,7 @@ class AxiDrawClass(inkex.Effect):
         circle, ellipse and use (clone) elements.  Notable elements not
         handled include text.  Unhandled elements should be converted to
         paths in Inkscape.
-        '''
+        """
 
         if mat_current is None:
             mat_current = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
@@ -1253,7 +1253,7 @@ class AxiDrawClass(inkex.Effect):
                     continue
 
     def DoWePlotLayer(self, strLayerName):
-        '''
+        """
         Parse layer name for layer number and other properties.
 
         First: scan layer name for first non-numeric character,
@@ -1270,7 +1270,7 @@ class AxiDrawClass(inkex.Effect):
         "!" (leading character only)-- force a pause, as though the button were pressed.
 
         The escape sequences are described at: https://wiki.evilmadscientist.com/AxiDraw_Layer_Control
-        '''
+        """
 
         # Look at layer name.  Sample first character, then first two, and
         # so on, until the string ends or the string no longer consists of digit characters only.
@@ -1401,11 +1401,11 @@ class AxiDrawClass(inkex.Effect):
                 # This new value will be used when we next lower the pen. (It's up between layers.)
 
     def plotPath(self, path, matTransform):
-        '''
+        """
         Plot the path while applying the transformation defined by the matrix [matTransform].
         - Turn this path into a cubicsuperpath (list of beziers).
         - We also identify "even and odd" parts of the path, to decide when the pen is up and down.
-        '''
+        """
 
         d = path.get('d')
 
@@ -1467,7 +1467,7 @@ class AxiDrawClass(inkex.Effect):
                 self.svgLastPathNC = self.nodeCount  # the node count after the last path was completed.
 
     def PlanTrajectory(self, inputPath):
-        '''
+        """
         Plan the trajectory for a full path, accounting for linear acceleration.
         Inputs: Ordered (x,y) pairs to cover.
         Output: A list of segments to plot, of the form (Xfinal, Yfinal, Vinitial, Vfinal)
@@ -1475,7 +1475,7 @@ class AxiDrawClass(inkex.Effect):
 
         Important note: This routine uses *inch* units (inches of distance, velocities of inches/second, etc.),
         and works in the basis of the XY axes, not the native axes of the motors.
-        '''
+        """
 
         spewTrajectoryDebugData = self.spewDebugdata  # Suggested values: False or self.spewDebugdata
 
@@ -1793,7 +1793,7 @@ class AxiDrawClass(inkex.Effect):
             self.plotSegmentWithVelocity(trimmedPath[i][0], trimmedPath[i][1], TrajVels[i], TrajVels[i + 1])
 
     def plotSegmentWithVelocity(self, xDest, yDest, Vi, Vf):
-        '''
+        """
         Control the serial port to command the machine to draw
         a straight line segment, with basic acceleration support.
 
@@ -1824,7 +1824,7 @@ class AxiDrawClass(inkex.Effect):
         We will only discuss motor steps, and resolution, within the context of native axes.
 
 
-        '''
+        """
 
         self.PauseResumeCheck()
 
@@ -2489,7 +2489,7 @@ class AxiDrawClass(inkex.Effect):
             self.serialPort = self.options.port
 
     def EnableMotors(self):
-        '''
+        """
         Enable motors, set native motor resolution, and set speed scales.
 
         The "pen down" speed scale is adjusted with the following factors
@@ -2499,7 +2499,7 @@ class AxiDrawClass(inkex.Effect):
 
         These factors prevent unexpected dramatic changes in speed when turning
         those two options on and off.
-        '''
+        """
 
         if self.UseCustomLayerSpeed:
             LocalPenDownSpeed = self.LayerPenDownSpeed
@@ -2636,11 +2636,11 @@ class AxiDrawClass(inkex.Effect):
                     self.virtualPenUp = False
 
     def ServoSetup(self):
-        '''
+        """
         Pen position units range from 0% to 100%, which correspond to
         a typical timing range of 7500 - 25000 in units of 1/(12 MHz).
         1% corresponds to ~14.6 us, or 175 units of 1/(12 MHz).
-        '''
+        """
 
         if self.UseCustomLayerPenHeight:
             penDownPos = self.LayerPenDownPosition
@@ -2684,11 +2684,11 @@ class AxiDrawClass(inkex.Effect):
                     self.warnings['voltage'] = 1
 
     def getDocProps(self):
-        '''
+        """
         Get the document's height and width attributes from the <svg> tag.
         Use a default value in case the property is not present or is
         expressed in units of percentages.
-        '''
+        """
 
         self.svgHeight = plot_utils.getLengthInches(self, 'height')
         self.svgWidth = plot_utils.getLengthInches(self, 'width')
