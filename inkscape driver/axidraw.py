@@ -275,13 +275,13 @@ class AxiDrawClass(inkex.Effect):
                 self.svgLayer = 12345  # indicate (to resume routine) that we are plotting all layers.
 
                 self.delayBetweenCopies = False  # Indicate that we are not currently delaying between copies
-                self.copiesToPlot = self.copiesToPlot - 1
+                self.copiesToPlot -= 1
                 self.plotDocument()
                 self.delayBetweenCopies = True  # Indicate that we are currently delaying between copies
 
                 timeCounter = 10 * self.options.copyDelay
                 while timeCounter > 0:
-                    timeCounter = timeCounter - 1
+                    timeCounter -= 1
                     if self.copiesToPlot != 0 and not self.bStopped:  # Delay if we're between copies, not after the last or paused.
                         if self.options.previewOnly:
                             self.ptEstimate += 100
@@ -325,12 +325,12 @@ class AxiDrawClass(inkex.Effect):
                 self.svgNodeCount = 0
                 self.svgLayer = self.options.layerNumber
                 self.delayBetweenCopies = False
-                self.copiesToPlot = self.copiesToPlot - 1
+                self.copiesToPlot -= 1
                 self.plotDocument()
                 self.delayBetweenCopies = True  # Indicate that we are currently delaying between copies
                 timeCounter = 10 * self.options.copyDelay
                 while timeCounter > 0:
-                    timeCounter = timeCounter - 1
+                    timeCounter -= 1
                     if self.copiesToPlot != 0 and not self.bStopped:
                         if self.options.previewOnly:
                             self.ptEstimate += 100
@@ -892,9 +892,9 @@ class AxiDrawClass(inkex.Effect):
                         else:
                             matNew2 = matNew
                         visibility = node.get('visibility', visibility)
-                        self.useTagNestLevel = self.useTagNestLevel + 1  # Use a number, not a boolean, to keep track of nested "use" elements.
+                        self.useTagNestLevel += 1  # Use a number, not a boolean, to keep track of nested "use" elements.
                         self.recursivelyTraverseSvg(refnode, matNew2, parent_visibility=visibility)
-                        self.useTagNestLevel = self.useTagNestLevel - 1
+                        self.useTagNestLevel -= 1
                     else:
                         continue
                 else:
@@ -1317,7 +1317,7 @@ class AxiDrawClass(inkex.Effect):
                 LayerNameFragment = CurrentLayerName[:stringPos]
                 if LayerNameFragment.isdigit():
                     TempNumString = CurrentLayerName[:stringPos]  # Store longest numeric string so far
-                    stringPos = stringPos + 1
+                    stringPos += 1
                 else:
                     break
 
@@ -1346,20 +1346,20 @@ class AxiDrawClass(inkex.Effect):
             self.LayerPenDownSpeed = -1
 
             if stringPos > 0:
-                stringPos = stringPos - 1
+                stringPos -= 1
 
             if MaxLength > stringPos + 2:
                 while stringPos <= MaxLength:
                     key = CurrentLayerName[stringPos:stringPos + 2].lower()
                     if key == "+h" or key == "+s" or key == "+d":
                         paramStart = stringPos + 2
-                        stringPos = stringPos + 3
+                        stringPos += 3
                         TempNumString = 'x'
                         if MaxLength > 0:
                             while stringPos <= MaxLength:
                                 if str.isdigit(CurrentLayerName[paramStart:stringPos]):
                                     TempNumString = CurrentLayerName[paramStart:stringPos]  # Longest numeric string so far
-                                    stringPos = stringPos + 1
+                                    stringPos += 1
                                 else:
                                     break
                         if str.isdigit(TempNumString):
@@ -1377,7 +1377,7 @@ class AxiDrawClass(inkex.Effect):
                                             self.PauseResumeCheck()  # Check if pause button was pressed while we were sleeping
                                         else:
                                             time.sleep(0.1)  # Use short 100 ms intervals to improve pausing responsiveness
-                                            timeRemaining = timeRemaining - 0.1
+                                            timeRemaining -= 0.1
                                             self.PauseResumeCheck()  # Check if pause button was pressed while we were sleeping
 
                             if key == "+h":
@@ -2338,7 +2338,7 @@ class AxiDrawClass(inkex.Effect):
 
             # Don't allow too fast movements of either axis: Catch rounding errors that could cause an overspeed event
             while (abs(float(moveSteps1) / float(moveTime)) >= axidraw_conf.MaxStepRate) or (abs(float(moveSteps2) / float(moveTime)) >= axidraw_conf.MaxStepRate):
-                moveTime = moveTime + 1
+                moveTime += 1
 
             prevMotor1 += moveSteps1
             prevMotor2 += moveSteps2
