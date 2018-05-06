@@ -48,9 +48,10 @@ import axidraw_conf  # Some settings can be changed here.
 
 try:
     xrange = xrange  # We have Python 2
-except:
+except NameError:
     xrange = range  # We have Python 3
 try:
+    # noinspection PyCompatibility
     basestring
 except NameError:
     basestring = str
@@ -401,14 +402,14 @@ class AxiDrawClass(inkex.Effect):
                 self.svg_paused_pos_y_old = float(wcb_node.get('pausedposy'))
                 self.svg_application_old = str(wcb_node.get('application'))
                 self.svg_data_read = True
-            except:
+            except TypeError:
                 self.svg.remove(wcb_node)  # An error before this point leaves svg_data_read as False.
                 # Also remove the node, to prevent adding a duplicate WCB node later.
             try:
                 # Check for additonal, optional attributes:
                 self.svg_rand_seed_old = float(wcb_node.get('randseed'))
                 self.svg_row_old = float(wcb_node.get('row'))
-            except:
+            except TypeError:
                 pass  # Leave as default if not found
 
     def UpdateSVGWCBData(self, a_node_list):
@@ -2432,7 +2433,7 @@ class AxiDrawClass(inkex.Effect):
 
         try:
             pause_state = str_button[0]
-        except:
+        except IndexError:
             inkex.errormsg('\nUSB Connectivity lost.')
             pause_state = '2'  # Pause the plot; we appear to have lost connectivity.
             if self.spew_debugdata:
