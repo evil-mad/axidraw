@@ -520,9 +520,9 @@ class AxiDrawClass(inkex.Effect):
         # Update velocity charts, using some appropriate scaling for X and Y display.
         temp_time = self.doc_unit_scale_factor * self.vel_data_time / 1000.0
         scale_factor = 10.0 / self.options.resolution
-        self.vel_data_chart1.append(" %0.3f %0.3f" % (temp_time, 8.5 - self.doc_unit_scale_factor * v1 / scale_factor))
-        self.vel_data_chart2.append(" %0.3f %0.3f" % (temp_time, 8.5 - self.doc_unit_scale_factor * v2 / scale_factor))
-        self.vel_data_chart_t.append(" %0.3f %0.3f" % (temp_time, 8.5 - self.doc_unit_scale_factor * v_total / scale_factor))
+        self.vel_data_chart1.append(" {:0.3f} {:0.3f}".format(temp_time, 8.5 - self.doc_unit_scale_factor * v1 / scale_factor))
+        self.vel_data_chart2.append(" {:0.3f} {:0.3f}".format(temp_time, 8.5 - self.doc_unit_scale_factor * v2 / scale_factor))
+        self.vel_data_chart_t.append(" {:0.3f} {:0.3f}".format(temp_time, 8.5 - self.doc_unit_scale_factor * v_total / scale_factor))
 
     def plotDocument(self):
         # Plot the actual SVG document, if so selected in the interface
@@ -749,9 +749,9 @@ class AxiDrawClass(inkex.Effect):
                         m, s = divmod(self.pt_estimate / 1000.0, 60)
                         h, m = divmod(m, 60)
                         if h > 0:
-                            inkex.errormsg("Estimated print time: %d:%02d:%02d (Hours, minutes, seconds)" % (h, m, s))
+                            inkex.errormsg("Estimated print time: {:d}:{:02d}:{:02d} (Hours, minutes, seconds)".format(h, m, s))
                         else:
-                            inkex.errormsg("Estimated print time: %02d:%02d (minutes, seconds)" % (m, s))
+                            inkex.errormsg("Estimated print time: {:02d}:{:02d} (minutes, seconds)".format(m, s))
 
                     elapsed_time = time.time() - self.start_time
                     m, s = divmod(elapsed_time, 60)
@@ -759,17 +759,17 @@ class AxiDrawClass(inkex.Effect):
                     down_dist = 0.0254 * self.pen_down_travel_inches
                     tot_dist = down_dist + (0.0254 * self.pen_up_travel_inches)
                     if self.options.previewOnly:
-                        inkex.errormsg("Length of path to draw: %1.2f m." % down_dist)
-                        inkex.errormsg("Total movement distance: %1.2f m." % tot_dist)
+                        inkex.errormsg("Length of path to draw: {:1.2f} m.".format(down_dist))
+                        inkex.errormsg("Total movement distance: {:1.2f} m.".format(tot_dist))
                         if self.options.previewType > 0:
-                            inkex.errormsg("This estimate took: %d:%02d:%02d (Hours, minutes, seconds)" % (h, m, s))
+                            inkex.errormsg("This estimate took: {:d}:{:02d}:{:02d} (Hours, minutes, seconds)".format(h, m, s))
                     else:
                         if h > 0:
-                            inkex.errormsg("Elapsed time: %d:%02d:%02d (Hours, minutes, seconds)" % (h, m, s))
+                            inkex.errormsg("Elapsed time: {:d}:{:02d}:{:02d} (Hours, minutes, seconds)".format(h, m, s))
                         else:
-                            inkex.errormsg("Elapsed time: %02d:%02d (minutes, seconds)" % (m, s))
-                        inkex.errormsg("Length of path drawn: %1.2f m." % down_dist)
-                        inkex.errormsg("Total distance moved: %1.2f m." % tot_dist)
+                            inkex.errormsg("Elapsed time: {:02d}:{:02d} (minutes, seconds)".format(m, s))
+                        inkex.errormsg("Length of path drawn: {:1.2f} m.".format(down_dist))
+                        inkex.errormsg("Total distance moved: {:1.2f} m.".format(tot_dist))
 
         finally:
             # We may have had an exception and lost the serial port...
@@ -882,14 +882,14 @@ class AxiDrawClass(inkex.Effect):
                 refid = node.get(inkex.addNS('href', 'xlink'))
                 if refid is not None:
                     # [1:] to ignore leading '#' in reference
-                    path = '//*[@id="%s"]' % refid[1:]
+                    path = '//*[@id="{}"]'.format(refid[1:])
                     refnode = node.xpath(path)
                     if refnode is not None:
                         x = float(node.get('x', '0'))
                         y = float(node.get('y', '0'))
                         # Note: the transform has already been applied
                         if x != 0 or y != 0:
-                            mat_new2 = composeTransform(mat_new, parseTransform('translate(%f,%f)' % (x, y)))
+                            mat_new2 = composeTransform(mat_new, parseTransform('translate({:f},{:f})'.format(x, y)))
                         else:
                             mat_new2 = mat_new
                         visibility = node.get('visibility', visibility)
@@ -1158,11 +1158,11 @@ class AxiDrawClass(inkex.Effect):
                         cy = float(node.get('cy', '0'))
                         x1 = cx - rx
                         x2 = cx + rx
-                        d = 'M %f,%f ' % (x1, cy) + \
-                            'A %f,%f ' % (rx, ry) + \
-                            '0 1 0 %f,%f ' % (x2, cy) + \
-                            'A %f,%f ' % (rx, ry) + \
-                            '0 1 0 %f,%f' % (x1, cy)
+                        d = 'M {:f},{:f} '.format(x1, cy) + \
+                            'A {:f},{:f} '.format(rx, ry) + \
+                            '0 1 0 {:f},{:f} '.format(x2, cy) + \
+                            'A {:f},{:f} '.format(rx, ry) + \
+                            '0 1 0 {:f},{:f}'.format(x1, cy)
                         # Create (but do not add to SVG) a path to represent the circle or ellipse
                         newpath = inkex.etree.Element(inkex.addNS('path', 'svg'))
                         newpath.set('d', d)
@@ -1512,7 +1512,7 @@ class AxiDrawClass(inkex.Effect):
         if spew_trajectory_debug_data:
             inkex.errormsg('Input path to PlanTrajectory: ')
             for xy in input_path:
-                inkex.errormsg('x: %1.3f,  y: %1.3f' % (xy[0], xy[1]))
+                inkex.errormsg('x: {:1.3f},  y: {:1.3f}'.format(xy[0], xy[1]))
             inkex.errormsg('\ntraj_length: ' + str(traj_length))
 
         speed_limit = self.pen_down_speed  # speed_limit is maximum travel rate, in inches/second, in the XY  plane.
@@ -1556,13 +1556,13 @@ class AxiDrawClass(inkex.Effect):
                 trimmed_path.append([tmp_x, tmp_y])  # Selected, usable portions of input_path.
 
                 if spew_trajectory_debug_data:
-                    inkex.errormsg('\nSegment: input_path[%1.0f] -> input_path[%1.0f]' % (last_index, i))
-                    inkex.errormsg('Destination: x: %1.3f,  y: %1.3f. Move distance: %1.3f' % (tmp_x, tmp_y, tmp_dist))
+                    inkex.errormsg('\nSegment: input_path[{:1.0f}] -> input_path[{:1.0f}]'.format(last_index, i))
+                    inkex.errormsg('Destination: x: {:1.3f},  y: {:1.3f}. Move distance: {:1.3f}'.format(tmp_x, tmp_y, tmp_dist))
 
                 last_index = i
             elif spew_trajectory_debug_data:
-                inkex.errormsg('\nSegment: input_path[%1.0f] -> input_path[%1.0f] is zero (or near zero); skipping!' % (last_index, i))
-                inkex.errormsg('  x: %1.3f,  y: %1.3f, distance: %1.3f' % (input_path[i][0], input_path[i][1], tmp_dist))
+                inkex.errormsg('\nSegment: input_path[{:1.0f}] -> input_path[{:1.0f}] is zero (or near zero); skipping!'.format(last_index, i))
+                inkex.errormsg('  x: {:1.3f},  y: {:1.3f}, distance: {:1.3f}'.format(input_path[i][0], input_path[i][1], tmp_dist))
 
         traj_length = len(traj_dists)
 
@@ -1581,10 +1581,10 @@ class AxiDrawClass(inkex.Effect):
 
         if spew_trajectory_debug_data:
             inkex.errormsg('\nAfter removing any zero-length segments, we are left with: ')
-            inkex.errormsg('trajDists[0]: %1.3f' % (traj_dists[0]))
+            inkex.errormsg('traj_dists[0]: {:1.3f}'.format(traj_dists[0]))
             for i in xrange(0, len(trimmed_path)):
-                inkex.errormsg('i: %1.0f, x: %1.3f,  y: %1.3f, distance: %1.3f' % (i, trimmed_path[i][0], trimmed_path[i][1], traj_dists[i + 1]))
-                inkex.errormsg('  And... trajDists[i+1]: %1.3f' % (traj_dists[i + 1]))
+                inkex.errormsg('i: {:1.0f}, x: {:1.3f},  y: {:1.3f}, distance: {:1.3f}'.format(i, trimmed_path[i][0], trimmed_path[i][1], traj_dists[i + 1]))
+                inkex.errormsg('  And... traj_dists[i+1]: {:1.3f}'.format(traj_dists[i + 1]))
 
         # Acceleration/deceleration rates:
         if self.pen_up:
@@ -1600,10 +1600,10 @@ class AxiDrawClass(inkex.Effect):
         accel_dist = 0.5 * accel_rate * t_max * t_max
 
         if spew_trajectory_debug_data:
-            inkex.errormsg('\nspeed_limit: %1.3f' % speed_limit)
-            inkex.errormsg('t_max: %1.3f' % t_max)
-            inkex.errormsg('accel_rate: %1.3f' % accel_rate)
-            inkex.errormsg('accel_dist: %1.3f' % accel_dist)
+            inkex.errormsg('\nspeed_limit: {:1.3f}'.format(speed_limit))
+            inkex.errormsg('t_max: {:1.3f}'.format(t_max))
+            inkex.errormsg('accel_rate: {:1.3f}'.format(accel_rate))
+            inkex.errormsg('accel_dist: {:1.3f}'.format(accel_dist))
             cosine_print_array = array('f')
 
         '''
@@ -1704,7 +1704,7 @@ class AxiDrawClass(inkex.Effect):
                     vcurrent_max = speed_limit
 
                 if spew_trajectory_debug_data:
-                    inkex.errormsg('traj_vels I: %1.3f' % vcurrent_max)
+                    inkex.errormsg('traj_vels I: {:1.3f}'.format(vcurrent_max))
 
             '''
             Velocity at vertex: Part II 
@@ -1741,11 +1741,11 @@ class AxiDrawClass(inkex.Effect):
         if spew_trajectory_debug_data:
             inkex.errormsg(' ')
             for dist in cosine_print_array:
-                inkex.errormsg('Cosine Factor: %1.3f' % dist)
+                inkex.errormsg('Cosine Factor: {:1.3f}'.format(dist))
             inkex.errormsg(' ')
 
             for dist in traj_vels:
-                inkex.errormsg('traj_vels II: %1.3f' % dist)
+                inkex.errormsg('traj_vels II: {:1.3f}'.format(dist))
             inkex.errormsg(' ')
 
         '''            
@@ -1769,8 +1769,8 @@ class AxiDrawClass(inkex.Effect):
                 v_init_max = plot_utils.vInitial_VF_A_Dx(v_final, -accel_rate, seg_length)
 
                 if spew_trajectory_debug_data:
-                    inkex.errormsg('VInit Calc: (v_final = %1.3f, accel_rate = %1.3f, seg_length = %1.3f) '
-                                   % (v_final, accel_rate, seg_length))
+                    inkex.errormsg('VInit Calc: (v_final = {:1.3f}, accel_rate = {:1.3f}, seg_length = {:1.3f}) '
+                                   .format(v_final, accel_rate, seg_length))
 
                 if v_init_max < v_initial:
                     v_initial = v_init_max
@@ -1778,7 +1778,7 @@ class AxiDrawClass(inkex.Effect):
 
         if spew_trajectory_debug_data:
             for dist in traj_vels:
-                inkex.errormsg('traj_vels III: %1.3f' % dist)
+                inkex.errormsg('traj_vels III: {:1.3f}'.format(dist))
             inkex.errormsg(' ')
 
         #         if spew_trajectory_debug_data:
@@ -1843,9 +1843,9 @@ class AxiDrawClass(inkex.Effect):
                 spew_text += '  Pen-up transit'
             else:
                 spew_text += '  Pen-down move'
-            spew_text += ' from (x = %1.3f, y = %1.3f)' % (self.f_curr_x, self.f_curr_y)
-            spew_text += ' to (x = %1.3f, y = %1.3f)\n' % (x_dest, y_dest)
-            spew_text += '    w/ v_i = %1.2f, v_f = %1.2f ' % (v_i, v_f)
+            spew_text += ' from (x = {:1.3f}, y = {:1.3f})'.format(self.f_curr_x, self.f_curr_y)
+            spew_text += ' to (x = {:1.3f}, y = {:1.3f})\n'.format(x_dest, y_dest)
+            spew_text += '    w/ v_i = {:1.2f}, v_f = {:1.2f} '.format(v_i, v_f)
             inkex.errormsg(spew_text)
             if self.resume_mode:
                 inkex.errormsg(' -> NOTE: ResumeMode is active')
@@ -2381,15 +2381,15 @@ class AxiDrawClass(inkex.Effect):
                             if self.pen_up:
                                 if self.options.previewType > 1:  # previewType is 2 or 3. Show pen-up movement
                                     if self.path_data_pen_up != 1:
-                                        self.path_data_pu.append("M%0.3f %0.3f" % (x_old_t, y_old_t))
+                                        self.path_data_pu.append("M{:0.3f} {:0.3f}".format(x_old_t, y_old_t))
                                         self.path_data_pen_up = 1  # Reset pen state indicator
-                                    self.path_data_pu.append(" %0.3f %0.3f" % (x_new_t, y_new_t))
+                                    self.path_data_pu.append(" {:0.3f} {:0.3f}".format(x_new_t, y_new_t))
                             else:
                                 if self.options.previewType == 1 or self.options.previewType == 3:  # If 1 or 3, show pen-down movement
                                     if self.path_data_pen_up != 0:
-                                        self.path_data_pd.append("M%0.3f %0.3f" % (x_old_t, y_old_t))
+                                        self.path_data_pd.append("M{:0.3f} {:0.3f}".format(x_old_t, y_old_t))
                                         self.path_data_pen_up = 0  # Reset pen state indicator
-                                    self.path_data_pd.append(" %0.3f %0.3f" % (x_new_t, y_new_t))
+                                    self.path_data_pd.append(" {:0.3f} {:0.3f}".format(x_new_t, y_new_t))
                     else:
                         ebb_motion.doXYMove(self.serial_port, move_steps2, move_steps1, move_time)
                         if move_time > 50:
