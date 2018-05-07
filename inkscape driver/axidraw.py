@@ -748,6 +748,9 @@ class AxiDrawClass(inkex.Effect):
                     if self.options.preview_only:
                         m, s = divmod(self.pt_estimate / 1000.0, 60)
                         h, m = divmod(m, 60)
+                        h = int(h)
+                        m = int(m)
+                        s = int(s)
                         if h > 0:
                             inkex.errormsg("Estimated print time: {:d}:{:02d}:{:02d} (Hours, minutes, seconds)".format(h, m, s))
                         else:
@@ -756,6 +759,9 @@ class AxiDrawClass(inkex.Effect):
                     elapsed_time = time.time() - self.start_time
                     m, s = divmod(elapsed_time, 60)
                     h, m = divmod(m, 60)
+                    h = int(h)
+                    m = int(m)
+                    s = int(s)
                     down_dist = 0.0254 * self.pen_down_travel_inches
                     tot_dist = down_dist + (0.0254 * self.pen_up_travel_inches)
                     if self.options.preview_only:
