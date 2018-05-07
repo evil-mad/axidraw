@@ -2092,50 +2092,50 @@ class AxiDrawClass(inkex.Effect):
                 We begin with given: initial velocity, final velocity,
                     maximum acceleration rate, distance to travel.
                 
-                The optimal solution is to accelerate at the maximum rate, to some maximum velocity vmax,
+                The optimal solution is to accelerate at the maximum rate, to some maximum velocity Vmax,
                 and then to decelerate at same maximum rate, to the final velocity. 
                 This forms a triangle on the plot of V(t). 
                 
-                The value of vmax -- and the time at which we reach it -- may be varied in order to
+                The value of Vmax -- and the time at which we reach it -- may be varied in order to
                 accommodate our choice of distance-traveled and velocity requirements.
                 (This does assume that the segment requested is self consistent, and planned 
                 with respect to our acceleration requirements.)
                 
-                In a more detail, with short notation v_i = vi_inches_per_sec, v_f = vf_inches_per_sec, 
-                    Amax = accel_rate, Dv = (v_f - v_i)
+                In a more detail, with short notation Vi = vi_inches_per_sec, Vf = vf_inches_per_sec, 
+                    Amax = accel_rate_local, Dv = (Vf - Vi)
                 
-                (i) We accelerate from v_i, at Amax to some maximum velocity vmax.
-                This takes place during an interval of time ta. 
+                (i) We accelerate from Vi, at Amax to some maximum velocity Vmax.
+                This takes place during an interval of time Ta. 
                 
-                (ii) We then decelerate from vmax, to v_f, at the same maximum rate, Amax.
-                This takes place during an interval of time td.                     
+                (ii) We then decelerate from Vmax, to Vf, at the same maximum rate, Amax.
+                This takes place during an interval of time Td.
                 
-                (iii) The total time elapsed is ta + td
+                (iii) The total time elapsed is Ta + Td
                 
                 (iv) v = v0 + a * t
-                    =>    vmax = v_i + Amax * ta
-                    and    vmax = v_f + Amax * td    (i.e., vmax - Amax * td = v_f)
+                    =>    Vmax = Vi + Amax * Ta
+                    and   Vmax = Vf + Amax * Td  (i.e., Vmax - Amax * Td = Vf)
                 
-                    Thus td = ta - (v_f - v_i) / Amax, or    td = ta - (Dv / Amax)
+                    Thus Td = Ta - (Vf - Vi) / Amax, or Td = Ta - (Dv / Amax)
                     
-                (v) The distance covered during the acceleration interval ta is given by:
-                    Xa = v_i * ta + (1/2) Amax * ta^2
+                (v) The distance covered during the acceleration interval Ta is given by:
+                    Xa = Vi * Ta + (1/2) Amax * Ta^2
                     
-                    The distance covered during the deceleration interval td is given by:
-                    Xd = v_f * td + (1/2) Amax * td^2
+                    The distance covered during the deceleration interval Td is given by:
+                    Xd = Vf * Td + (1/2) Amax * Td^2
                     
-                    Thus, the total distance covered during interval ta + td is given by:
-                    segment_length_inches = Xa + Xd = v_i * ta + (1/2) Amax * ta^2 + v_f * td + (1/2) Amax * td^2
+                    Thus, the total distance covered during interval Ta + Td is given by:
+                    segment_length_inches = Xa + Xd = Vi * Ta + (1/2) Amax * Ta^2 + Vf * Td + (1/2) Amax * Td^2
 
-                (vi) Now substituting in td = ta - (Dv / Amax), we find:
-                    Amax * ta^2 + 2 * v_i * ta + ( v_i^2 - v_f^2 )/( 2 * Amax ) - segment_length_inches = 0
+                (vi) Now substituting in Td = Ta - (Dv / Amax), we find:
+                    Amax * Ta^2 + 2 * Vi * Ta + ( Vi^2 - Vf^2 )/( 2 * Amax ) - segment_length_inches = 0
                     
-                    Solving this quadratic equation for ta, we find:
-                    ta = ( sqrt(2 * v_i^2 + 2 * v_f^2 + 4 * Amax * segment_length_inches) - 2 * v_i ) / ( 2 * Amax )
+                    Solving this quadratic equation for Ta, we find:
+                    Ta = ( sqrt(2 * Vi^2 + 2 * Vf^2 + 4 * Amax * segment_length_inches) - 2 * Vi ) / ( 2 * Amax )
                     
-                    [We pick the positive root in the quadratic formula, since ta must be positive.]
+                    [We pick the positive root in the quadratic formula, since Ta must be positive.]
                 
-                (vii) From ta and part (iv) above, we can find vmax and td.
+                (vii) From Ta and part (iv) above, we can find Vmax and Td.
                 '''
 
                 if spew_segment_debug_data:
