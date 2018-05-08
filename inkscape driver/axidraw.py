@@ -42,6 +42,7 @@ import inkex
 import plot_utils  # Requires v 0.9 in plotink
 import simplepath
 import simplestyle
+from lxml import etree
 from simpletransform import applyTransformToPath, composeTransform, parseTransform
 
 import axidraw_conf  # Some settings can be changed here.
@@ -414,7 +415,7 @@ class AxiDrawClass(inkex.Effect):
 
     def UpdateSVGWCBData(self, a_node_list):
         if not self.svg_data_read:
-            wcb_data = inkex.etree.SubElement(self.svg, 'WCB')
+            wcb_data = etree.SubElement(self.svg, 'WCB')
             self.svg_data_read = True  # Ensure that we don't keep adding WCB elements
         if not self.svg_data_written:
             for node in a_node_list:
@@ -654,9 +655,9 @@ class AxiDrawClass(inkex.Effect):
                                 self.svg.remove(node)
 
             if self.options.preview_type > 0:  # Render preview. Only possible when in preview mode.
-                self.previewLayer = inkex.etree.Element(inkex.addNS('g', 'svg'))
-                self.previewSLU = inkex.etree.SubElement(self.previewLayer, inkex.addNS('g', 'svg'))
-                self.previewSLD = inkex.etree.SubElement(self.previewLayer, inkex.addNS('g', 'svg'))
+                self.previewLayer = etree.Element(inkex.addNS('g', 'svg'))
+                self.previewSLU = etree.SubElement(self.previewLayer, inkex.addNS('g', 'svg'))
+                self.previewSLD = etree.SubElement(self.previewLayer, inkex.addNS('g', 'svg'))
 
                 self.previewLayer.set(inkex.addNS('groupmode', 'inkscape'), 'layer')
                 self.previewLayer.set(inkex.addNS('label', 'inkscape'), '% Preview')
@@ -702,8 +703,8 @@ class AxiDrawClass(inkex.Effect):
                         'style': simplestyle.formatStyle(p_style),
                         'd': " ".join(self.path_data_pu),
                         inkex.addNS('desc', ns_prefix): "pen-up transit"}
-                    inkex.etree.SubElement(self.previewSLU,
-                                           inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
+                    etree.SubElement(self.previewSLU,
+                                     inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
                 if self.options.preview_type == 1 or self.options.preview_type == 3:
                     p_style.update({'stroke': 'blue'})
@@ -711,8 +712,8 @@ class AxiDrawClass(inkex.Effect):
                         'style': simplestyle.formatStyle(p_style),
                         'd': " ".join(self.path_data_pd),
                         inkex.addNS('desc', ns_prefix): "pen-down drawing"}
-                    inkex.etree.SubElement(self.previewSLD,
-                                           inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
+                    etree.SubElement(self.previewSLD,
+                                     inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
                 if self.options.preview_type > 0 and self.vel_data_plot:  # Preview enabled & do velocity Plot
                     self.vel_data_chart1.insert(0, "M")
@@ -724,24 +725,24 @@ class AxiDrawClass(inkex.Effect):
                         'style': simplestyle.formatStyle(p_style),
                         'd': " ".join(self.vel_data_chart_t),
                         inkex.addNS('desc', ns_prefix): "Total V"}
-                    inkex.etree.SubElement(self.previewLayer,
-                                           inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
+                    etree.SubElement(self.previewLayer,
+                                     inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
                     p_style.update({'stroke': 'red'})
                     path_attrs = {
                         'style': simplestyle.formatStyle(p_style),
                         'd': " ".join(self.vel_data_chart1),
                         inkex.addNS('desc', ns_prefix): "Motor 1 V"}
-                    inkex.etree.SubElement(self.previewLayer,
-                                           inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
+                    etree.SubElement(self.previewLayer,
+                                     inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
                     p_style.update({'stroke': 'green'})
                     path_attrs = {
                         'style': simplestyle.formatStyle(p_style),
                         'd': " ".join(self.vel_data_chart2),
                         inkex.addNS('desc', ns_prefix): "Motor 2 V"}
-                    inkex.etree.SubElement(self.previewLayer,
-                                           inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
+                    etree.SubElement(self.previewLayer,
+                                     inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
             if self.options.report_time and (not self.called_externally):
                 if self.copies_to_plot == 0:
@@ -957,7 +958,7 @@ class AxiDrawClass(inkex.Effect):
                     if do_we_plot_this_path:
                         self.pathcount += 1
                         # Create (but do not add to SVG) a path with the outline of the rectangle
-                        newpath = inkex.etree.Element(inkex.addNS('path', 'svg'))
+                        newpath = etree.Element(inkex.addNS('path', 'svg'))
 
                         x = float(node.get('x'))
                         y = float(node.get('y'))
@@ -1002,7 +1003,7 @@ class AxiDrawClass(inkex.Effect):
                     if do_we_plot_this_path:
                         self.pathcount += 1
                         # Create (but do not add to SVG) a path to contain the line
-                        newpath = inkex.etree.Element(inkex.addNS('path', 'svg'))
+                        newpath = etree.Element(inkex.addNS('path', 'svg'))
                         x1 = float(node.get('x1'))
                         y1 = float(node.get('y1'))
                         x2 = float(node.get('x2'))
@@ -1063,7 +1064,7 @@ class AxiDrawClass(inkex.Effect):
                             i += 2
 
                         # Create (but do not add to SVG) a path to represent the polyline
-                        newpath = inkex.etree.Element(inkex.addNS('path', 'svg'))
+                        newpath = etree.Element(inkex.addNS('path', 'svg'))
                         newpath.set('d', d)
                         s = node.get('style')
                         if s:
@@ -1110,7 +1111,7 @@ class AxiDrawClass(inkex.Effect):
                             d += " L " + pa[i]
                         d += " Z"
                         # Create (but do not add to SVG) a path to represent the polygon
-                        newpath = inkex.etree.Element(inkex.addNS('path', 'svg'))
+                        newpath = etree.Element(inkex.addNS('path', 'svg'))
                         newpath.set('d', d)
                         s = node.get('style')
                         if s:
@@ -1170,7 +1171,7 @@ class AxiDrawClass(inkex.Effect):
                             'A {:f},{:f} '.format(rx, ry) + \
                             '0 1 0 {:f},{:f}'.format(x1, cy)
                         # Create (but do not add to SVG) a path to represent the circle or ellipse
-                        newpath = inkex.etree.Element(inkex.addNS('path', 'svg'))
+                        newpath = etree.Element(inkex.addNS('path', 'svg'))
                         newpath.set('d', d)
                         s = node.get('style')
                         if s:
