@@ -620,9 +620,9 @@ class AxiDrawClass(inkex.Effect):
             '''
 
             try:
-                # If called from an external script that specifies a "backupOriginal",
+                # If called from an external script that specifies a "backup_original",
                 # revert to _that_, rather than the true original
-                self.document = copy.deepcopy(self.backupOriginal)
+                self.document = copy.deepcopy(self.backup_original)
                 self.svg = self.document.getroot()
             except AttributeError:
                 self.document = copy.deepcopy(self.original_document)
