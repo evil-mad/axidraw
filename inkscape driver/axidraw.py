@@ -371,7 +371,7 @@ class AxiDrawClass(inkex.Effect):
                 self.ServoSetupWrapper()
                 self.penRaise()
                 self.EnableMotors()  # Set plotting resolution
-                if self.options.resumeType == "ResumeNow":
+                if self.options.resume_type == "ResumeNow":
                     self.resume_mode = True
                 self.f_speed = self.pen_down_speed
                 self.f_curr_x = self.svg_last_known_pos_x_old + axidraw_conf.StartPosX
@@ -450,10 +450,10 @@ class AxiDrawClass(inkex.Effect):
 
         self.ServoSetupWrapper()
 
-        if self.options.setupType == "align-mode":
+        if self.options.setup_type == "align-mode":
             self.penRaise()
             ebb_motion.sendDisableMotors(self.serial_port)
-        elif self.options.setupType == "toggle-pen":
+        elif self.options.setup_type == "toggle-pen":
             ebb_motion.TogglePen(self.serial_port)
 
     def manualCommand(self):
@@ -2431,9 +2431,9 @@ class AxiDrawClass(inkex.Effect):
         else:
             str_button = ebb_motion.QueryPRGButton(self.serial_port)  # Query if button pressed
 
-        #        # To test corner cases of pause and resume cycles, one may manually force a pause:
-        #         if (self.options.mode == "plot") and (self.node_count == 24) and (self.options.row == 2):
-        #             self.force_pause = True
+        #To test corner cases of pause and resume cycles, one may manually force a pause:
+        #if (self.options.mode == "plot") and (self.node_count == 24):
+        #    self.force_pause = True
 
         if self.force_pause:
             str_button = ['1']  # simulate pause button press
