@@ -532,10 +532,10 @@ class AxiDrawClass(inkex.Effect):
         if not self.getDocProps():
             # Error: This document appears to have inappropriate (or missing) dimensions.
             inkex.errormsg(gettext.gettext('This document does not have valid dimensions.\r'))
-            inkex.errormsg(gettext.gettext('The document dimensions must be in either millimeters (mm) or inches (in).\r\r'))
+            inkex.errormsg(gettext.gettext('The page size must be in either millimeters (mm) or inches (in).\r\r'))
             inkex.errormsg(gettext.gettext('Consider starting with the Letter landscape or '))
             inkex.errormsg(gettext.gettext('the A4 landscape template.\r\r'))
-            inkex.errormsg(gettext.gettext('Document dimensions may also be set in Inkscape,\r'))
+            inkex.errormsg(gettext.gettext('The page size may also be set in Inkscape,\r'))
             inkex.errormsg(gettext.gettext('using File > Document Properties.'))
             return
 
