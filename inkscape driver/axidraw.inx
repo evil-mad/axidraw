@@ -207,8 +207,6 @@ Note: Inkscape's "Cancel" button does not work while plotting;
 Press the physical pause button on the left side of the machine.
 </_param>
 
-<!-- <param name="useGUI" type="boolean" gui-hidden="true">true</param> -->
-
 </page>
 
 </param>
