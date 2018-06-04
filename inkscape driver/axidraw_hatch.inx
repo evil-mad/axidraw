@@ -34,7 +34,7 @@ Hatched figures will be grouped with their fills.
   <param name="tolerance" type="float" min="0.1" max="100" _gui-text="   Tolerance (default: 3.0)">3.0</param>
 
   <param name="footer" type="description" xml:space="preserve">
-            (v2.2, December 26, 2017)</param>
+            (v2.2.1, June 3, 2018)</param>
 
   </page>
   <page name="info" _gui-text="More info...">
@@ -71,7 +71,7 @@ the hatches try to fill the input paths.</_param>
   <effect needs-live-preview="true">
     <object-type>all</object-type>
     <effects-menu>
-      <submenu _name="AxiDraw"/>
+    <submenu _name="AxiDraw Utilities"/>
     </effects-menu>
   </effect>
   <script>
