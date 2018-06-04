@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+  <_name>Hershey Text for AxiDraw</_name>
+  <id>org.evilmad.render.hershey_axi</id>
+  <!-- Version 2.2 November 28, 2017 -->
+  <dependency type="executable" location="extensions">hershey.py</dependency>
+  <dependency type="executable" location="extensions">hersheydata.py</dependency>
+  <dependency type="executable" location="extensions">inkex.py</dependency>
+
+  <param name="tab" type="notebook">
+    <page name="splash" _gui-text="Render Text">
+
+<_param indent="1" name="splashpage" type="description" appearance="header">
+Hershey Text: Engraving Fonts for Inkscape
+
+</_param>
+      <param indent="2" name="text" type="string" _gui-text="Text:">The Quick Brown Fox Jumps Over a Lazy Dog</param>
+
+      <param indent="2" name="action" type="enum" _gui-text="Action: ">
+        <_item value="render"   >Typeset that text</_item>
+        <_item value="sample"   >Generate font table: All fonts</_item> 
+        <_item value="sampleHW" >Generate font table: Handwriting-like</_item> 
+        <_item value="table"    >Generate glyph table in selected font</_item> 
+      </param>
+
+      <param indent="2" name="fontface" type="enum" _gui-text="Font face: ">
+        <_item value="futural">Sans 1-stroke</_item>
+        <_item value="futuram">Sans bold</_item> 
+
+        <_item value="timesr">Serif medium</_item>
+        <_item value="timesi">Serif medium italic</_item>
+        <_item value="timesib">Serif bold italic</_item>
+        <_item value="timesrb">Serif bold</_item>
+
+        <_item value="scripts">Script 1-stroke</_item>
+        <_item value="cursive">Script 1-stroke (alt)</_item>
+        <_item value="scriptc">Script medium</_item>
+
+        <_item value="gothiceng">Gothic English</_item>
+        <_item value="gothicger">Gothic German</_item>
+        <_item value="gothicita">Gothic Italian</_item>	   
+        
+        <!-- Block below this are loosely adapted from fonts licensed under SIL Open Font License -->
+		<_item value="EMSAllure">EMS Allure</_item>
+		<_item value="EMSBird">EMS Bird</_item>
+		<_item value="EMSBirdSwashCaps">EMS Bird Swash Caps</_item>
+		<_item value="EMSBrush">EMS Brush</_item>
+		<_item value="EMSCapitol">EMS Capitol</_item>
+		<_item value="EMSCasualHand">EMS Casual Hand</_item>
+		<_item value="EMSDecorousScript">EMS Decorous Script</_item>
+		<_item value="EMSDelight">EMS Delight</_item>
+		<_item value="EMSDelightSwashCaps">EMS Delight Swash Caps</_item>
+		<_item value="EMSElfin">EMS Elfin</_item>
+		<_item value="EMSFelix">EMS Felix</_item>
+		<_item value="EMSHerculean">EMS Herculean</_item>
+		<_item value="EMSInvite">EMS Invite</_item>
+		<_item value="EMSLeague">EMS League</_item>
+		<_item value="EMSLittlePrincess">EMS Little Princess</_item>
+		<_item value="EMSMistyNight">EMS Misty Night</_item>
+		<_item value="EMSNeato">EMS Neato</_item>
+		<_item value="EMSNixish">EMS Nixish</_item>
+		<_item value="EMSNixishItalic">EMS Nixish Italic</_item>
+		<_item value="EMSOsmotron">EMS Osmotron</_item>
+		<_item value="EMSPancakes">EMS Pancakes</_item>
+		<_item value="EMSPepita">EMS Pepita</_item>
+		<_item value="EMSQwandry">EMS Qwandry</_item>
+		<_item value="EMSReadability">EMS Readability</_item>
+		<_item value="EMSReadabilityItalic">EMS Readability Italic</_item>
+		<_item value="EMSSociety">EMS Society</_item>
+		<_item value="EMSSwiss">EMS Swiss</_item>
+        <_item value="EMSTech">EMS Tech</_item> 
+        <!-- Block above this are loosely adapted from fonts licensed under SIL Open Font License -->
+
+        <_item value="greek">Greek 1-stroke</_item>
+        <_item value="timesg">Greek medium</_item>
+        <_item value="cyrillic">Cyrillic</_item>		
+        <_item value="japanese">Japanese</_item> 
+
+        <_item value="astrology">Astrology</_item>
+        <_item value="mathlow">Math (lower)</_item>
+        <_item value="mathupp">Math (upper)</_item>
+        <_item value="markers">Markers</_item> 
+        <_item value="meteorology">Meteorology</_item>
+        <_item value="music">Music</_item>
+        <_item value="symbolic">Symbolic</_item>
+
+      </param>
+      <_param name="emptyspace" type="description" xml:space="preserve"> 
+</_param>
+
+    </page>
+    <page name="info" _gui-text="About Hershey Text">
+<_param indent="1" name="aboutTitle" type="description" appearance="header">Hershey Text 2.2</_param>
+<_param name="aboutpage" type="description" xml:space="preserve">This tool renders a line of text using specialized
+"stroke" or "engraving" fonts designed for plotters. 
+
+Whereas regular "outline" fonts (e.g., TrueType) work
+by filling in the region inside an invisible outline,
+engraving fonts are composed only of individual lines
+or strokes; much like human handwriting.
+
+Engraving fonts are used for creating text paths that
+computer controlled drawing and cutting machines (from
+pen plotters to CNC routers) can efficiently follow. 
+
+For a full introduction, please visit:
+  www.evilmadscientist.com/go/hershey</_param>
+</page>
+
+<page name="info" _gui-text="Credits">
+<_param name="aboutpage" type="description" xml:space="preserve">
+The classic fonts included -- those without the "EMS"
+prefix -- are derived from work by Dr. A. V. Hershey,
+distributed by the US National Bureau of Standards
+(now NIST) in NBS SP-424 1976-04, "A contribution to 
+computer typesetting techniques: Tables of Coordinates
+for Hershey's Repertory of Occidental Type Fonts and
+Graphic Symbols."
+
+Additional modern "EMS" fonts in this distribution are
+derivatives created from fonts licensed under the SIL
+Open Font License.
+
+For full credits and license information, please see
+the "hersheydata.py" file included with this
+distribution or visit:
+   wiki.evilmadscientist.com/hershey
+</_param>
+</page>
+</param>
+
+  <effect needs-live-preview="true" needs-document="true">
+    <object-type>all</object-type>
+    <effects-menu>
+    <submenu _name="AxiDraw Utilities"/>
+    </effects-menu>
+  </effect>
+    <script>
+      <command reldir="extensions" interpreter="python">hershey.py</command>
+    </script>
+</inkscape-extension>
