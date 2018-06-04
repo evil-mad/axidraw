@@ -191,7 +191,7 @@ You can resume directly where you paused, or after using the Return to Home Corn
 </param>
 
 <_param name="instructions_general2" type="description" indent="1" xml:space="preserve">
-AxiDraw Control v 1.7.8  	2018-04-22
+AxiDraw Control v 1.7.9  	2018-06-03
 
 Press 'Apply' to query the firmware version;
 EBB firmware 2.5.1 or newer is recommended.
@@ -213,7 +213,6 @@ Press the physical pause button on the left side of the machine.
 <effect needs-live-preview="false" needs-document="no">
 <object-type>all</object-type>
 <effects-menu>
-<submenu _name="AxiDraw"/>
 </effects-menu>
 </effect>
 
