@@ -77,7 +77,7 @@ class AxiDrawClass(inkex.Effect):
         self.OptionParser.add_option("--autoRotate", action="store", type="inkbool", dest="auto_rotate", default=axidraw_conf.autoRotate, help="Auto pick portrait or landscape mode")
         self.OptionParser.add_option("--constSpeed", action="store", type="inkbool", dest="const_speed", default=axidraw_conf.constSpeed, help="Constant velocity when pen is down")
         self.OptionParser.add_option("--reportTime", action="store", type="inkbool", dest="report_time", default=axidraw_conf.reportTime, help="Report time elapsed")
-        self.OptionParser.add_option("--manualType", action="store", type="string", dest="manual_type", default="version", help="The active option when Apply was pressed")
+        self.OptionParser.add_option("--manualType", action="store", type="string", dest="manual_type", default="fwversion", help="The active option when Apply was pressed")
         self.OptionParser.add_option("--WalkDistance", action="store", type="float", dest="walk_distance", default=1, help="Distance for manual walk")
         self.OptionParser.add_option("--resumeType", action="store", type="string", dest="resume_type", default="ResumeNow", help="The active option when Apply was pressed")
         self.OptionParser.add_option("--layerNumber", action="store", type="int", dest="layer_number", default=axidraw_conf.DefaultLayer, help="Selected layer for multilayer plotting")
@@ -108,7 +108,7 @@ class AxiDrawClass(inkex.Effect):
     def effect(self):
         """Main entry point: check to see which mode/tab is selected, and act accordingly."""
 
-        self.version_string = "AxiDraw Control - Version 1.7.8, 2018-04-22."
+        self.version_string = "AxiDraw Control - Version 1.8.0, 2018-06-18."
         self.spew_debugdata = False
 
         self.start_time = time.time()
@@ -216,7 +216,7 @@ class AxiDrawClass(inkex.Effect):
             self.called_externally
         except AttributeError:
             self.called_externally = False
-
+    
         if self.options.mode == "options":
             return
         if self.options.mode == "timing":
@@ -234,7 +234,7 @@ class AxiDrawClass(inkex.Effect):
                     self.svg.remove(node)
                 for node in self.svg.xpath('//svg:eggbot', namespaces=inkex.NSS):
                     self.svg.remove(node)
-                inkex.errormsg(gettext.gettext("I've removed all AxiDraw data from this SVG file. Have a great day!"))
+                inkex.errormsg(gettext.gettext("All AxiDraw data has been removed from this SVG file."))
                 return
         if self.options.mode == "fwversion":
             self.options.mode = "manual"  # Use "manual" command mechanism to handle fwversion request.
@@ -483,9 +483,26 @@ class AxiDrawClass(inkex.Effect):
                                            "disconnect the AxiDraw from both USB and power."))
             return
 
-        # Next: Commands that require both power and seraial connectivity:
+        if self.options.manual_type == "read-name":
+            nameString = ebb_serial.query_nickname(self.serial_port)
+            if nameString is None:
+                inkex.errormsg(gettext.gettext("Error; unable to read nickname.\n"))
+            else:
+                inkex.errormsg(nameString)
+            return
+        if self.options.manual_type == "write-name":
+            renamed = ebb_serial.write_nickname(self.serial_port, self.options.setup_type)
+            if renamed is True:
+	            inkex.errormsg('Nickname written. Rebooting EBB.')
+            else:
+                inkex.errormsg('Error encountered while writing nickname.')
+            ebb_serial.reboot(self.serial_port)    # Reboot required after writing nickname
+            ebb_serial.closePort(self.serial_port) # Manually close port
+            self.serial_port = None                # Indicate that serial port is closed.
+            return
+            
+        # Next: Commands that require both power and serial connectivity:
         self.queryEBBVoltage()
-
         if self.options.manual_type == "raise-pen":
             self.ServoSetupWrapper()
             self.penRaise()
@@ -513,7 +530,7 @@ class AxiDrawClass(inkex.Effect):
             self.f_curr_y = self.svg_last_known_pos_y_old + axidraw_conf.StartPosY
             self.ignore_limits = True
             f_x = self.f_curr_x + n_delta_x  # Note: Walking motors is strictly relative to initial position.
-            f_y = self.f_curr_y + n_delta_y  # New position is not saved, and may interfere with (e.g.,) resuming plots.
+            f_y = self.f_curr_y + n_delta_y  # New position is not saved, this may interfere with resuming plots.
             self.plotSegmentWithVelocity(f_x, f_y, 0, 0)
 
     def updateVCharts(self, v1, v2, v_total):

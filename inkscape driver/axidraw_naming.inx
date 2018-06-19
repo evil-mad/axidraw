@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+<_name>AxiDraw Naming</_name>
+<id>command.evilmadscientist.axidraw_naming</id>
+<dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
+<dependency type="executable" location="extensions">axidraw_naming.py</dependency>
+<dependency type="executable" location="extensions">inkex.py</dependency>
+
+
+<param name="mode" type="notebook" >
+<page name="read-name" _gui-text="Read AxiDraw Name">
+
+<_param name="read1" type="description" appearance="header">
+Read AxiDraw Nickname
+</_param>
+
+<_param name="read2" type="description" >
+Click "Apply" to read the Nickname (if any) currently assigned
+to the AxiDraw connected via USB. 
+</_param>
+
+</page>
+
+
+<page name="write-name" _gui-text="Write AxiDraw Name">
+
+<_param name="write1" type="description" appearance="header">
+Write AxiDraw Nickname
+</_param>
+
+<param indent="1" name="nickname" type="string" max_length="16" _gui-text="Nickname:">East</param>
+
+<_param name="write2" type="description" >
+Click "Apply" to assign the Nickname above to the AxiDraw
+connected via USB. After the name change, the AxiDraw will
+reboot to its power-on state.
+</_param>
+
+
+</page>
+
+
+<page name="about" _gui-text="About">
+
+<_param name="aboutpage" type="description" xml:space="preserve">
+This extension allows you to assign "nickname" (a digital
+name tag) to a given AxiDraw, or to read out that name. 
+
+Nicknames are not required, but can be helpful if you have
+more than one AxiDraw connected: You can specify which
+AxiDraw to plot to when using AxiDraw Control.
+
+AxiDraw Naming requires firmware version 2.5.4 or newer. 
+You can use the "Version" tab in AxiDraw Control to check
+which firmware version is currently installed.
+
+Firmware update instructions may be found in the AxiDraw
+documentation at:  axidraw.com/docs
+</_param>
+
+
+</page>
+
+
+</param>
+
+
+
+
+<effect needs-live-preview="false" needs-document="no">
+<object-type>all</object-type>
+<effects-menu>
+<submenu _name="AxiDraw Utilities"/>
+</effects-menu>
+</effect>
+
+<script>
+<command reldir="extensions" interpreter="python">axidraw_naming.py</command>
+</script>
+
+</inkscape-extension>
