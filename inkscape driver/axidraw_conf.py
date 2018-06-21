@@ -61,7 +61,7 @@ copiesOfDocument = 1  # Copies to plot while in Plot mode
 copiesOfLayer = 1     # Copies to plot while in Layer mode
 copyDelay = 15        # Seconds to delay between copies when plotting multiple copies.
 
-resolution = 1        # Resolution: Either 1 for (coarser) low resolution, or value 2 for (smoother, slightly slower) high resolution mode.
+resolution = 1        # Resolution: Either 1 for (smoother, slightly slower) high resolution mode or 2 (coarser) low resolution
 
 # Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
 # Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
