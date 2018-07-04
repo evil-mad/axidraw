@@ -36,10 +36,10 @@ sys.path.append(libpath)
 sys.path.append('lib')
 
 import cubicsuperpath
-import ebb_motion  # Requires v 0.13 in plotink
-import ebb_serial  # Requires v 0.9 in plotink:     https://github.com/evil-mad/plotink
+import ebb_motion  # Requires v 0.15 in plotink     https://github.com/evil-mad/plotink
+import ebb_serial  # Requires v 0.11 in plotink
 import inkex
-import plot_utils  # Requires v 0.9 in plotink
+import plot_utils  # Requires v 0.10 in plotink
 import simplepath
 import simplestyle
 from lxml import etree
@@ -2502,8 +2502,9 @@ class AxiDrawClass(inkex.Effect):
             # This function may be passed a port name to open (and later close).
             tempstring = str(self.options.port)
             self.options.port = tempstring.strip('\"')
-            # inkex.errormsg( 'About to test serial port: ' + str(self.options.port) )
-            self.serial_port = ebb_serial.testPort(self.options.port)
+            # inkex.errormsg( 'About to test serial port: ' + str(self.options.port) ) # debug message
+            the_port = ebb_serial.find_named_ebb(self.options.port)
+            self.serial_port = ebb_serial.testPort(the_port)
             self.options.port = None  # Clear this input, to ensure that we close the port later.
         else:
             # This function may be passed a true serial port object,
