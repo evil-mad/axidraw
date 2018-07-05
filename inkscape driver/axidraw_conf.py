@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.7.4, dated January 30, 2017.
+# Version 1.8.0, dated July 4, 2018.
 #
 # Copyright 2018 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -18,7 +18,7 @@ We encourage you to freely tune these values as needed to match the
 If you are operating the AxiDraw from within Inkscape (either within the
  application from the Extensions menu or from the command line), please
  set your preferences within Inkscape, using the AxiDraw Control dialog.
- (The values listed here are ignored when called via Inkscape.)
+ (Most values listed here are ignored when called via Inkscape.)
 
 If you are operating the AxiDraw in "standalone" mode, that is, outside
  of the Inkscape context, then please set your preferences here or via
@@ -67,7 +67,10 @@ resolution = 1        # Resolution: Either 1 for (smoother, slightly slower) hig
 # Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
 # not along the XY axes of the machine. This parameter chooses 8X or 16X microstepping on the motors.
 
-model = 1
+model = 1             # AxiDraw Model. 1: AxiDraw V2 or V3, default. 2: AxiDraw V3/A3. 3: AxiDraw V3 XLX
+
+port = None           # Serial port (or EBB name) to use. 
+
 
 '''
 Additional user-adjustable control parameters:

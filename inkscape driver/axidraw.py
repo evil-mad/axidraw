@@ -90,7 +90,9 @@ class AxiDrawClass(inkex.Effect):
         self.OptionParser.add_option("--model", action="store", type="int", dest="model", default=axidraw_conf.model, help="AxiDraw Model Type")
         self.OptionParser.add_option("--smoothness", action="store", type="float", dest="smoothness", default=axidraw_conf.smoothness, help="Smoothness of curves")
         self.OptionParser.add_option("--cornering", action="store", type="float", dest="cornering", default=axidraw_conf.cornering, help="Cornering speed factor")
-        self.OptionParser.add_option("--port", action="store", type="string", dest="port", default=None, help="Serial port to use")
+        self.OptionParser.add_option("--portOption", action="store", type="int", dest="port_option", default=None, help="Port use option specified")
+        self.OptionParser.add_option("--port", action="store", type="string", dest="port", default=axidraw_conf.port, help="Serial port or EBB name to use")
+
 
         # Set default values of certain parameters
         self.svg_layer_old = int(0)
@@ -242,11 +244,6 @@ class AxiDrawClass(inkex.Effect):
 
         if not skip_serial:
             self.serialConnect()
-            # if self.serial_port is None:
-            #    self.serialConnect()    # Give a second try, before giving up. :)
-            if self.serial_port is None:
-                inkex.errormsg(gettext.gettext("Failed to connect to AxiDraw. :("))
-                return
 
         self.svg = self.document.getroot()
         self.ReadWCBdata(self.svg)
@@ -2496,22 +2493,35 @@ class AxiDrawClass(inkex.Effect):
                     self.penLower()
 
     def serialConnect(self):
-        if self.options.port is None:
+        named_port = None
+        if self.options.port_option is not None:
+            if self.options.port_option == 1: # port_option with value "1" specifies to use first AxiDraw found.
+                self.options.port = None
+        if not self.options.port:
             self.serial_port = ebb_serial.openPort()
         elif str(type(self.options.port)) == "<type 'str'>" or str(type(self.options.port)) == "<type 'unicode'>":
             # This function may be passed a port name to open (and later close).
             tempstring = str(self.options.port)
             self.options.port = tempstring.strip('\"')
+            named_port = self.options.port
             # inkex.errormsg( 'About to test serial port: ' + str(self.options.port) ) # debug message
             the_port = ebb_serial.find_named_ebb(self.options.port)
             self.serial_port = ebb_serial.testPort(the_port)
             self.options.port = None  # Clear this input, to ensure that we close the port later.
         else:
-            # This function may be passed a true serial port object,
-            # such as an instance of serial.serialposix.Serial.
+            # This function may be passed a serial port object reference;
+            # an instance of serial.serialposix.Serial.
             # In that case, we should interact with that given
-            # port, and leave it open at the end.
+            # port object, and leave it open at the end.
             self.serial_port = self.options.port
+        if self.serial_port is None:
+            if not named_port:
+                inkex.errormsg(gettext.gettext("Failed to connect to AxiDraw. :("))
+            else:
+                inkex.errormsg(gettext.gettext('Failed to connect to AxiDraw "' + named_port + '"'))
+            return
+
+
 
     def EnableMotors(self):
         """

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-<_name>AxiDraw Control</_name>
-<id>command.evilmadscientist.axidraw</id>
+<_name>AxiDraw Control Plus</_name>
+<id>command.evilmadscientist.axidraw_plus</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw.py</dependency>
 <dependency type="executable" location="extensions">inkex.py</dependency>
@@ -188,19 +188,20 @@ You can resume directly where you paused, or after using the Return to Home Corn
 <_option value="2">AxiDraw V3/A3</_option>
 <_option value="3">AxiDraw V3 XLX</_option>
 </param>
+<param name="portOption" type="optiongroup" appearance="minimal" indent="4" _gui-text="Plot to:">
+<_option value="1">First AxiDraw found</_option>
+<_option value="2">An AxiDraw named below</_option>
+</param>
+<param indent="6" name="port" type="string" _gui-text="Name of the AxiDraw:"></param>
 
 <_param name="instructions_general2" type="description" indent="1" xml:space="preserve">
-AxiDraw Control v 1.8.0  	2018-06-19
+AxiDraw Control Plus v 1.8.0  	2018-06-19
+
+Copyright 2018 Evil Mad Science LLC
+Documentation is online at: axidraw.com/docs
 
 Press 'Apply' to query the firmware version;
 EBB firmware 2.5.4 or newer is recommended.
-
-
-Copyright 2018 Evil Mad Science LLC
-
-Documentation is online at: axidraw.com/docs
-Issue tracker is online at: axidraw.com/dev
-
 
 Note: Inkscape's "Cancel" button does not work while plotting;
 Press the physical pause button on the left side of the machine.
