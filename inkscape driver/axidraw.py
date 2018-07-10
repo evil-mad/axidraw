@@ -93,7 +93,6 @@ class AxiDrawClass(inkex.Effect):
         self.OptionParser.add_option("--portOption", action="store", type="int", dest="port_option", default=None, help="Port use option specified")
         self.OptionParser.add_option("--port", action="store", type="string", dest="port", default=axidraw_conf.port, help="Serial port or EBB name to use")
 
-
         # Set default values of certain parameters
         self.svg_layer_old = int(0)
         self.svg_node_count_old = int(0)
@@ -114,6 +113,15 @@ class AxiDrawClass(inkex.Effect):
         self.spew_debugdata = False
 
         self.start_time = time.time()
+
+        try:
+            self.Secondary
+        except AttributeError:
+            self.Secondary = False
+
+        self.text_out = '' # Text log for basic communication messages
+        self.error_out = '' # Text log for significant errors
+        
         self.pt_estimate = 0.0  # plot time estimate, milliseconds
 
         self.doc_units = "in"
@@ -225,7 +233,7 @@ class AxiDrawClass(inkex.Effect):
             return
         if self.options.mode == "version":
             # Return the version of _this python script_.
-            inkex.errormsg(gettext.gettext(self.version_string))
+            self.text_log(self.version_string)
             return
         if self.options.mode == "manual":
             if self.options.manual_type == "none":
@@ -236,7 +244,7 @@ class AxiDrawClass(inkex.Effect):
                     self.svg.remove(node)
                 for node in self.svg.xpath('//svg:eggbot', namespaces=inkex.NSS):
                     self.svg.remove(node)
-                inkex.errormsg(gettext.gettext("All AxiDraw data has been removed from this SVG file."))
+                self.text_log(gettext.gettext("All AxiDraw data has been removed from this SVG file."))
                 return
         if self.options.mode == "fwversion":
             self.options.mode = "manual"  # Use "manual" command mechanism to handle fwversion request.
@@ -294,7 +302,7 @@ class AxiDrawClass(inkex.Effect):
                 self.plotDocument()
             elif self.options.resume_type == "justGoHome":
                 if not self.svg_data_read or (self.svg_last_known_pos_x_old == 0 and self.svg_last_known_pos_y_old == 0):
-                    inkex.errormsg(gettext.gettext("No resume data found; unable to return to home position."))
+                    self.text_log(gettext.gettext("No resume data found; unable to return to home position."))
                 else:
                     self.plotDocument()
                     self.svg_node_count = self.svg_node_count_old  # Write old values back to file, to resume later.
@@ -305,7 +313,7 @@ class AxiDrawClass(inkex.Effect):
                     self.svg_layer = self.svg_layer_old
                     self.svg_rand_seed = self.svg_rand_seed_old
             else:
-                inkex.errormsg(gettext.gettext("No in-progress plot data found in file."))
+                self.text_log(gettext.gettext("No in-progress plot data found in file."))
 
         elif self.options.mode == "layers":
             self.copies_to_plot = self.options.layer_copies
@@ -374,7 +382,7 @@ class AxiDrawClass(inkex.Effect):
                 self.f_curr_y = self.svg_last_known_pos_y_old + axidraw_conf.StartPosY
                 self.svg_rand_seed = self.svg_rand_seed_old  # Use old random seed value
                 if self.spew_debugdata:
-                    inkex.errormsg('Entering resume mode at layer:  ' + str(self.svg_layer))
+                    self.text_log('Entering resume mode at layer:  ' + str(self.svg_layer))
 
     def ReadWCBdata(self, svg_to_check):
         # Read plot progress data, stored in a custom "WCB" XML element
@@ -436,7 +444,7 @@ class AxiDrawClass(inkex.Effect):
         """
 
         if self.options.preview_only:
-            inkex.errormsg('Command unavailable while in preview mode.')
+            self.text_log('Command unavailable while in preview mode.')
             return
 
         if self.serial_port is None:
@@ -459,7 +467,7 @@ class AxiDrawClass(inkex.Effect):
 
         # First: Commands that require serial but not power:
         if self.options.preview_only:
-            inkex.errormsg('Command unavailable while in preview mode.')
+            self.text_log('Command unavailable while in preview mode.')
             return
 
         if self.serial_port is None:
@@ -467,35 +475,45 @@ class AxiDrawClass(inkex.Effect):
 
         if self.options.manual_type == "fwversion":
             ebb_version_string = ebb_serial.queryVersion(self.serial_port)  # Full string, human readable
-            inkex.errormsg('I asked the EBB for its version info, and it replied:\n ' + ebb_version_string)
-            inkex.errormsg('Additional system information:')
-            inkex.errormsg(gettext.gettext(self.version_string))
-            inkex.errormsg(sys.version)
+            self.text_log('I asked the EBB for its version info, and it replied:\n ' + ebb_version_string)
+            self.text_log('Additional system information:')
+            self.text_log(gettext.gettext(self.version_string))
+            self.text_log(sys.version)
             return
 
         if self.options.manual_type == "bootload":
-            ebb_serial.bootload(self.serial_port)
-            inkex.errormsg(gettext.gettext("Entering bootloader mode for firmware programming.\n" +
+            success = ebb_serial.bootload(self.serial_port)
+            if success == True:
+                self.text_log(gettext.gettext("Entering bootloader mode for firmware programming.\n" +
                                            "To resume normal operation, you will need to first\n" +
                                            "disconnect the AxiDraw from both USB and power."))
+                ebb_serial.closePort(self.serial_port) # Manually close port
+                self.serial_port = None                # Indicate that serial port is closed.
+            else:
+                self.text_log('Failed while trying to enter bootloader.')
             return
 
         if self.options.manual_type == "read-name":
             nameString = ebb_serial.query_nickname(self.serial_port)
             if nameString is None:
-                inkex.errormsg(gettext.gettext("Error; unable to read nickname.\n"))
+                self.error_log(gettext.gettext("Error; unable to read nickname.\n"))
             else:
-                inkex.errormsg(nameString)
+                self.text_log(nameString)
             return
+            
         if self.options.manual_type == "write-name":
-            renamed = ebb_serial.write_nickname(self.serial_port, self.options.setup_type)
-            if renamed is True:
-	            inkex.errormsg('Nickname written. Rebooting EBB.')
+            version_status = ebb_serial.min_version(port_name, "2.5.5")
+            if version_status:
+                renamed = ebb_serial.write_nickname(self.serial_port, self.options.setup_type)
+                if renamed is True:
+                    self.text_log('Nickname written. Rebooting EBB.')
+                else:
+                    self.error_log('Error encountered while writing nickname.')
+                ebb_serial.reboot(self.serial_port)    # Reboot required after writing nickname
+                ebb_serial.closePort(self.serial_port) # Manually close port
+                self.serial_port = None                # Indicate that serial port is closed.
             else:
-                inkex.errormsg('Error encountered while writing nickname.')
-            ebb_serial.reboot(self.serial_port)    # Reboot required after writing nickname
-            ebb_serial.closePort(self.serial_port) # Manually close port
-            self.serial_port = None                # Indicate that serial port is closed.
+                self.error_log("AxiDraw naming requires firmware version 2.5.5 or higher.")
             return
             
         # Next: Commands that require both power and serial connectivity:
@@ -544,12 +562,12 @@ class AxiDrawClass(inkex.Effect):
 
         if not self.getDocProps():
             # Error: This document appears to have inappropriate (or missing) dimensions.
-            inkex.errormsg(gettext.gettext('This document does not have valid dimensions.\r'))
-            inkex.errormsg(gettext.gettext('The page size must be in either millimeters (mm) or inches (in).\r\r'))
-            inkex.errormsg(gettext.gettext('Consider starting with the Letter landscape or '))
-            inkex.errormsg(gettext.gettext('the A4 landscape template.\r\r'))
-            inkex.errormsg(gettext.gettext('The page size may also be set in Inkscape,\r'))
-            inkex.errormsg(gettext.gettext('using File > Document Properties.'))
+            self.text_log(gettext.gettext('This document does not have valid dimensions.\r'))
+            self.text_log(gettext.gettext('The page size must be in either millimeters (mm) or inches (in).\r\r'))
+            self.text_log(gettext.gettext('Consider starting with the Letter landscape or '))
+            self.text_log(gettext.gettext('the A4 landscape template.\r\r'))
+            self.text_log(gettext.gettext('The page size may also be set in Inkscape,\r'))
+            self.text_log(gettext.gettext('using File > Document Properties.'))
             return
 
         user_units_width = plot_utils.unitsToUserUnits("1in")
@@ -656,7 +674,7 @@ class AxiDrawClass(inkex.Effect):
                     self.svg_rand_seed = 0
 
             if self.warn_out_of_bounds:
-                inkex.errormsg(gettext.gettext('Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help.'))
+                self.text_log(gettext.gettext('Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help.'))
 
             if self.options.preview_only:
                 # Remove old preview layers, whenever preview mode is enabled
@@ -766,9 +784,9 @@ class AxiDrawClass(inkex.Effect):
                         m = int(m)
                         s = int(s)
                         if h > 0:
-                            inkex.errormsg("Estimated print time: {0:d}:{1:02d}:{2:02d} (Hours, minutes, seconds)".format(h, m, s))
+                            self.text_log("Estimated print time: {0:d}:{1:02d}:{2:02d} (Hours, minutes, seconds)".format(h, m, s))
                         else:
-                            inkex.errormsg("Estimated print time: {0:02d}:{1:02d} (minutes, seconds)".format(m, s))
+                            self.text_log("Estimated print time: {0:02d}:{1:02d} (minutes, seconds)".format(m, s))
 
                     elapsed_time = time.time() - self.start_time
                     m, s = divmod(elapsed_time, 60)
@@ -779,17 +797,17 @@ class AxiDrawClass(inkex.Effect):
                     down_dist = 0.0254 * self.pen_down_travel_inches
                     tot_dist = down_dist + (0.0254 * self.pen_up_travel_inches)
                     if self.options.preview_only:
-                        inkex.errormsg("Length of path to draw: {0:1.2f} m.".format(down_dist))
-                        inkex.errormsg("Total movement distance: {0:1.2f} m.".format(tot_dist))
+                        self.text_log("Length of path to draw: {0:1.2f} m.".format(down_dist))
+                        self.text_log("Total movement distance: {0:1.2f} m.".format(tot_dist))
                         if self.options.preview_type > 0:
-                            inkex.errormsg("This estimate took: {0:d}:{1:02d}:{2:02d} (Hours, minutes, seconds)".format(h, m, s))
+                            self.text_log("This estimate took: {0:d}:{1:02d}:{2:02d} (Hours, minutes, seconds)".format(h, m, s))
                     else:
                         if h > 0:
-                            inkex.errormsg("Elapsed time: {0:d}:{1:02d}:{2:02d} (Hours, minutes, seconds)".format(h, m, s))
+                            self.text_log("Elapsed time: {0:d}:{1:02d}:{2:02d} (Hours, minutes, seconds)".format(h, m, s))
                         else:
-                            inkex.errormsg("Elapsed time: {0:02d}:{1:02d} (minutes, seconds)".format(m, s))
-                        inkex.errormsg("Length of path drawn: {0:1.2f} m.".format(down_dist))
-                        inkex.errormsg("Total distance moved: {0:1.2f} m.".format(tot_dist))
+                            self.text_log("Elapsed time: {0:02d}:{1:02d} (minutes, seconds)".format(m, s))
+                        self.text_log("Length of path drawn: {0:1.2f} m.".format(down_dist))
+                        self.text_log("Total distance moved: {0:1.2f} m.".format(tot_dist))
 
         finally:
             # We may have had an exception and lost the serial port...
@@ -1217,11 +1235,11 @@ class AxiDrawClass(inkex.Effect):
                             temp_text = '.'
                         else:
                             temp_text = ', found in a \nlayer named: "' + self.s_current_layer_name + '" .'
-                        inkex.errormsg(gettext.gettext('Note: This file contains some plain text' + temp_text))
-                        inkex.errormsg(gettext.gettext('Please convert your text into paths before drawing,'))
-                        inkex.errormsg(gettext.gettext('using Path > Object to Path. '))
-                        inkex.errormsg(gettext.gettext('You can also create new text by using Hershey Text,'))
-                        inkex.errormsg(gettext.gettext('located in the menu at Extensions > Render.'))
+                        self.text_log(gettext.gettext('Note: This file contains some plain text' + temp_text))
+                        self.text_log(gettext.gettext('Please convert your text into paths before drawing,'))
+                        self.text_log(gettext.gettext('using Path > Object to Path. '))
+                        self.text_log(gettext.gettext('You can also create new text by using Hershey Text,'))
+                        self.text_log(gettext.gettext('located in the menu at Extensions > Render.'))
                         self.warnings['text'] = 1
                     continue
                 elif node.tag == inkex.addNS('image', 'svg') or node.tag == 'image':
@@ -1230,10 +1248,10 @@ class AxiDrawClass(inkex.Effect):
                             temp_text = ''
                         else:
                             temp_text = ' in layer "' + self.s_current_layer_name + '"'
-                        inkex.errormsg(gettext.gettext('Warning:' + temp_text))
-                        inkex.errormsg(gettext.gettext('unable to draw bitmap images; '))
-                        inkex.errormsg(gettext.gettext('Please convert images to line art before drawing. '))
-                        inkex.errormsg(gettext.gettext('Consider using the Path > Trace bitmap tool. '))
+                        self.text_log(gettext.gettext('Warning:' + temp_text))
+                        self.text_log(gettext.gettext('unable to draw bitmap images; '))
+                        self.text_log(gettext.gettext('Please convert images to line art before drawing. '))
+                        self.text_log(gettext.gettext('Consider using the Path > Trace bitmap tool. '))
                         self.warnings['image'] = 1
                     continue
                 elif node.tag == inkex.addNS('pattern', 'svg') or node.tag == 'pattern':
@@ -1268,8 +1286,8 @@ class AxiDrawClass(inkex.Effect):
                         else:
                             layer_description = 'in layer "' + self.s_current_layer_name + '".'
 
-                        inkex.errormsg('Warning: unable to plot <' + str(t[-1]) + '> object')
-                        inkex.errormsg(layer_description + 'Please convert it to a path first.')
+                        self.text_log('Warning: unable to plot <' + str(t[-1]) + '> object')
+                        self.text_log(layer_description + 'Please convert it to a path first.')
                         self.warnings[str(node.tag)] = 1
                     continue
 
@@ -1431,10 +1449,10 @@ class AxiDrawClass(inkex.Effect):
         d = path.get('d')
 
         if self.spew_debugdata:
-            inkex.errormsg('plotPath()\n')
-            inkex.errormsg('path d: ' + d)
+            self.text_log('plotPath()\n')
+            self.text_log('path d: ' + d)
             if len(simplepath.parsePath(d)) == 0:
-                inkex.errormsg('path length is zero, will not be plotting this path.')
+                self.text_log('path length is zero, will not be plotting this path.')
 
         if len(d) > 3000:  # Raise pen when computing extremely long paths.
             if not self.pen_up:  # skip if pen is already up
@@ -1501,7 +1519,7 @@ class AxiDrawClass(inkex.Effect):
         spew_trajectory_debug_data = self.spew_debugdata  # Suggested values: False or self.spew_debugdata
 
         if spew_trajectory_debug_data:
-            inkex.errormsg('\nPlanTrajectory()\n')
+            self.text_log('\nPlanTrajectory()\n')
 
         if self.b_stopped:
             return
@@ -1520,8 +1538,8 @@ class AxiDrawClass(inkex.Effect):
         # Handle simple segments (lines) that do not require any complex planning:
         if len(input_path) < 3:
             if spew_trajectory_debug_data:
-                inkex.errormsg('Drawing straight line, not a curve.')  # This is the "SHORTPATH ESCAPE"
-                inkex.errormsg('plotSegmentWithVelocity({}, {}, {}, {})'.format(xy[0], xy[1], 0, 0))
+                self.text_log('Drawing straight line, not a curve.')  # This is the "SHORTPATH ESCAPE"
+                self.text_log('plotSegmentWithVelocity({}, {}, {}, {})'.format(xy[0], xy[1], 0, 0))
 
             self.plotSegmentWithVelocity(xy[0], xy[1], 0, 0)
             return
@@ -1530,17 +1548,17 @@ class AxiDrawClass(inkex.Effect):
         traj_length = len(input_path)
 
         if spew_trajectory_debug_data:
-            inkex.errormsg('Input path to PlanTrajectory: ')
+            self.text_log('Input path to PlanTrajectory: ')
             for xy in input_path:
-                inkex.errormsg('x: {0:1.3f},  y: {1:1.3f}'.format(xy[0], xy[1]))
-            inkex.errormsg('\ntraj_length: ' + str(traj_length))
+                self.text_log('x: {0:1.3f},  y: {1:1.3f}'.format(xy[0], xy[1]))
+            self.text_log('\ntraj_length: ' + str(traj_length))
 
         speed_limit = self.pen_down_speed  # speed_limit is maximum travel rate, in inches/second, in the XY  plane.
         if self.pen_up:
             speed_limit = self.pen_up_speed  # Unlikely case, but handle it anyway...
 
         if spew_trajectory_debug_data:
-            inkex.errormsg('\nspeed_limit (PlanTrajectory) ' + str(speed_limit) + ' inches per second')
+            self.text_log('\nspeed_limit (PlanTrajectory) ' + str(speed_limit) + ' inches per second')
 
         traj_dists = array('f')  # float, Segment length (distance) when arriving at the junction
         traj_vels = array('f')  # float, Velocity (_speed_, really) when arriving at the junction
@@ -1576,35 +1594,35 @@ class AxiDrawClass(inkex.Effect):
                 trimmed_path.append([tmp_x, tmp_y])  # Selected, usable portions of input_path.
 
                 if spew_trajectory_debug_data:
-                    inkex.errormsg('\nSegment: input_path[{0:1.0f}] -> input_path[{1:1.0f}]'.format(last_index, i))
-                    inkex.errormsg('Destination: x: {0:1.3f},  y: {1:1.3f}. Move distance: {2:1.3f}'.format(tmp_x, tmp_y, tmp_dist))
+                    self.text_log('\nSegment: input_path[{0:1.0f}] -> input_path[{1:1.0f}]'.format(last_index, i))
+                    self.text_log('Destination: x: {0:1.3f},  y: {1:1.3f}. Move distance: {2:1.3f}'.format(tmp_x, tmp_y, tmp_dist))
 
                 last_index = i
             elif spew_trajectory_debug_data:
-                inkex.errormsg('\nSegment: input_path[{0:1.0f}] -> input_path[{1:1.0f}] is zero (or near zero); skipping!'.format(last_index, i))
-                inkex.errormsg('  x: {0:1.3f},  y: {1:1.3f}, distance: {2:1.3f}'.format(input_path[i][0], input_path[i][1], tmp_dist))
+                self.text_log('\nSegment: input_path[{0:1.0f}] -> input_path[{1:1.0f}] is zero (or near zero); skipping!'.format(last_index, i))
+                self.text_log('  x: {0:1.3f},  y: {1:1.3f}, distance: {2:1.3f}'.format(input_path[i][0], input_path[i][1], tmp_dist))
 
         traj_length = len(traj_dists)
 
         # Handle zero-segment plot:
         if traj_length < 2:
             if spew_trajectory_debug_data:
-                inkex.errormsg('\nSkipped a path element that did not have any well-defined segments.')
+                self.text_log('\nSkipped a path element that did not have any well-defined segments.')
             return
 
         # Handle simple segments (lines) that do not require any complex planning (after removing zero-length elements):
         if traj_length < 3:
             if spew_trajectory_debug_data:
-                inkex.errormsg('\nDrawing straight line, not a curve.')
+                self.text_log('\nDrawing straight line, not a curve.')
             self.plotSegmentWithVelocity(trimmed_path[0][0], trimmed_path[0][1], 0, 0)
             return
 
         if spew_trajectory_debug_data:
-            inkex.errormsg('\nAfter removing any zero-length segments, we are left with: ')
-            inkex.errormsg('traj_dists[0]: {0:1.3f}'.format(traj_dists[0]))
+            self.text_log('\nAfter removing any zero-length segments, we are left with: ')
+            self.text_log('traj_dists[0]: {0:1.3f}'.format(traj_dists[0]))
             for i in xrange(0, len(trimmed_path)):
-                inkex.errormsg('i: {0:1.0f}, x: {1:1.3f},  y: {2:1.3f}, distance: {3:1.3f}'.format(i, trimmed_path[i][0], trimmed_path[i][1], traj_dists[i + 1]))
-                inkex.errormsg('  And... traj_dists[i+1]: {0:1.3f}'.format(traj_dists[i + 1]))
+                self.text_log('i: {0:1.0f}, x: {1:1.3f},  y: {2:1.3f}, distance: {3:1.3f}'.format(i, trimmed_path[i][0], trimmed_path[i][1], traj_dists[i + 1]))
+                self.text_log('  And... traj_dists[i+1]: {0:1.3f}'.format(traj_dists[i + 1]))
 
         # Acceleration/deceleration rates:
         if self.pen_up:
@@ -1620,10 +1638,10 @@ class AxiDrawClass(inkex.Effect):
         accel_dist = 0.5 * accel_rate * t_max * t_max
 
         if spew_trajectory_debug_data:
-            inkex.errormsg('\nspeed_limit: {0:1.3f}'.format(speed_limit))
-            inkex.errormsg('t_max: {0:1.3f}'.format(t_max))
-            inkex.errormsg('accel_rate: {0:1.3f}'.format(accel_rate))
-            inkex.errormsg('accel_dist: {0:1.3f}'.format(accel_dist))
+            self.text_log('\nspeed_limit: {0:1.3f}'.format(speed_limit))
+            self.text_log('t_max: {0:1.3f}'.format(t_max))
+            self.text_log('accel_rate: {0:1.3f}'.format(accel_rate))
+            self.text_log('accel_dist: {0:1.3f}'.format(accel_dist))
             cosine_print_array = array('f')
 
         '''
@@ -1713,7 +1731,7 @@ class AxiDrawClass(inkex.Effect):
                 # accelerate to maximum speed or come to a full stop before this vertex.
                 vcurrent_max = speed_limit
                 if spew_trajectory_debug_data:
-                    inkex.errormsg('Speed Limit on vel : ' + str(i))
+                    self.text_log('Speed Limit on vel : ' + str(i))
             else:
                 # There is _not necessarily_ enough distance in the segment for us to either
                 # accelerate to maximum speed or come to a full stop before this vertex.
@@ -1724,7 +1742,7 @@ class AxiDrawClass(inkex.Effect):
                     vcurrent_max = speed_limit
 
                 if spew_trajectory_debug_data:
-                    inkex.errormsg('traj_vels I: {0:1.3f}'.format(vcurrent_max))
+                    self.text_log('traj_vels I: {0:1.3f}'.format(vcurrent_max))
 
             '''
             Velocity at vertex: Part II 
@@ -1759,14 +1777,14 @@ class AxiDrawClass(inkex.Effect):
         traj_vels.append(0.0)  # Add zero velocity, for final vertex.
 
         if spew_trajectory_debug_data:
-            inkex.errormsg(' ')
+            self.text_log(' ')
             for dist in cosine_print_array:
-                inkex.errormsg('Cosine Factor: {0:1.3f}'.format(dist))
-            inkex.errormsg(' ')
+                self.text_log('Cosine Factor: {0:1.3f}'.format(dist))
+            self.text_log(' ')
 
             for dist in traj_vels:
-                inkex.errormsg('traj_vels II: {0:1.3f}'.format(dist))
-            inkex.errormsg(' ')
+                self.text_log('traj_vels II: {0:1.3f}'.format(dist))
+            self.text_log(' ')
 
         '''            
         Velocity at vertex: Part III
@@ -1789,7 +1807,7 @@ class AxiDrawClass(inkex.Effect):
                 v_init_max = plot_utils.vInitial_VF_A_Dx(v_final, -accel_rate, seg_length)
 
                 if spew_trajectory_debug_data:
-                    inkex.errormsg('VInit Calc: (v_final = {0:1.3f}, accel_rate = {1:1.3f}, seg_length = {2:1.3f}) '
+                    self.text_log('VInit Calc: (v_final = {0:1.3f}, accel_rate = {1:1.3f}, seg_length = {2:1.3f}) '
                                    .format(v_final, accel_rate, seg_length))
 
                 if v_init_max < v_initial:
@@ -1798,17 +1816,17 @@ class AxiDrawClass(inkex.Effect):
 
         if spew_trajectory_debug_data:
             for dist in traj_vels:
-                inkex.errormsg('traj_vels III: {0:1.3f}'.format(dist))
-            inkex.errormsg(' ')
+                self.text_log('traj_vels III: {0:1.3f}'.format(dist))
+            self.text_log(' ')
 
         #         if spew_trajectory_debug_data:
-        #             inkex.errormsg( 'List results for this input path:')
+        #             self.text_log( 'List results for this input path:')
         #             for i in xrange(0, traj_length-1):
-        #                 inkex.errormsg( 'i: %1.0f' %(i))
-        #                 inkex.errormsg( 'x: %1.3f,  y: %1.3f' %(trimmed_path[i][0],trimmed_path[i][1]))
-        #                 inkex.errormsg( 'distance: %1.3f' %(traj_dists[i+1]))
-        #                 inkex.errormsg( 'traj_vels[i]: %1.3f' %(traj_vels[i]))
-        #                 inkex.errormsg( 'traj_vels[i+1]: %1.3f\n' %(traj_vels[i+1]))
+        #                 self.text_log( 'i: %1.0f' %(i))
+        #                 self.text_log( 'x: %1.3f,  y: %1.3f' %(trimmed_path[i][0],trimmed_path[i][1]))
+        #                 self.text_log( 'distance: %1.3f' %(traj_dists[i+1]))
+        #                 self.text_log( 'traj_vels[i]: %1.3f' %(traj_vels[i]))
+        #                 self.text_log( 'traj_vels[i+1]: %1.3f\n' %(traj_vels[i+1]))
 
         for i in xrange(0, traj_length - 1):
             self.plotSegmentWithVelocity(trimmed_path[i][0], trimmed_path[i][1], traj_vels[i], traj_vels[i + 1])
@@ -1853,7 +1871,7 @@ class AxiDrawClass(inkex.Effect):
         #         spew_segment_debug_data = True
 
         if spew_segment_debug_data:
-            inkex.errormsg('plotSegmentWithVelocity({0}, {1}, {2}, {3})'.format(x_dest, y_dest, v_i, v_f))
+            self.text_log('plotSegmentWithVelocity({0}, {1}, {2}, {3})'.format(x_dest, y_dest, v_i, v_f))
             if self.resume_mode or self.b_stopped:
                 spew_text = '\nSkipping '
             else:
@@ -1866,11 +1884,11 @@ class AxiDrawClass(inkex.Effect):
             spew_text += ' from (x = {0:1.3f}, y = {1:1.3f})'.format(self.f_curr_x, self.f_curr_y)
             spew_text += ' to (x = {0:1.3f}, y = {1:1.3f})\n'.format(x_dest, y_dest)
             spew_text += '    w/ v_i = {0:1.2f}, v_f = {1:1.2f} '.format(v_i, v_f)
-            inkex.errormsg(spew_text)
+            self.text_log(spew_text)
             if self.resume_mode:
-                inkex.errormsg(' -> NOTE: ResumeMode is active')
+                self.text_log(' -> NOTE: ResumeMode is active')
             if self.b_stopped:
-                inkex.errormsg(' -> NOTE: Stopped by button press.')
+                self.text_log(' -> NOTE: Stopped by button press.')
 
         constant_vel_mode = False
         if self.options.const_speed and not self.pen_up:
@@ -1922,17 +1940,17 @@ class AxiDrawClass(inkex.Effect):
         segment_length_inches = plot_utils.distance(delta_x_inches_rounded, delta_y_inches_rounded)
 
         if spew_segment_debug_data:
-            inkex.errormsg('\ndelta_x_inches Requested: ' + str(delta_x_inches))
-            inkex.errormsg('delta_y_inches Requested: ' + str(delta_y_inches))
-            inkex.errormsg('motor_steps1: ' + str(motor_steps1))
-            inkex.errormsg('motor_steps2: ' + str(motor_steps2))
-            inkex.errormsg('\ndelta_x_inches to be moved: ' + str(delta_x_inches_rounded))
-            inkex.errormsg('delta_y_inches to be moved: ' + str(delta_y_inches_rounded))
-            inkex.errormsg('segment_length_inches: ' + str(segment_length_inches))
+            self.text_log('\ndelta_x_inches Requested: ' + str(delta_x_inches))
+            self.text_log('delta_y_inches Requested: ' + str(delta_y_inches))
+            self.text_log('motor_steps1: ' + str(motor_steps1))
+            self.text_log('motor_steps2: ' + str(motor_steps2))
+            self.text_log('\ndelta_x_inches to be moved: ' + str(delta_x_inches_rounded))
+            self.text_log('delta_y_inches to be moved: ' + str(delta_y_inches_rounded))
+            self.text_log('segment_length_inches: ' + str(segment_length_inches))
             if not self.pen_up:
-                inkex.errormsg('\nBefore speedlimit check::')
-                inkex.errormsg('vi_inches_per_sec: {0}'.format(vi_inches_per_sec))
-                inkex.errormsg('vf_inches_per_sec: {0}\n'.format(vf_inches_per_sec))
+                self.text_log('\nBefore speedlimit check::')
+                self.text_log('vi_inches_per_sec: {0}'.format(vi_inches_per_sec))
+                self.text_log('vf_inches_per_sec: {0}\n'.format(vf_inches_per_sec))
 
         if self.options.report_time:  # Also keep track of distance:
             if self.pen_up:
@@ -1966,10 +1984,10 @@ class AxiDrawClass(inkex.Effect):
             vf_inches_per_sec = speed_limit
 
         if spew_segment_debug_data:
-            inkex.errormsg('\nspeed_limit (PlotSegment) ' + str(speed_limit))
-            inkex.errormsg('After speedlimit check::')
-            inkex.errormsg('vi_inches_per_sec: {0}'.format(vi_inches_per_sec))
-            inkex.errormsg('vf_inches_per_sec: {0}\n'.format(vf_inches_per_sec))
+            self.text_log('\nspeed_limit (PlotSegment) ' + str(speed_limit))
+            self.text_log('After speedlimit check::')
+            self.text_log('vi_inches_per_sec: {0}'.format(vi_inches_per_sec))
+            self.text_log('vf_inches_per_sec: {0}\n'.format(vf_inches_per_sec))
 
         # Times to reach maximum speed, from our initial velocity
         # vMax = vi + a*t  =>  t = (vMax - vi)/a
@@ -1980,12 +1998,12 @@ class AxiDrawClass(inkex.Effect):
         t_decel_max = (speed_limit - vf_inches_per_sec) / accel_rate
 
         if spew_segment_debug_data:
-            inkex.errormsg('\naccel_rate: {0:.3}'.format(accel_rate))
-            inkex.errormsg('speed_limit: {0:.3}'.format(speed_limit))
-            inkex.errormsg('vi_inches_per_sec: {0}'.format(vi_inches_per_sec))
-            inkex.errormsg('vf_inches_per_sec: {0}'.format(vf_inches_per_sec))
-            inkex.errormsg('t_accel_max: {0:.3}'.format(t_accel_max))
-            inkex.errormsg('t_decel_max: {0:.3}'.format(t_decel_max))
+            self.text_log('\naccel_rate: {0:.3}'.format(accel_rate))
+            self.text_log('speed_limit: {0:.3}'.format(speed_limit))
+            self.text_log('vi_inches_per_sec: {0}'.format(vi_inches_per_sec))
+            self.text_log('vf_inches_per_sec: {0}'.format(vf_inches_per_sec))
+            self.text_log('t_accel_max: {0:.3}'.format(t_accel_max))
+            self.text_log('t_decel_max: {0:.3}'.format(t_decel_max))
 
         # Distance that is required to reach full speed, from our start at speed vi_inches_per_sec:
         # distance = vi * t + (1/2) a t^2
@@ -2050,7 +2068,7 @@ class AxiDrawClass(inkex.Effect):
                 '''
 
                 if spew_segment_debug_data:
-                    inkex.errormsg('Type 1: Trapezoid' + '\n')
+                    self.text_log('Type 1: Trapezoid' + '\n')
                 speed_max = speed_limit  # We will reach _full cruising speed_!
 
                 intervals = int(math.floor(t_accel_max / time_slice))  # Number of intervals during acceleration
@@ -2071,7 +2089,7 @@ class AxiDrawClass(inkex.Effect):
                         duration_array.append(int(round(time_elapsed * 1000.0)))
                         dist_array.append(position)  # Estimated distance along direction of travel
                     if spew_segment_debug_data:
-                        inkex.errormsg('Accel intervals: ' + str(intervals))
+                        self.text_log('Accel intervals: ' + str(intervals))
 
                 # Add a center "coasting" speed interval IF there is time for it.
                 coasting_distance = segment_length_inches - (accel_dist_max + decel_dist_max)
@@ -2085,8 +2103,8 @@ class AxiDrawClass(inkex.Effect):
                     position += velocity * cruising_time
                     dist_array.append(position)  # Estimated distance along direction of travel
                     if spew_segment_debug_data:
-                        inkex.errormsg('Coast Distance: ' + str(coasting_distance))
-                        inkex.errormsg('Coast velocity: ' + str(velocity))
+                        self.text_log('Coast Distance: ' + str(coasting_distance))
+                        self.text_log('Coast velocity: ' + str(velocity))
 
                 intervals = int(math.floor(t_decel_max / time_slice))  # Number of intervals during deceleration
 
@@ -2101,7 +2119,7 @@ class AxiDrawClass(inkex.Effect):
                         duration_array.append(int(round(time_elapsed * 1000.0)))
                         dist_array.append(position)  # Estimated distance along direction of travel
                     if spew_segment_debug_data:
-                        inkex.errormsg('Decel intervals: ' + str(intervals))
+                        self.text_log('Decel intervals: ' + str(intervals))
 
             else:
                 ''' 
@@ -2159,7 +2177,7 @@ class AxiDrawClass(inkex.Effect):
                 '''
 
                 if spew_segment_debug_data:
-                    inkex.errormsg('\nType 2: Triangle')
+                    self.text_log('\nType 2: Triangle')
 
                 if segment_length_inches >= 0.9 * (accel_dist_max + decel_dist_max):
                     accel_rate_local = 0.9 * ((accel_dist_max + decel_dist_max) / segment_length_inches) * accel_rate
@@ -2168,7 +2186,7 @@ class AxiDrawClass(inkex.Effect):
                         accel_rate_local = accel_rate  # prevent possible divide by zero case, if already at full speed
 
                     if spew_segment_debug_data:
-                        inkex.errormsg('accel_rate_local changed')
+                        self.text_log('accel_rate_local changed')
                 else:
                     accel_rate_local = accel_rate
 
@@ -2180,7 +2198,7 @@ class AxiDrawClass(inkex.Effect):
 
                 vmax = vi_inches_per_sec + accel_rate_local * ta
                 if spew_segment_debug_data:
-                    inkex.errormsg('vmax: ' + str(vmax))
+                    self.text_log('vmax: ' + str(vmax))
 
                 intervals = int(math.floor(ta / time_slice))  # Number of intervals during acceleration
 
@@ -2197,7 +2215,7 @@ class AxiDrawClass(inkex.Effect):
                 if intervals + d_intervals > 4:
                     if intervals > 0:
                         if spew_segment_debug_data:
-                            inkex.errormsg('Triangle intervals UP: ' + str(intervals))
+                            self.text_log('Triangle intervals UP: ' + str(intervals))
 
                         time_per_interval = ta / intervals
                         velocity_step_size = (vmax - vi_inches_per_sec) / (intervals + 1.0)
@@ -2213,11 +2231,11 @@ class AxiDrawClass(inkex.Effect):
                             dist_array.append(position)  # Estimated distance along direction of travel
                     else:
                         if spew_segment_debug_data:
-                            inkex.errormsg('Note: Skipping accel phase in triangle.')
+                            self.text_log('Note: Skipping accel phase in triangle.')
 
                     if d_intervals > 0:
                         if spew_segment_debug_data:
-                            inkex.errormsg('Triangle intervals Down: ' + str(d_intervals))
+                            self.text_log('Triangle intervals Down: ' + str(d_intervals))
 
                         time_per_interval = td / d_intervals
                         velocity_step_size = (vmax - vf_inches_per_sec) / (d_intervals + 1.0)
@@ -2233,7 +2251,7 @@ class AxiDrawClass(inkex.Effect):
                             dist_array.append(position)  # Estimated distance along direction of travel
                     else:
                         if spew_segment_debug_data:
-                            inkex.errormsg('Note: Skipping decel phase in triangle.')
+                            self.text_log('Note: Skipping decel phase in triangle.')
                 else:
                     ''' 
                     Case 3: 'Linear or constant velocity changes' 
@@ -2249,7 +2267,7 @@ class AxiDrawClass(inkex.Effect):
                     '''
 
                     if spew_segment_debug_data:
-                        inkex.errormsg('Type 3: Linear' + '\n')
+                        self.text_log('Type 3: Linear' + '\n')
                     # xFinal = vi * t  + (1/2) a * t^2, and vFinal = vi + a * t
                     # Combining these (with same t) gives: 2 a x = (vf^2 - vi^2)  => a = (vf^2 - vi^2)/2x
                     # So long as this 'a' is less than accel_rate, we can linearly interpolate in velocity.
@@ -2294,7 +2312,7 @@ class AxiDrawClass(inkex.Effect):
             '''
 
             if spew_segment_debug_data:
-                inkex.errormsg('-> [Constant Velocity Mode Segment]' + '\n')
+                self.text_log('-> [Constant Velocity Mode Segment]' + '\n')
             # Single segment with constant velocity.
 
             if self.options.const_speed and not self.pen_up:
@@ -2309,7 +2327,7 @@ class AxiDrawClass(inkex.Effect):
                 velocity = self.pen_down_speed / 10  # TODO: Check this method. May be better to level it out to same value as others.
 
             if spew_segment_debug_data:
-                inkex.errormsg('velocity: ' + str(velocity))
+                self.text_log('velocity: ' + str(velocity))
 
             time_elapsed = segment_length_inches / velocity
             duration_array.append(int(round(time_elapsed * 1000.0)))
@@ -2324,7 +2342,7 @@ class AxiDrawClass(inkex.Effect):
         '''
 
         if spew_segment_debug_data:
-            inkex.errormsg('position/segment_length_inches: ' + str(position / segment_length_inches))
+            self.text_log('position/segment_length_inches: ' + str(position / segment_length_inches))
 
         for index in xrange(0, len(dist_array)):
             # Scale our trajectory to the "actual" travel distance that we need:
@@ -2335,9 +2353,9 @@ class AxiDrawClass(inkex.Effect):
             sum(dest_array1)
 
         if spew_segment_debug_data:
-            inkex.errormsg('\nSanity check after computing motion:')
-            inkex.errormsg('Final motor_steps1: {0:}'.format(dest_array1[-1]))  # View last element in list
-            inkex.errormsg('Final motor_steps2: {0:}'.format(dest_array2[-1]))  # View last element in list
+            self.text_log('\nSanity check after computing motion:')
+            self.text_log('Final motor_steps1: {0:}'.format(dest_array1[-1]))  # View last element in list
+            self.text_log('Final motor_steps2: {0:}'.format(dest_array2[-1]))  # View last element in list
 
         prev_motor1 = 0
         prev_motor2 = 0
@@ -2417,12 +2435,12 @@ class AxiDrawClass(inkex.Effect):
                                 time.sleep(float(move_time - 10) / 1000.0)  # pause before issuing next command
 
                     if spew_segment_debug_data:
-                        inkex.errormsg('XY move:({0}, {1}), in {2} ms'.format(move_steps1, move_steps2, move_time))
-                        inkex.errormsg('fNew(X,Y) :({0:.2}, {1:.2})'.format(f_new_x, f_new_y))
+                        self.text_log('XY move:({0}, {1}), in {2} ms'.format(move_steps1, move_steps2, move_time))
+                        self.text_log('fNew(X,Y) :({0:.2}, {1:.2})'.format(f_new_x, f_new_y))
                         if (move_steps1 / move_time) >= axidraw_conf.MaxStepRate:
-                            inkex.errormsg('Motor 1 overspeed error.')
+                            self.text_log('Motor 1 overspeed error.')
                         if (move_steps2 / move_time) >= axidraw_conf.MaxStepRate:
-                            inkex.errormsg('Motor 2 overspeed error.')
+                            self.text_log('Motor 2 overspeed error.')
 
                     self.f_curr_x = f_new_x  # Update current position
                     self.f_curr_y = f_new_y
@@ -2454,18 +2472,23 @@ class AxiDrawClass(inkex.Effect):
         try:
             pause_state = str_button[0]
         except IndexError:
-            inkex.errormsg('\nUSB Connectivity lost.')
+            self.error_log('\nUSB Connectivity lost.')
             pause_state = '2'  # Pause the plot; we appear to have lost connectivity.
             if self.spew_debugdata:
-                inkex.errormsg('\n (USB Connectivity lost after node number : ' + str(self.node_count) + ')')
+                self.error_log('\n (USB Connectivity lost after node number : ' + str(self.node_count) + ')')
 
         if pause_state == '1' and not self.delay_between_copies:
             if self.force_pause:
-                inkex.errormsg('Plot paused by layer name control.')
+                self.error_log('Plot paused by layer name control.')
             else:
-                inkex.errormsg('Plot paused by button press.')
+                if self.Secondary: 
+                    self.error_log('Plot halted by button press.')
+                    self.error_log('Important: Manually home this AxiDraw before plotting next file.')
+                else:
+                    self.error_log('Plot paused by button press.')
+
             if self.spew_debugdata:
-                inkex.errormsg('\n (Paused after node number : ' + str(self.node_count) + ')')
+                self.text_log('\n (Paused after node number : ' + str(self.node_count) + ')')
 
         if self.force_pause:
             self.force_pause = False  # Clear the flag
@@ -2476,7 +2499,7 @@ class AxiDrawClass(inkex.Effect):
             self.svg_paused_pos_y = self.f_curr_y - axidraw_conf.StartPosY
             self.penRaise()
             if not self.delay_between_copies:  # Only say this if we're not in the delay between copies.
-                inkex.errormsg('Use the "resume" feature to continue.')
+                self.text_log('Use the "resume" feature to continue.')
             self.b_stopped = True
             return  # Note: This segment is not plotted.
 
@@ -2486,9 +2509,9 @@ class AxiDrawClass(inkex.Effect):
             if self.node_count >= self.node_target:
                 self.resume_mode = False
                 if self.spew_debugdata:
-                    inkex.errormsg('\nRESUMING PLOT at node : ' + str(self.node_count))
-                    inkex.errormsg('\nself.virtual_pen_up : ' + str(self.virtual_pen_up))
-                    inkex.errormsg('\nself.pen_up : ' + str(self.pen_up))
+                    self.text_log('\nRESUMING PLOT at node : ' + str(self.node_count))
+                    self.text_log('\nself.virtual_pen_up : ' + str(self.virtual_pen_up))
+                    self.text_log('\nself.pen_up : ' + str(self.pen_up))
                 if not self.virtual_pen_up:  # This is the point where we switch from virtual to real pen
                     self.penLower()
 
@@ -2504,7 +2527,7 @@ class AxiDrawClass(inkex.Effect):
             tempstring = str(self.options.port)
             self.options.port = tempstring.strip('\"')
             named_port = self.options.port
-            # inkex.errormsg( 'About to test serial port: ' + str(self.options.port) ) # debug message
+            # self.text_log( 'About to test serial port: ' + str(self.options.port) ) # debug message
             the_port = ebb_serial.find_named_ebb(self.options.port)
             self.serial_port = ebb_serial.testPort(the_port)
             self.options.port = None  # Clear this input, to ensure that we close the port later.
@@ -2516,11 +2539,12 @@ class AxiDrawClass(inkex.Effect):
             self.serial_port = self.options.port
         if self.serial_port is None:
             if not named_port:
-                inkex.errormsg(gettext.gettext("Failed to connect to AxiDraw. :("))
+                self.error_log(gettext.gettext("Failed to connect to AxiDraw. :("))
             else:
-                inkex.errormsg(gettext.gettext('Failed to connect to AxiDraw "' + named_port + '"'))
+                self.error_log(gettext.gettext('Failed to connect to AxiDraw "' + named_port + '"'))
             return
-
+        else: # Successfully connected
+            self.nameString = ebb_serial.query_nickname(self.serial_port, False) # read out assigned EBB name, if any.
 
 
     def EnableMotors(self):
@@ -2715,7 +2739,7 @@ class AxiDrawClass(inkex.Effect):
             voltage_o_k = ebb_motion.queryVoltage(self.serial_port)
             if not voltage_o_k:
                 if 'voltage' not in self.warnings:
-                    inkex.errormsg(gettext.gettext('Warning: Low voltage detected.\nCheck that power supply is plugged in.'))
+                    self.text_log(gettext.gettext('Warning: Low voltage detected.\nCheck that power supply is plugged in.'))
                     self.warnings['voltage'] = 1
 
     def getDocProps(self):
@@ -2739,6 +2763,18 @@ class AxiDrawClass(inkex.Effect):
             return False
         else:
             return True
+
+    def text_log(self,text_to_add):
+        if not self.Secondary:
+            inkex.errormsg(text_to_add)
+        else:
+            self.text_out = self.text_out + '\n' + text_to_add
+
+    def error_log(self,text_to_add):
+        if not self.Secondary:
+            inkex.errormsg(text_to_add)
+        else:
+            self.error_out = self.error_out + '\n' + text_to_add
 
 
 if __name__ == '__main__':
