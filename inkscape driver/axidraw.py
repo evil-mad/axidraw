@@ -70,18 +70,18 @@ class AxiDrawClass(inkex.Effect):
         self.OptionParser.add_option("--penDownSpeed", action="store", type="int", dest="pen_down_speed", default=axidraw_conf.PenDownSpeed, help="Speed (step/sec) while pen is down")
         self.OptionParser.add_option("--penUpSpeed", action="store", type="int", dest="pen_up_speed", default=axidraw_conf.PenUpSpeed, help="Rapid speed (percent) while pen is up")
         self.OptionParser.add_option("--accelFactor", action="store", type="int", dest="accel_factor", default=axidraw_conf.accelFactor, help="Acceleration rate factor")
-        self.OptionParser.add_option("--penLiftRate", action="store", type="int", dest="pen_lift_rate", default=axidraw_conf.penLiftRate, help="Rate of lifting pen ")
-        self.OptionParser.add_option("--penLiftDelay", action="store", type="int", dest="pen_lift_delay", default=axidraw_conf.penLiftDelay, help="Added delay after pen up (ms)")
+        self.OptionParser.add_option("--penRaiseRate", action="store", type="int", dest="pen_raise_rate", default=axidraw_conf.penRaiseRate, help="Rate of raising pen ")
+        self.OptionParser.add_option("--penRaiseDelay", action="store", type="int", dest="pen_raise_delay", default=axidraw_conf.penRaiseDelay, help="Added delay after pen up (ms)")
         self.OptionParser.add_option("--penLowerRate", action="store", type="int", dest="pen_lower_rate", default=axidraw_conf.penLowerRate, help="Rate of lowering pen ")
         self.OptionParser.add_option("--penLowerDelay", action="store", type="int", dest="pen_lower_delay", default=axidraw_conf.penLowerDelay, help="Added delay after pen down (ms)")
-        self.OptionParser.add_option("--autoRotate", action="store", type="inkbool", dest="auto_rotate", default=axidraw_conf.autoRotate, help="Auto pick portrait or landscape mode")
-        self.OptionParser.add_option("--constSpeed", action="store", type="inkbool", dest="const_speed", default=axidraw_conf.constSpeed, help="Constant velocity when pen is down")
-        self.OptionParser.add_option("--reportTime", action="store", type="inkbool", dest="report_time", default=axidraw_conf.reportTime, help="Report time elapsed")
+        self.OptionParser.add_option("--autoRotate", action="store", type="inkbool", dest="auto_rotate", default=axidraw_conf.autoRotate, help="Boolean: Auto select portrait vs landscape mode")
+        self.OptionParser.add_option("--constSpeed", action="store", type="inkbool", dest="const_speed", default=axidraw_conf.constSpeed, help="Boolean: Use constant velocity when pen is down")
+        self.OptionParser.add_option("--reportTime", action="store", type="inkbool", dest="report_time", default=axidraw_conf.reportTime, help="Boolean: Report time elapsed")
         self.OptionParser.add_option("--manualType", action="store", type="string", dest="manual_type", default="fwversion", help="The active option when Apply was pressed")
         self.OptionParser.add_option("--WalkDistance", action="store", type="float", dest="walk_distance", default=1, help="Distance for manual walk")
         self.OptionParser.add_option("--resumeType", action="store", type="string", dest="resume_type", default="ResumeNow", help="The active option when Apply was pressed")
         self.OptionParser.add_option("--layerNumber", action="store", type="int", dest="layer_number", default=axidraw_conf.DefaultLayer, help="Selected layer for multilayer plotting")
-        self.OptionParser.add_option("--previewOnly", action="store", type="inkbool", dest="preview_only", default=axidraw_conf.previewOnly, help="Offline preview. Simulate plotting only.")
+        self.OptionParser.add_option("--previewOnly", action="store", type="inkbool", dest="preview_only", default=axidraw_conf.previewOnly, help="Preview mode; simulate plotting only.")
         self.OptionParser.add_option("--previewType", action="store", type="int", dest="preview_type", default=axidraw_conf.previewType, help="Preview mode rendering")
         self.OptionParser.add_option("--copiesOfDocument", action="store", type="int", dest="document_copies", default=axidraw_conf.copiesOfDocument, help="Copies to plot, in Plot mode")
         self.OptionParser.add_option("--copiesOfLayer", action="store", type="int", dest="layer_copies", default=axidraw_conf.copiesOfLayer, help="Copies to plot while in Layer mode")
@@ -2604,10 +2604,10 @@ class AxiDrawClass(inkex.Effect):
             pen_down_pos = plot_utils.constrainLimits(pen_down_pos, 0, 100)  # Constrain input values
 
             v_distance = float(self.options.pen_up_position - pen_down_pos)
-            v_time = int((1000.0 * v_distance) / self.options.pen_lift_rate)
+            v_time = int((1000.0 * v_distance) / self.options.pen_raise_rate)
             if v_time < 0:  # Handle case that penDownPosition is above pen_up_position
                 v_time = -v_time
-            v_time += self.options.pen_lift_delay
+            v_time += self.options.pen_raise_delay
             if v_time < 0:  # Do not allow negative delay times
                 v_time = 0
             if self.options.preview_only:
@@ -2726,7 +2726,7 @@ class AxiDrawClass(inkex.Effect):
             Rounding this to 5 steps/24 ms is sufficient.
             '''
 
-            int_temp = 5 * self.options.pen_lift_rate
+            int_temp = 5 * self.options.pen_raise_rate
             ebb_motion.setPenUpRate(self.serial_port, int_temp)
 
             int_temp = 5 * self.options.pen_lower_rate

@@ -63,7 +63,7 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 
 <_param name="instructions_timing3" type="description" appearance="header">Pen lift and lowering speeds:</_param>
 
-<param indent="1" name="penLiftRate" type="optiongroup" appearance="minimal" _gui-text="Pen raising speed :">
+<param indent="1" name="penRaiseRate" type="optiongroup" appearance="minimal" _gui-text="Pen raising speed :">
 <_option value="400">Maximum</_option>
 <_option value="150">Standard</_option>
 <_option value="100">Slow</_option>
@@ -91,7 +91,7 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <param indent="1" name="constSpeed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
 
 <param indent="1" name="reportTime" type="boolean" _gui-text="Report time elapsed">false</param> 
-<param indent="1" name="penLiftDelay" type="int" min="-500" max="500" _gui-text="Optional delay after raising pen (ms):">0</param>
+<param indent="1" name="penRaiseDelay" type="int" min="-500" max="500" _gui-text="Optional delay after raising pen (ms):">0</param>
 <param indent="1" name="penLowerDelay" type="int" min="-500" max="500" _gui-text="Optional delay after lowering pen (ms):">0</param>
 
 <param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">

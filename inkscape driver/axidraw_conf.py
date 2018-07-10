@@ -39,9 +39,9 @@ PenDownSpeed = 25     # Default pen-down speed (%).         Range: 1 - 110 %
 accelFactor = 75      # Acceleration factor (%).            Range: 1 - 100 %
 
 penLowerDelay = 0     # added delay (ms) for the pen to go down before the next move
-penLiftDelay = 0      # added delay (ms) for the pen to go up before the next move
+penRaiseDelay = 0      # added delay (ms) for the pen to go up before the next move
 
-penLiftRate = 150     # Default pen-lift servo speed
+penRaiseRate = 150     # Default pen-lift servo speed
 penLowerRate = 150    # Default pen-lift servo speed when lowering
 
 autoRotate = True     # Print in portrait or landscape mode automatically
