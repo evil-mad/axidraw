@@ -22,6 +22,8 @@ Need help? Visit http://axidraw.com/docs
 </_param>
 
 <param indent="2" name="copiesOfDocument" type="int" min="0" max="9999"  _gui-text="Copies to Plot:">1</param>	
+<param indent="2" name="copyDelay" type="int" min="0" max="3600" _gui-text="Seconds of delay between copies:">15</param>	
+
 <_param name="instructions_plot1" type="description" indent="4" > Tip: Select 0 copies to plot continuously until paused.</_param>
 
 </page>
@@ -61,7 +63,7 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <_option value="10">Very slow</_option>
 </param>
 
-<_param name="instructions_timing3" type="description" appearance="header">Pen lift and lowering speeds:</_param>
+<_param name="instructions_timing3" type="description" appearance="header">Pen raising and lowering speeds:</_param>
 
 <param indent="1" name="penRaiseRate" type="optiongroup" appearance="minimal" _gui-text="Pen raising speed :">
 <_option value="400">Maximum</_option>
@@ -77,9 +79,10 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <_option value="50">Very slow</_option>
 </param>
 
+<param indent="1" name="penRaiseDelay" type="int" min="-500" max="500" _gui-text="Optional delay after raising pen (ms):">0</param>
+<param indent="1" name="penLowerDelay" type="int" min="-500" max="500" _gui-text="Optional delay after lowering pen (ms):">0</param>
 
-<_param name="instructions_timing4" type="description" appearance="header">Multiple Copies:</_param>
-<param indent="1" name="copyDelay" type="int" min="0" max="3600" appearance="header" _gui-text="Seconds of delay between copies:">15</param>	
+
 </page>
 
 
@@ -91,8 +94,6 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <param indent="1" name="constSpeed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
 
 <param indent="1" name="reportTime" type="boolean" _gui-text="Report time elapsed">false</param> 
-<param indent="1" name="penRaiseDelay" type="int" min="-500" max="500" _gui-text="Optional delay after raising pen (ms):">0</param>
-<param indent="1" name="penLowerDelay" type="int" min="-500" max="500" _gui-text="Optional delay after lowering pen (ms):">0</param>
 
 <param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
 <_option value="1">~2870 DPI (Slightly Smoother)</_option>
@@ -153,8 +154,7 @@ Press 'Apply' with this tab selected to plot only the visible layers whose names
 For example, a layer named "5-red" will be plotted if the number 5 is selected, but layers named "guide lines", "55", or "2-black" will be skipped.
 </_param>
 <param indent="2" name="layerNumber" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
-<param indent="2" name="copiesOfLayer" type="int" min="0" max="9999" appearance="header" _gui-text="Copies to Plot:">1</param>	
-<_param name="instructions_layer1" type="description" indent="4" > Tip: Select 0 copies to plot continuously until paused.</_param>
+<_param name="instructions_layer1" type="description" indent="4" > Tip: The number of copies to plot is specified in the "Plot" tab.</_param>
 
 </page>
 
@@ -190,10 +190,10 @@ You can resume directly where you paused, or after using the Return to Home Corn
 </param>
 
 <_param name="instructions_general2" type="description" indent="1" xml:space="preserve">
-AxiDraw Control v 1.8.0  	2018-06-19
+AxiDraw Control v 2.0.0  	2018-07-10
 
 Press 'Apply' to query the firmware version;
-EBB firmware 2.5.4 or newer is recommended.
+EBB firmware 2.5.5 or newer is recommended.
 
 
 Copyright 2018 Evil Mad Science LLC

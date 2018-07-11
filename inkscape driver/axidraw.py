@@ -84,7 +84,6 @@ class AxiDrawClass(inkex.Effect):
         self.OptionParser.add_option("--previewOnly", action="store", type="inkbool", dest="preview_only", default=axidraw_conf.previewOnly, help="Preview mode; simulate plotting only.")
         self.OptionParser.add_option("--previewType", action="store", type="int", dest="preview_type", default=axidraw_conf.previewType, help="Preview mode rendering")
         self.OptionParser.add_option("--copiesOfDocument", action="store", type="int", dest="document_copies", default=axidraw_conf.copiesOfDocument, help="Copies to plot, in Plot mode")
-        self.OptionParser.add_option("--copiesOfLayer", action="store", type="int", dest="layer_copies", default=axidraw_conf.copiesOfLayer, help="Copies to plot while in Layer mode")
         self.OptionParser.add_option("--copyDelay", action="store", type="int", dest="copy_delay", default=axidraw_conf.copyDelay, help="Seconds to delay between copies.")
         self.OptionParser.add_option("--resolution", action="store", type="int", dest="resolution", default=axidraw_conf.resolution, help="Resolution factor")
         self.OptionParser.add_option("--model", action="store", type="int", dest="model", default=axidraw_conf.model, help="AxiDraw Model Type")
@@ -316,7 +315,7 @@ class AxiDrawClass(inkex.Effect):
                 self.text_log(gettext.gettext("No in-progress plot data found in file."))
 
         elif self.options.mode == "layers":
-            self.copies_to_plot = self.options.layer_copies
+            self.copies_to_plot = self.options.document_copies
             if self.copies_to_plot == 0:
                 self.copies_to_plot = -1
                 if self.options.preview_only:  # Special case: 0 (continuous copies) selected, but running in preview mode.
@@ -776,7 +775,7 @@ class AxiDrawClass(inkex.Effect):
                                      inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
             if self.options.report_time and (not self.called_externally):
-                if self.copies_to_plot == 0:
+                if self.copies_to_plot == 0: # No copies remaining to plot
                     if self.options.preview_only:
                         m, s = divmod(self.pt_estimate / 1000.0, 60)
                         h, m = divmod(m, 60)

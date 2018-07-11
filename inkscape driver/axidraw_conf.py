@@ -1,6 +1,6 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver for Inkscape
-# Version 1.8.0, dated July 4, 2018.
+# Version 2.0.0, dated July 10, 2018.
 #
 # Copyright 2018 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -39,9 +39,9 @@ PenDownSpeed = 25     # Default pen-down speed (%).         Range: 1 - 110 %
 accelFactor = 75      # Acceleration factor (%).            Range: 1 - 100 %
 
 penLowerDelay = 0     # added delay (ms) for the pen to go down before the next move
-penRaiseDelay = 0      # added delay (ms) for the pen to go up before the next move
+penRaiseDelay = 0     # added delay (ms) for the pen to go up before the next move
 
-penRaiseRate = 150     # Default pen-lift servo speed
+penRaiseRate = 150    # Default pen-lift servo speed
 penLowerRate = 150    # Default pen-lift servo speed when lowering
 
 autoRotate = True     # Print in portrait or landscape mode automatically
@@ -58,7 +58,6 @@ previewType = 0       # When in preview mode, render preview layers?
 DefaultLayer = 1      # Default inkscape layer, when plotting in "layers" mode
 
 copiesOfDocument = 1  # Copies to plot while in Plot mode
-copiesOfLayer = 1     # Copies to plot while in Layer mode
 copyDelay = 15        # Seconds to delay between copies when plotting multiple copies.
 
 resolution = 1        # Resolution: Either 1 for (smoother, slightly slower) high resolution mode or 2 (coarser) low resolution
