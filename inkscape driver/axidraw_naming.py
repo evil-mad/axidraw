@@ -37,7 +37,7 @@ class AxiDrawNamingClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Naming - Version 1.8.0 dated 2018-06-19"
+		self.versionString = "AxiDraw Naming - Version 2.0.0 dated 2018-07-10"
 		
 		# Input sanitization:
 		self.options.mode = self.options.mode.strip("\"")
@@ -59,8 +59,8 @@ class AxiDrawNamingClass( inkex.Effect ):
 		if (self.options.mode == "read-name"):
 			ad.options.manual_type = "read-name"
 		if (self.options.mode == "write-name"):
-			ad.options.manual_type = "write-name"
-			ad.options.setup_type = self.options.nickname
+			ad.options.manual_type = "write-name" + self.options.nickname
+# 			ad.options.setup_type = self.options.nickname
 
 		ad.effect()	
 

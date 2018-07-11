@@ -66,7 +66,7 @@ class AxiDrawClass(inkex.Effect):
         self.OptionParser.add_option("--mode", action="store", type="string", dest="mode", default="plot", help="Mode (or GUI tab) selected")
         self.OptionParser.add_option("--penUpPosition", action="store", type="int", dest="pen_up_position", default=axidraw_conf.penUpPosition, help="Height of pen when lifted")
         self.OptionParser.add_option("--penDownPosition", action="store", type="int", dest="pen_down_position", default=axidraw_conf.penDownPosition, help="Height of pen when lowered")
-        self.OptionParser.add_option("--setupType", action="store", type="string", dest="setup_type", default="align-mode", help="The setup option selected")
+        self.OptionParser.add_option("--setup_type", action="store", type="string", dest="setup_type", default="align", help="The setup option selected")
         self.OptionParser.add_option("--penDownSpeed", action="store", type="int", dest="pen_down_speed", default=axidraw_conf.PenDownSpeed, help="Speed (step/sec) while pen is down")
         self.OptionParser.add_option("--penUpSpeed", action="store", type="int", dest="pen_up_speed", default=axidraw_conf.PenUpSpeed, help="Rapid speed (percent) while pen is up")
         self.OptionParser.add_option("--accelFactor", action="store", type="int", dest="accel_factor", default=axidraw_conf.accelFactor, help="Acceleration rate factor")
@@ -79,7 +79,7 @@ class AxiDrawClass(inkex.Effect):
         self.OptionParser.add_option("--reportTime", action="store", type="inkbool", dest="report_time", default=axidraw_conf.reportTime, help="Boolean: Report time elapsed")
         self.OptionParser.add_option("--manualType", action="store", type="string", dest="manual_type", default="fwversion", help="The active option when Apply was pressed")
         self.OptionParser.add_option("--WalkDistance", action="store", type="float", dest="walk_distance", default=1, help="Distance for manual walk")
-        self.OptionParser.add_option("--resumeType", action="store", type="string", dest="resume_type", default="ResumeNow", help="The active option when Apply was pressed")
+        self.OptionParser.add_option("--resume_type", action="store", type="string", dest="resume_type", default="plot", help="The active option when Apply was pressed")
         self.OptionParser.add_option("--layerNumber", action="store", type="int", dest="layer_number", default=axidraw_conf.DefaultLayer, help="Selected layer for multilayer plotting")
         self.OptionParser.add_option("--previewOnly", action="store", type="inkbool", dest="preview_only", default=axidraw_conf.previewOnly, help="Preview mode; simulate plotting only.")
         self.OptionParser.add_option("--previewType", action="store", type="int", dest="preview_type", default=axidraw_conf.previewType, help="Preview mode rendering")
@@ -108,7 +108,7 @@ class AxiDrawClass(inkex.Effect):
     def effect(self):
         """Main entry point: check to see which mode/tab is selected, and act accordingly."""
 
-        self.version_string = "AxiDraw Control - Version 1.8.0, 2018-06-18."
+        self.version_string = "AxiDraw Control - Version 2.0.0, 2018-06-18."
         self.spew_debugdata = False
 
         self.start_time = time.time()
@@ -249,6 +249,20 @@ class AxiDrawClass(inkex.Effect):
             self.options.mode = "manual"  # Use "manual" command mechanism to handle fwversion request.
             self.options.manual_type = "fwversion"
 
+        if self.options.mode == "resume":
+            # resume mode + resume_type -> either resume-plot or resume-home modes.
+            if self.options.resume_type == "home":
+                self.options.mode = "resume-home"
+            else:
+                self.options.mode = "resume-plot"
+
+        if self.options.mode == "setup":
+            # setup mode + setup_type -> either align or toggle modes.
+            if self.options.setup_type == "align":
+                self.options.mode = "align"
+            else:
+                self.options.mode = "toggle"
+
         if not skip_serial:
             self.serialConnect()
 
@@ -294,12 +308,12 @@ class AxiDrawClass(inkex.Effect):
                             time.sleep(0.100)  # Use short intervals to improve responsiveness
                             self.PauseResumeCheck()  # Detect button press while paused between plots
 
-        elif self.options.mode == "resume":
+        elif self.options.mode == "resume-home" or self.options.mode == "resume-plot":
             resume_data_needs_updating = True
             self.resumePlotSetup()
             if self.resume_mode:
                 self.plotDocument()
-            elif self.options.resume_type == "justGoHome":
+            elif self.options.mode == "resume-home":
                 if not self.svg_data_read or (self.svg_last_known_pos_x_old == 0 and self.svg_last_known_pos_y_old == 0):
                     self.text_log(gettext.gettext("No resume data found; unable to return to home position."))
                 else:
@@ -374,7 +388,7 @@ class AxiDrawClass(inkex.Effect):
                 self.ServoSetupWrapper()
                 self.penRaise()
                 self.EnableMotors()  # Set plotting resolution
-                if self.options.resume_type == "ResumeNow":
+                if self.options.mode == "resume-plot":
                     self.resume_mode = True
                 self.f_speed = self.pen_down_speed
                 self.f_curr_x = self.svg_last_known_pos_x_old + axidraw_conf.StartPosX
@@ -453,10 +467,10 @@ class AxiDrawClass(inkex.Effect):
 
         self.ServoSetupWrapper()
 
-        if self.options.setup_type == "align-mode":
+        if self.options.mode == "align":
             self.penRaise()
             ebb_motion.sendDisableMotors(self.serial_port)
-        elif self.options.setup_type == "toggle-pen":
+        elif self.options.mode == "toggle":
             ebb_motion.TogglePen(self.serial_port)
 
     def manualCommand(self):
@@ -500,10 +514,15 @@ class AxiDrawClass(inkex.Effect):
                 self.text_log(nameString)
             return
             
-        if self.options.manual_type == "write-name":
-            version_status = ebb_serial.min_version(port_name, "2.5.5")
+
+
+        if (self.options.manual_type).startswith("write-name"):
+            temp_string = self.options.manual_type
+            temp_string = temp_string.split("write-name",1)[1] # Get part after "write-name"
+            
+            version_status = ebb_serial.min_version(self.serial_port, "2.5.5")
             if version_status:
-                renamed = ebb_serial.write_nickname(self.serial_port, self.options.setup_type)
+                renamed = ebb_serial.write_nickname(self.serial_port, temp_string) #TODO: check this
                 if renamed is True:
                     self.text_log('Nickname written. Rebooting EBB.')
                 else:
@@ -612,7 +631,7 @@ class AxiDrawClass(inkex.Effect):
             self.penRaise()
             self.EnableMotors()  # Set plotting resolution
 
-            if self.options.mode == "resume":
+            if self.options.mode == "resume-home" or self.options.mode == "resume-plot":
                 if self.resume_mode:
                     f_x = self.svg_paused_pos_x_old + axidraw_conf.StartPosX
                     f_y = self.svg_paused_pos_y_old + axidraw_conf.StartPosY
@@ -620,7 +639,7 @@ class AxiDrawClass(inkex.Effect):
                     self.plotSegmentWithVelocity(f_x, f_y, 0, 0)  # pen-up move to starting point
                     self.resume_mode = True
                     self.node_count = 0
-                else:  # i.e., ( self.options.resume_type == "justGoHome" ):
+                else:  # i.e., ( self.options.mode == "resume-home" ):
                     f_x = axidraw_conf.StartPosX
                     f_y = axidraw_conf.StartPosY
                     self.plotSegmentWithVelocity(f_x, f_y, 0, 0)
@@ -659,7 +678,7 @@ class AxiDrawClass(inkex.Effect):
                 self.svg = self.document.getroot()
 
             if not self.b_stopped:
-                if self.options.mode in ["plot", "layers", "resume"]:
+                if self.options.mode in ["plot", "layers", "resume-home", "resume-plot"]:
                     # Clear saved plot data from the SVG file,
                     # IF we have _successfully completed_ a normal plot from the plot, layer, or resume mode.
                     self.svg_layer = 0

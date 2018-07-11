@@ -14,8 +14,8 @@
 AxiDraw - Disable XY Motors
 </_param>
 
-<param name="manualType" type="optiongroup" gui-hidden="true">
-<_option value="disable-motors" >Disable Motors</_option>
+<param name="manual_cmd" type="optiongroup" gui-hidden="true">
+<_option value="disable-xy" >Disable Motors</_option>
 </param>
 
 </page>

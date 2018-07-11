@@ -22,7 +22,7 @@ Need help? Visit http://axidraw.com/docs
 </_param>
 
 <param indent="2" name="copiesOfDocument" type="int" min="0" max="9999"  _gui-text="Copies to Plot:">1</param>	
-<param indent="2" name="copyDelay" type="int" min="0" max="3600" _gui-text="Seconds of delay between copies:">15</param>	
+<param indent="1" name="copyDelay" type="int" min="0" max="3600" _gui-text="Seconds of delay between copies:">15</param>	
 
 <_param name="instructions_plot1" type="description" indent="4" > Tip: Select 0 copies to plot continuously until paused.</_param>
 
@@ -38,9 +38,9 @@ _gui-text="Pen height: UP (%):">60</param>
 <param name="penDownPosition" type="int" min="0" max="100" appearance="full"
 _gui-text="Pen height: DOWN, (%):">30</param>
 
-<param name="setupType"  indent="1" type="optiongroup" _gui-text="       Action on 'Apply':">
-<_option value="align-mode">Raise pen, turn off motors</_option>	
-<_option value="toggle-pen">Toggle pen between UP, DOWN</_option>
+<param name="setup_type"  indent="1" type="optiongroup" _gui-text="       Action on 'Apply':">
+<_option value="align">Raise pen, turn off motors</_option>	
+<_option value="toggle">Toggle pen between UP, DOWN</_option>
 </param>
 <_param indent="1" name="instructions_setup3" type="description" xml:space="preserve">
 - Raise pen and turn off stepper motors to manually move carriage to the Home Corner (upper left).
@@ -154,7 +154,7 @@ Press 'Apply' with this tab selected to plot only the visible layers whose names
 For example, a layer named "5-red" will be plotted if the number 5 is selected, but layers named "guide lines", "55", or "2-black" will be skipped.
 </_param>
 <param indent="2" name="layerNumber" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
-<_param name="instructions_layer1" type="description" indent="4" > Tip: The number of copies to plot is specified in the "Plot" tab.</_param>
+<_param name="instructions_layer1" type="description" indent="1" >Tip: The number of copies is given in the "Plot" tab.</_param>
 
 </page>
 
@@ -173,9 +173,9 @@ Plot progress is stored in the SVG file itself. If you plan to quit Inkscape and
 You can resume directly where you paused, or after using the Return to Home Corner command.
 </_param>
 
-<param name="resumeType" type="optiongroup" appearance=""  indent="2" _gui-text="Action on 'Apply':">
-<_option indent="1" value="ResumeNow" >Resume (From Home or Where Paused)</_option>
-<_option indent="1" value="justGoHome">Return to Home Corner (only)</_option>	
+<param name="resume_type" type="optiongroup" indent="2" _gui-text="Action on 'Apply':">
+<_option indent="1" value="plot">Resume (From Home or Where Paused)</_option>
+<_option indent="1" value="home">Return to Home Corner (only)</_option>	
 </param>
 
 </page>
