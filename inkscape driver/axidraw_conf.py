@@ -30,45 +30,47 @@ If you are operating the AxiDraw in "standalone" mode, that is, outside
  
 '''
 
-penUpPosition = 60    # Default pen-up position (%).        Range: 0 - 100 %
-penDownPosition = 30  # Default pen-down position (%).    Range: 0 - 100 %
+# DEFAULT VALUES
 
-PenUpSpeed = 75       # Default pen-up speed (%).         Range: 1 - 110 %
-PenDownSpeed = 25     # Default pen-down speed (%).         Range: 1 - 110 %
+speed_pendown = 25      # Maximum plotting speed, when pen is down (1-100)
+speed_penup = 75        # Maximum transit speed, when pen is up (1-100)
+accel = 75              # Acceleration rate factor (1-100)
 
-accelFactor = 75      # Acceleration factor (%).            Range: 1 - 100 %
+pen_pos_up = 60         # Height of pen when raised (0-100)
+pen_pos_down = 30       # Height of pen when lowered (0-100)
 
-penLowerDelay = 0     # added delay (ms) for the pen to go down before the next move
-penRaiseDelay = 0     # added delay (ms) for the pen to go up before the next move
+pen_rate_raise = 75     # Rate of raising pen (1-100)
+pen_rate_lower = 50     # Rate of lowering pen (1-100)
 
-penRaiseRate = 150    # Default pen-lift servo speed
-penLowerRate = 150    # Default pen-lift servo speed when lowering
+pen_delay_up = 0        # Optional delay after pen is raised (ms)
+pen_delay_down = 0      # Optional delay after pen is lowered (ms)
 
-autoRotate = True     # Print in portrait or landscape mode automatically
-constSpeed = False    # Use constant velocity mode when pen is down
-reportTime = False    # Report time elapsed
+const_speed = False     # Use constant velocity mode when pen is down.
+report_time = False     # Report time elapsed.
+default_Layer = 1       # Layer(s) selected for layers mode (1-1000).
 
-previewOnly = False   # Plot preview mode. Simulate plotting only.
-previewType = 0       # When in preview mode, render preview layers?
-#                     # 0: Do not render layers
-#                     # 1: Render only pen-down movement
-#                     # 2: Render only pen-up movement
-#                     # 3: Render all movement
+copies = 1              # Copies to plot, or 0 for continuous plotting. Default: 1
+page_delay = 15         # Optional delay between copies (s).
 
-DefaultLayer = 1      # Default inkscape layer, when plotting in "layers" mode
+preview = False         # Preview mode; simulate plotting only.
+rendering = 0           # Preview mode rendering option (0-3)
+                            # 0: Do not render layers
+                            # 1: Render only pen-down movement
+                            # 2: Render only pen-up movement
+                            # 3: Render all movement
 
-copiesOfDocument = 1  # Copies to plot while in Plot mode
-copyDelay = 15        # Seconds to delay between copies when plotting multiple copies.
-
-resolution = 1        # Resolution: Either 1 for (smoother, slightly slower) high resolution mode or 2 (coarser) low resolution
+model = 1             # AxiDraw Model (1-3). 1: AxiDraw V2 or V3, default. 2: AxiDraw V3/A3. 3: AxiDraw V3 XLX
+port = None           # Serial port or named AxiDraw to use
 
 # Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
 # Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
 # not along the XY axes of the machine. This parameter chooses 8X or 16X microstepping on the motors.
 
-model = 1             # AxiDraw Model. 1: AxiDraw V2 or V3, default. 2: AxiDraw V3/A3. 3: AxiDraw V3 XLX
 
-port = None           # Serial port (or EBB name) to use. 
+resolution = 1        # Resolution: Either 1 for (smoother, slightly slower) high resolution mode or 2 (coarser) low resolution
+auto_rotate = True     # Auto-select portrait vs landscape orientation
+
+
 
 
 '''
@@ -122,8 +124,8 @@ MaxStepDist_LR = 0.000696  # Maximum distance covered by 1 step in Low Res mode,
 MaxStepDist_HR = 0.000348  # Maximum distance covered by 1 step in Hi Res mode, rounded up, in inches.  ~1/(2032 sqrt(2))
 # In planning trajectories, we skip movements shorter than these distances, likely to be < 1 step.
 
-ConstSpeedFactor_LR = 0.5  # When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.5 for Low Res mode
-ConstSpeedFactor_HR = 0.4  # When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.3 for Hi Res mode
+const_speedFactor_LR = 0.5  # When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.5 for Low Res mode
+const_speedFactor_HR = 0.4  # When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.3 for Hi Res mode
 
 StartPosX = 0  # Parking position, in pixels. Default: 0
 StartPosY = 0  # Parking position, in pixels. Default: 0
