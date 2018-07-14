@@ -8,15 +8,15 @@
 
 
 <param name="mode" type="notebook" >
-<page name="read_name" _gui-text="Read AxiDraw Name">
+<page name="list_names" _gui-text="Read AxiDraw Name">
 
 <_param name="read1" type="description" appearance="header">
 Read AxiDraw Nickname
 </_param>
 
 <_param name="read2" type="description" >
-Click "Apply" to read the Nickname (if any) currently assigned
-to the AxiDraw connected via USB. 
+Click "Apply" to read the Nickname (if any) or USB port currently assigned
+to all AxiDraw units connected via USB. 
 </_param>
 
 </page>
@@ -33,7 +33,8 @@ Write AxiDraw Nickname
 <_param name="write2" type="description" >
 Click "Apply" to assign the Nickname above to the AxiDraw
 connected via USB. After the name change, the AxiDraw will
-reboot to its power-on state.
+reboot to its power-on state. (If more than one AxiDraw is
+connected, only the first one found will be updated.)
 </_param>
 
 
@@ -50,7 +51,7 @@ Nicknames are not required, but can be helpful if you have
 more than one AxiDraw connected: You can specify which
 AxiDraw to plot to when using AxiDraw Control.
 
-AxiDraw Naming requires firmware version 2.5.4 or newer. 
+AxiDraw Naming requires firmware version 2.5.5 or newer. 
 You can use the "Version" tab in AxiDraw Control to check
 which firmware version is currently installed.
 

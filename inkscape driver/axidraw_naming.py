@@ -57,8 +57,8 @@ class AxiDrawNamingClass( inkex.Effect ):
 		
 		ad.options.mode = "manual"
 		
-		if (self.options.mode == "read_name"):
-			ad.options.manual_cmd = "read_name"
+		if (self.options.mode == "list_names"):
+			ad.options.manual_cmd = "list_names"
 		if (self.options.mode == "write_name"):
 			ad.options.manual_cmd = "write_name" + self.options.nickname
 
