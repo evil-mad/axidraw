@@ -122,14 +122,14 @@ Use this tab to execute various "manual" AxiDraw commands. For example, you can 
 <param name="manual_cmd" type="optiongroup" appearance="minimal"
 _gui-text="               Command: ">
 <_option value="none"           >- Select -</_option>
-<_option value="walk-x"   >Walk Carriage (X)</_option>
-<_option value="walk-y"   >Walk Carriage (Y)</_option>
-<_option value="raise-pen"      >Raise the Pen</_option>
-<_option value="lower-pen"      >Lower the Pen</_option>
-<_option value="enable-xy"  >Enable XY Motors</_option>
-<_option value="disable-xy" >Disable XY Motors</_option> 
+<_option value="walk_x"   >Walk Carriage (X)</_option>
+<_option value="walk_y"   >Walk Carriage (Y)</_option>
+<_option value="raise_pen"      >Raise the Pen</_option>
+<_option value="lower_pen"      >Lower the Pen</_option>
+<_option value="enable_xy"  >Enable XY Motors</_option>
+<_option value="disable_xy" >Disable XY Motors</_option> 
 <_option value="bootload"       >Enter EBB Bootloader mode</_option>
-<_option value="strip-data"     >Strip plotter data from file</_option>
+<_option value="strip_data"     >Strip plotter data from file</_option>
 </param>
 
 <param name="walk_dist" indent="1" type="float" min="-11" max="11" _gui-text="Walk distance in inches (+ or -):">1.00</param>

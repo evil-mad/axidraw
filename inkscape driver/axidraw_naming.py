@@ -56,11 +56,11 @@ class AxiDrawNamingClass( inkex.Effect ):
 		ad.document = self.document 
 		
 		ad.options.mode = "manual"
-		if (self.options.mode == "read-name"):
-			ad.options.manual_type = "read-name"
-		if (self.options.mode == "write-name"):
-			ad.options.manual_type = "write-name" + self.options.nickname
-# 			ad.options.setup_type = self.options.nickname
+		
+		if (self.options.mode == "read_name"):
+			ad.options.manual_cmd = "read_name"
+		if (self.options.mode == "write_name"):
+			ad.options.manual_cmd = "write_name" + self.options.nickname
 
 		ad.effect()	
 

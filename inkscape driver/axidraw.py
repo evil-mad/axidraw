@@ -131,10 +131,10 @@ class AxiDrawClass(inkex.Effect):
         
         self.OptionParser.add_option("--manual_cmd",\
             type="string", action="store", dest="manual_cmd",\
-            default="version",\
-            help="Manual command One of: [version, raise-pen, lower-pen, " \
-            + "walk-x, walk-y, enable-xy, disable-xy, bootload, " \
-            + "strip-data, read-name, write-name]. Default: version")
+            default="ebb_version",\
+            help="Manual command. One of: [ebb_version, raise_pen, lower_pen, " \
+            + "walk_x, walk_y, enable_xy, disable_xy, bootload, " \
+            + "strip_data, read_name, write_name]. Default: ebb_version")
         
         self.OptionParser.add_option("--walk_dist",\
             type="float", action="store", dest="walk_dist",\
@@ -360,7 +360,7 @@ class AxiDrawClass(inkex.Effect):
         if self.options.mode == "manual":
             if self.options.manual_cmd == "none":
                 return  # No option selected. Do nothing and return no error.
-            elif self.options.manual_cmd == "strip-data":
+            elif self.options.manual_cmd == "strip_data":
                 self.svg = self.document.getroot()
                 for node in self.svg.xpath('//svg:WCB', namespaces=inkex.NSS):
                     self.svg.remove(node)
@@ -611,10 +611,15 @@ class AxiDrawClass(inkex.Effect):
 
         if self.options.manual_cmd == "sysinfo":
             ebb_version_string = ebb_serial.queryVersion(self.serial_port)  # Full string, human readable
-            self.text_log('I asked the EBB for its version info, and it replied:\n ' + ebb_version_string)
+            self.text_log('EBB version information:\n ' + ebb_version_string)
             self.text_log('Additional system information:')
             self.text_log(gettext.gettext(self.version_string))
             self.text_log(sys.version)
+            return
+
+        if self.options.manual_cmd == "ebb_version":
+            ebb_version_string = ebb_serial.queryVersion(self.serial_port)  # Full string, human readable
+            self.text_log(ebb_version_string)
             return
 
         if self.options.manual_cmd == "bootload":
@@ -629,7 +634,7 @@ class AxiDrawClass(inkex.Effect):
                 self.text_log('Failed while trying to enter bootloader.')
             return
 
-        if self.options.manual_cmd == "read-name":
+        if self.options.manual_cmd == "read_name":
             nameString = ebb_serial.query_nickname(self.serial_port)
             if nameString is None:
                 self.error_log(gettext.gettext("Error; unable to read nickname.\n"))
@@ -637,9 +642,9 @@ class AxiDrawClass(inkex.Effect):
                 self.text_log(nameString)
             return
 
-        if (self.options.manual_cmd).startswith("write-name"):
+        if (self.options.manual_cmd).startswith("write_name"):
             temp_string = self.options.manual_cmd
-            temp_string = temp_string.split("write-name",1)[1] # Get part after "write-name"
+            temp_string = temp_string.split("write_name",1)[1] # Get part after "write_name"
             temp_string = temp_string[:16] # Only use first 16 characters in name
             if not temp_string:
                 self.error_log("No name given; unable to write.")
@@ -660,21 +665,21 @@ class AxiDrawClass(inkex.Effect):
             
         # Next: Commands that require both power and serial connectivity:
         self.queryEBBVoltage()
-        if self.options.manual_cmd == "raise-pen":
+        if self.options.manual_cmd == "raise_pen":
             self.ServoSetupWrapper()
             self.penRaise()
-        elif self.options.manual_cmd == "lower-pen":
+        elif self.options.manual_cmd == "lower_pen":
             self.ServoSetupWrapper()
             self.penLower()
-        elif self.options.manual_cmd == "enable-xy":
+        elif self.options.manual_cmd == "enable_xy":
             self.EnableMotors()
-        elif self.options.manual_cmd == "disable-xy":
+        elif self.options.manual_cmd == "disable_xy":
             ebb_motion.sendDisableMotors(self.serial_port)
         else:  # self.options.manual_cmd is walk motor:
-            if self.options.manual_cmd == "walk-y":
+            if self.options.manual_cmd == "walk_y":
                 n_delta_x = 0
                 n_delta_y = self.options.walk_dist
-            elif self.options.manual_cmd == "walk-x":
+            elif self.options.manual_cmd == "walk_x":
                 n_delta_y = 0
                 n_delta_x = self.options.walk_dist
             else:
@@ -752,7 +757,6 @@ class AxiDrawClass(inkex.Effect):
 
         try:  # wrap everything in a try so we can be sure to close the serial port
             self.ServoSetupWrapper()
-            self.pen_up = False # Force a pen-up movement, in case we're not already in pen-up position.
             self.penRaise()
             self.EnableMotors()  # Set plotting resolution
 
@@ -2787,7 +2791,8 @@ class AxiDrawClass(inkex.Effect):
                     # ebb_motion.PBOutValue( self.serial_port, 3, 1 )    # I/O Pin B3 output: high
                     if v_time > 50:
                         if self.options.mode != "manual":
-                            time.sleep(float(v_time - 10) / 1000.0)  # pause before issuing next command
+                            # pause before issuing next command
+                            time.sleep(float(v_time - 10) / 1000.0)  
                 self.pen_up = False
         self.path_data_pen_up = -1
 
@@ -2797,33 +2802,45 @@ class AxiDrawClass(inkex.Effect):
         # 1. Configure servo up & down positions and lifting/lowering speeds.
         # 2. Query EBB to learn if we're in the up or down state.
         #
-        # This wrapper is used in the manual, setup, and various plot modes, for initial pen raising/lowering.
+        # This wrapper is used in the manual, setup, and various plot modes,
+        #   for initial pen raising/lowering.
 
         self.ServoSetup()  # Pre-stage the pen up and pen down positions
         if self.options.preview:
             self.pen_up = True  # A fine assumption when in preview mode
             self.virtual_pen_up = True  #
         else:  # Need to figure out if we're in the pen-up or pen-down state... or neither!
-            if ebb_motion.queryEBBLV(self.serial_port) == 0:
+            if ebb_motion.queryEBBLV(self.serial_port) != self.options.pen_pos_up + 1:
+                '''
+                When the EBB is reset, it goes to its default "pen up" position,
+                for which QueryPenUp will tell us that the EBB believes it is
+                in the pen-up position. However, its actual position is the
+                default, not the pen-up position that we've requested.
+                
+                To fix this, we can manually command the pen to either the
+                pen-up or pen-down position, as requested. HOWEVER, that may
+                take as much as five seconds in the very slowest pen-movement
+                speeds, and we want to skip that delay if the pen were actually
+                already in the right place, for example if we're plotting right
+                after raising the pen, or plotting twice in a row
+                
+                Solution: Use an otherwise unused EBB firmware variable (EBBLV),
+                which is set to zero upon reset. If we set that value to be
+                nonzero, and later find that it's still nonzero, we know that
+                the servo position has been set (at least once) since reset.
+                
+                Knowing that the pen is up _does not_ confirm that the pen is
+                at the *requested* pen-up position. We can store
+                (self.options.pen_pos_up + 1), with possible values in the range
+                1 - 101 in EBBLV, to verify that the current position is
+                correct, and that we can  skip extra pen-up/pen-down movements.
+                
+                '''
 
-                # When the EBB is reset, it goes to its default "pen up" position, for which
-                # QueryPenUp will tell us that the EBB believes it is in the pen-up position.
-                # However, its actual position is the default, not the pen-up position that
-                # we've requested.
-                #
-                # To fix this, we can manually command the pen to either the pen-up or pen-down
-                # position, as requested. HOWEVER, that may take as much as five seconds in the
-                # very slowest pen-movement speeds, and we want to skip that delay if the pen
-                # were actually already in the right place, for example if we're plotting right
-                # after raising the pen, or plotting twice in a row.
-                #
-                # Solution: Use an otherwise unused EBB firmware variable (EBBLV), which is
-                # set to zero upon reset. If we set that value to be nonzero, and later find that
-                # it's still nonzero, we can safely skip extra pen-up/pen-down movements.
 
                 self.pen_up = None
                 self.virtual_pen_up = False
-                ebb_motion.setEBBLV(self.serial_port, 127)  # Set the EBBLV to value of 127.
+                ebb_motion.setEBBLV(self.serial_port, self.options.pen_pos_up + 1) 
             else:   # It looks like the EEBLV has already been set; we can trust the value from QueryPenUp:
                     # Note, however, that this does not ensure that the current 
                     #    Z position matches that in the settings.
@@ -2908,6 +2925,18 @@ class AxiDrawClass(inkex.Effect):
             return False
         else:
             return True
+
+    def setup(self, input_file):
+        inkex.localize()
+        self.getoptions([])
+        self.parse(input_file) 
+        self.getdocids()
+
+    def run(self, output=False):
+        self.effect()
+        if output:
+            result = etree.tostring(self.document)        
+            return result.decode("utf-8")
 
     def text_log(self,text_to_add):
         if not self.Secondary:

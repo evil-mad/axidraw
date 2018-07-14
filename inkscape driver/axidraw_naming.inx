@@ -8,7 +8,7 @@
 
 
 <param name="mode" type="notebook" >
-<page name="read-name" _gui-text="Read AxiDraw Name">
+<page name="read_name" _gui-text="Read AxiDraw Name">
 
 <_param name="read1" type="description" appearance="header">
 Read AxiDraw Nickname
@@ -22,7 +22,7 @@ to the AxiDraw connected via USB.
 </page>
 
 
-<page name="write-name" _gui-text="Write AxiDraw Name">
+<page name="write_name" _gui-text="Write AxiDraw Name">
 
 <_param name="write1" type="description" appearance="header">
 Write AxiDraw Nickname
