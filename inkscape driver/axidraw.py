@@ -133,8 +133,8 @@ class AxiDrawClass(inkex.Effect):
             type="string", action="store", dest="manual_cmd",\
             default="ebb_version",\
             help="Manual command. One of: [ebb_version, raise_pen, lower_pen, " \
-            + "walk_x, walk_y, enable_xy, disable_xy, bootload, " \
-            + "strip_data, read_name, write_name]. Default: ebb_version")
+            + "walk_x, walk_y, enable_xy, disable_xy, bootload, strip_data, " \
+            + "read_name, list_names,  write_name]. Default: ebb_version")
         
         self.OptionParser.add_option("--walk_dist",\
             type="float", action="store", dest="walk_dist",\
@@ -368,6 +368,17 @@ class AxiDrawClass(inkex.Effect):
                     self.svg.remove(node)
                 self.text_log(gettext.gettext("All AxiDraw data has been removed from this SVG file."))
                 return
+            elif self.options.manual_cmd == "list_names":
+                name_list = ebb_serial.list_named_ebbs() # does not require connection to AxiDraw
+                if not name_list:
+                    self.text_log(gettext.gettext("No named AxiDraw units located.\n"))
+                else:
+                    self.text_log(gettext.gettext("List of attached AxiDraw units:"))
+                    for EBB in name_list:
+                        self.text_log(EBB)
+                return    
+                
+                
         if self.options.mode == "sysinfo":
             self.options.mode = "manual"  # Use "manual" command mechanism to handle sysinfo request.
             self.options.manual_cmd = "sysinfo"
@@ -387,7 +398,9 @@ class AxiDrawClass(inkex.Effect):
                 self.options.mode = "toggle"
 
         if not skip_serial:
-            self.serialConnect()
+            self.serial_connect()
+            if self.serial_port is None:
+                return
 
         self.svg = self.document.getroot()
         self.ReadWCBdata(self.svg)
@@ -418,7 +431,7 @@ class AxiDrawClass(inkex.Effect):
 
                 self.delay_between_copies = False  # Indicate that we are not currently delaying between copies
                 self.copies_to_plot -= 1
-                self.plotDocument()
+                self.plot_document()
                 self.delay_between_copies = True  # Indicate that we are currently delaying between copies
 
                 time_counter = 10 * self.options.page_delay
@@ -430,17 +443,19 @@ class AxiDrawClass(inkex.Effect):
                         else:
                             time.sleep(0.100)  # Use short intervals to improve responsiveness
                             self.PauseResumeCheck()  # Detect button press while paused between plots
+                            if self.b_stopped:
+                                self.copies_to_plot = 0
 
         elif self.options.mode == "resume-home" or self.options.mode == "resume-plot":
             resume_data_needs_updating = True
             self.resumePlotSetup()
             if self.resume_mode:
-                self.plotDocument()
+                self.plot_document()
             elif self.options.mode == "resume-home":
                 if not self.svg_data_read or (self.svg_last_known_pos_x_old == 0 and self.svg_last_known_pos_y_old == 0):
                     self.text_log(gettext.gettext("No resume data found; unable to return to home position."))
                 else:
-                    self.plotDocument()
+                    self.plot_document()
                     self.svg_node_count = self.svg_node_count_old  # Write old values back to file, to resume later.
                     self.svg_last_path = self.svg_last_path_old
                     self.svg_last_path_nc = self.svg_last_path_nc_old
@@ -468,7 +483,7 @@ class AxiDrawClass(inkex.Effect):
                 self.svg_layer = self.options.layer
                 self.delay_between_copies = False
                 self.copies_to_plot -= 1
-                self.plotDocument()
+                self.plot_document()
                 self.delay_between_copies = True  # Indicate that we are currently delaying between copies
                 time_counter = 10 * self.options.page_delay
                 while time_counter > 0:
@@ -481,10 +496,10 @@ class AxiDrawClass(inkex.Effect):
                             self.PauseResumeCheck()  # Detect button press while paused between plots
 
         elif self.options.mode == "align" or self.options.mode == "toggle":
-            self.setupCommand()
+            self.setup_command()
 
         elif self.options.mode == "manual":
-            self.manualCommand()  # Handle manual commands that use both power and usb.
+            self.manual_command()  # Handle manual commands that use both power and usb.
 
         if resume_data_needs_updating:
             self.UpdateSVGWCBData(self.svg)
@@ -574,7 +589,7 @@ class AxiDrawClass(inkex.Effect):
                     node.set('application', "Axidraw")  # Name of this program
                     self.svg_data_written = True
 
-    def setupCommand(self):
+    def setup_command(self):
         """
         Execute commands from the setup modes
         """
@@ -596,7 +611,7 @@ class AxiDrawClass(inkex.Effect):
         elif self.options.mode == "toggle":
             ebb_motion.TogglePen(self.serial_port)
 
-    def manualCommand(self):
+    def manual_command(self):
         """
         Execute commands in the "manual" mode/tab
         """
@@ -635,11 +650,11 @@ class AxiDrawClass(inkex.Effect):
             return
 
         if self.options.manual_cmd == "read_name":
-            nameString = ebb_serial.query_nickname(self.serial_port)
-            if nameString is None:
+            name_string = ebb_serial.query_nickname(self.serial_port)
+            if name_string is None:
                 self.error_log(gettext.gettext("Error; unable to read nickname.\n"))
             else:
-                self.text_log(nameString)
+                self.text_log(name_string)
             return
 
         if (self.options.manual_cmd).startswith("write_name"):
@@ -651,7 +666,7 @@ class AxiDrawClass(inkex.Effect):
                 return
             version_status = ebb_serial.min_version(self.serial_port, "2.5.5")
             if version_status:
-                renamed = ebb_serial.write_nickname(self.serial_port, temp_string) #TODO: check this
+                renamed = ebb_serial.write_nickname(self.serial_port, temp_string)
                 if renamed is True:
                     self.text_log('Nickname written. Rebooting EBB.')
                 else:
@@ -703,7 +718,7 @@ class AxiDrawClass(inkex.Effect):
         self.vel_data_chart2.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.doc_unit_scale_factor * v2 / scale_factor))
         self.vel_data_chart_t.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.doc_unit_scale_factor * v_total / scale_factor))
 
-    def plotDocument(self):
+    def plot_document(self):
         # Plot the actual SVG document, if so selected in the interface
         # parse the svg data as a series of line segments and send each segment to be plotted
 
@@ -775,7 +790,7 @@ class AxiDrawClass(inkex.Effect):
                     return
 
             # Call the recursive routine to plot the document:
-            self.recursivelyTraverseSvg(self.svg, self.svg_transform)
+            self.traverse_svg(self.svg, self.svg_transform)
             self.penRaise()  # Always end with pen-up
 
             # Return to home after end of normal plot:
@@ -960,11 +975,11 @@ class AxiDrawClass(inkex.Effect):
             # We may have had an exception and lost the serial port...
             pass
 
-    def recursivelyTraverseSvg(self, a_node_list,
-                               mat_current=None,
-                               parent_visibility='visible'):
+    def traverse_svg(self, a_node_list,
+                            mat_current=None,
+                            parent_visibility='visible'):
         """
-        Recursively traverse the svg file to plot out all of the
+        Recursively traverse the SVG file to plot out all of the
         paths.  The function keeps track of the composite transformation
         that should be applied to each path.
 
@@ -1019,7 +1034,7 @@ class AxiDrawClass(inkex.Effect):
                     self.s_current_layer_name = node.get(inkex.addNS('label', 'inkscape'))
                     self.DoWePlotLayer(self.s_current_layer_name)
                     self.penRaise()
-                self.recursivelyTraverseSvg(node, mat_new, parent_visibility=visibility)
+                self.traverse_svg(node, mat_new, parent_visibility=visibility)
 
                 # Restore old layer status variables
                 self.use_custom_layer_pen_height = old_use_custom_layer_pen_height
@@ -1040,11 +1055,11 @@ class AxiDrawClass(inkex.Effect):
                 # A symbol is much like a group, except that it should only be rendered when called within a "use" tag.
 
                 if self.use_tag_nest_level > 0:
-                    self.recursivelyTraverseSvg(node, mat_new, parent_visibility=visibility)
+                    self.traverse_svg(node, mat_new, parent_visibility=visibility)
 
             elif node.tag == inkex.addNS('a', 'svg') or node.tag == 'a':
                 # An 'a' is much like a group, in that it is a generic container element.
-                self.recursivelyTraverseSvg(node, mat_new, parent_visibility=visibility)
+                self.traverse_svg(node, mat_new, parent_visibility=visibility)
 
             elif node.tag == inkex.addNS('use', 'svg') or node.tag == 'use':
 
@@ -1079,7 +1094,7 @@ class AxiDrawClass(inkex.Effect):
                             mat_new2 = mat_new
                         visibility = node.get('visibility', visibility)
                         self.use_tag_nest_level += 1  # Use a number, not a boolean, to keep track of nested "use" elements.
-                        self.recursivelyTraverseSvg(refnode, mat_new2, parent_visibility=visibility)
+                        self.traverse_svg(refnode, mat_new2, parent_visibility=visibility)
                         self.use_tag_nest_level -= 1
                     else:
                         continue
@@ -1107,7 +1122,7 @@ class AxiDrawClass(inkex.Effect):
                         do_we_plot_this_path = True
                     if do_we_plot_this_path:
                         self.pathcount += 1
-                        self.plotPath(node, mat_new)
+                        self.plot_path(node, mat_new)
 
                 elif node.tag == inkex.addNS('rect', 'svg') or node.tag == 'rect':
 
@@ -1155,7 +1170,7 @@ class AxiDrawClass(inkex.Effect):
                         a.append([' l ', [-w, 0]])
                         a.append([' Z', []])
                         newpath.set('d', simplepath.formatPath(a))
-                        self.plotPath(newpath, mat_new)
+                        self.plot_path(newpath, mat_new)
 
                 elif node.tag == inkex.addNS('line', 'svg') or node.tag == 'line':
 
@@ -1196,7 +1211,7 @@ class AxiDrawClass(inkex.Effect):
                         a.append(['M ', [x1, y1]])
                         a.append([' L ', [x2, y2]])
                         newpath.set('d', simplepath.formatPath(a))
-                        self.plotPath(newpath, mat_new)
+                        self.plot_path(newpath, mat_new)
 
                 elif node.tag == inkex.addNS('polyline', 'svg') or node.tag == 'polyline':
 
@@ -1250,7 +1265,7 @@ class AxiDrawClass(inkex.Effect):
                         t = node.get('transform')
                         if t:
                             newpath.set('transform', t)
-                        self.plotPath(newpath, mat_new)
+                        self.plot_path(newpath, mat_new)
 
                 elif node.tag == inkex.addNS('polygon', 'svg') or node.tag == 'polygon':
 
@@ -1297,7 +1312,7 @@ class AxiDrawClass(inkex.Effect):
                         t = node.get('transform')
                         if t:
                             newpath.set('transform', t)
-                        self.plotPath(newpath, mat_new)
+                        self.plot_path(newpath, mat_new)
 
                 elif node.tag in [inkex.addNS('ellipse', 'svg'), 'ellipse',
                                   inkex.addNS('circle', 'svg'), 'circle']:
@@ -1357,7 +1372,7 @@ class AxiDrawClass(inkex.Effect):
                         t = node.get('transform')
                         if t:
                             newpath.set('transform', t)
-                        self.plotPath(newpath, mat_new)
+                        self.plot_path(newpath, mat_new)
                 elif node.tag == inkex.addNS('metadata', 'svg') or node.tag == 'metadata':
                     continue
                 elif node.tag == inkex.addNS('defs', 'svg') or node.tag == 'defs':
@@ -1586,7 +1601,7 @@ class AxiDrawClass(inkex.Effect):
                 self.ServoSetup()  # Set pen down height for this layer.
                 # This new value will be used when we next lower the pen. (It's up between layers.)
 
-    def plotPath(self, path, mat_transform):
+    def plot_path(self, path, mat_transform):
         """
         Plot the path while applying the transformation defined by the matrix [mat_transform].
         - Turn this path into a cubicsuperpath (list of beziers).
@@ -1596,7 +1611,7 @@ class AxiDrawClass(inkex.Effect):
         d = path.get('d')
 
         if self.spew_debugdata:
-            self.text_log('plotPath()\n')
+            self.text_log('plot_path()\n')
             self.text_log('path d: ' + d)
             if len(simplepath.parsePath(d)) == 0:
                 self.text_log('path length is zero, will not be plotting this path.')
@@ -1646,13 +1661,13 @@ class AxiDrawClass(inkex.Effect):
 
                         single_path.append([f_x, f_y])
 
-                    self.PlanTrajectory(single_path)
+                    self.plan_trajectory(single_path)
 
             if not self.b_stopped:  # an "index" for resuming plots quickly-- record last complete path
                 self.svg_last_path = self.pathcount  # The number of the last path completed
                 self.svg_last_path_nc = self.node_count  # the node count after the last path was completed.
 
-    def PlanTrajectory(self, input_path):
+    def plan_trajectory(self, input_path):
         """
         Plan the trajectory for a full path, accounting for linear acceleration.
         Inputs: Ordered (x,y) pairs to cover.
@@ -1666,7 +1681,7 @@ class AxiDrawClass(inkex.Effect):
         spew_trajectory_debug_data = self.spew_debugdata  # Suggested values: False or self.spew_debugdata
 
         if spew_trajectory_debug_data:
-            self.text_log('\nPlanTrajectory()\n')
+            self.text_log('\nplan_trajectory()\n')
 
         if self.b_stopped:
             return
@@ -1695,7 +1710,7 @@ class AxiDrawClass(inkex.Effect):
         traj_length = len(input_path)
 
         if spew_trajectory_debug_data:
-            self.text_log('Input path to PlanTrajectory: ')
+            self.text_log('Input path to plan_trajectory: ')
             for xy in input_path:
                 self.text_log('x: {0:1.3f},  y: {1:1.3f}'.format(xy[0], xy[1]))
             self.text_log('\ntraj_length: ' + str(traj_length))
@@ -1705,7 +1720,7 @@ class AxiDrawClass(inkex.Effect):
             speed_limit = self.speed_penup  # Unlikely case, but handle it anyway...
 
         if spew_trajectory_debug_data:
-            self.text_log('\nspeed_limit (PlanTrajectory) ' + str(speed_limit) + ' inches per second')
+            self.text_log('\nspeed_limit (plan_trajectory) ' + str(speed_limit) + ' inches per second')
 
         traj_dists = array('f')  # float, Segment length (distance) when arriving at the junction
         traj_vels = array('f')  # float, Velocity (_speed_, really) when arriving at the junction
@@ -2601,11 +2616,13 @@ class AxiDrawClass(inkex.Effect):
         # Increment the node counter.
         # Also, resume drawing if we _were_ in resume mode and need to resume at this node.
 
+        pause_state = 0
+        
         if self.b_stopped:
             return  # We have _already_ halted the plot due to a button press. No need to proceed.
 
         if self.options.preview:
-            str_button = ['0']
+            str_button = 0
         else:
             str_button = ebb_motion.QueryPRGButton(self.serial_port)  # Query if button pressed
 
@@ -2614,17 +2631,21 @@ class AxiDrawClass(inkex.Effect):
         #    self.force_pause = True
 
         if self.force_pause:
-            str_button = ['1']  # simulate pause button press
+            str_button = 1  # simulate pause button press
 
-        try:
-            pause_state = str_button[0]
-        except IndexError:
-            self.error_log('\nUSB Connectivity lost.')
-            pause_state = '2'  # Pause the plot; we appear to have lost connectivity.
-            if self.spew_debugdata:
-                self.error_log('\n (USB Connectivity lost after node number : ' + str(self.node_count) + ')')
+#         try:
+#             pause_state = str_button[0]
+#         except IndexError:
+        if self.serial_port is not None:
+            if str_button is None:
+                self.error_log('\nUSB connection to AxiDraw lost.')
+                pause_state = 2  # Pause the plot; we appear to have lost connectivity.
+                if self.spew_debugdata:
+                    self.error_log('\n (USB connection to AxiDraw lost after node number : ' + str(self.node_count) + ')')
+            else:
+                pause_state = int(str_button[0])
 
-        if pause_state == '1' and not self.delay_between_copies:
+        if pause_state == 1 and not self.delay_between_copies:
             if self.force_pause:
                 self.error_log('Plot paused by layer name control.')
             else:
@@ -2637,10 +2658,14 @@ class AxiDrawClass(inkex.Effect):
             if self.spew_debugdata:
                 self.text_log('\n (Paused after node number : ' + str(self.node_count) + ')')
 
+        if pause_state == 1 and not self.delay_between_copies:
+            self.error_log('Plot sequence ended between copies.')
+
+
         if self.force_pause:
             self.force_pause = False  # Clear the flag
 
-        if pause_state == '1' or pause_state == '2':  # Stop plot
+        if pause_state == 1 or pause_state == 2:  # Stop plot
             self.svg_node_count = self.node_count
             self.svg_paused_pos_x = self.f_curr_x - axidraw_conf.StartPosX
             self.svg_paused_pos_y = self.f_curr_y - axidraw_conf.StartPosY
@@ -2662,7 +2687,7 @@ class AxiDrawClass(inkex.Effect):
                 if not self.virtual_pen_up:  # This is the point where we switch from virtual to real pen
                     self.penLower()
 
-    def serialConnect(self):
+    def serial_connect(self):
         named_port = None
         if self.options.port_option is not None:
             if self.options.port_option == 1: # port_option with value "1" specifies to use first AxiDraw found.
@@ -2690,8 +2715,8 @@ class AxiDrawClass(inkex.Effect):
             else:
                 self.error_log(gettext.gettext('Failed to connect to AxiDraw "' + named_port + '"'))
             return
-        else: # Successfully connected
-            self.nameString = ebb_serial.query_nickname(self.serial_port, False) # read out assigned EBB name, if any.
+#         else: # Successfully connected
+#             self.name_string = ebb_serial.query_nickname(self.serial_port, False) # read out assigned EBB name, if any.
 
 
     def EnableMotors(self):
@@ -2836,7 +2861,6 @@ class AxiDrawClass(inkex.Effect):
                 correct, and that we can  skip extra pen-up/pen-down movements.
                 
                 '''
-
 
                 self.pen_up = None
                 self.virtual_pen_up = False
