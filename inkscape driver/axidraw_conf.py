@@ -53,7 +53,7 @@ copies = 1              # Copies to plot, or 0 for continuous plotting. Default:
 page_delay = 15         # Optional delay between copies (s).
 
 preview = False         # Preview mode; simulate plotting only.
-rendering = 0           # Preview mode rendering option (0-3)
+rendering = 3           # Preview mode rendering option (0-3)
                             # 0: Do not render layers
                             # 1: Render only pen-down movement
                             # 2: Render only pen-up movement
