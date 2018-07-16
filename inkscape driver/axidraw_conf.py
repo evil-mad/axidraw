@@ -60,15 +60,20 @@ rendering = 3           # Preview mode rendering option (0-3)
                             # 3: Render all movement
 
 model = 1             # AxiDraw Model (1-3). 1: AxiDraw V2 or V3, default. 2: AxiDraw V3/A3. 3: AxiDraw V3 XLX
-port = None           # Serial port or named AxiDraw to use
+port = None           # Serial port or named AxiDraw to use. Default (none) will plot to first unit located.
+
+port_option = 0       # Serial port behavior option (0-2)
+                            # 0: Default: Plot to first unit found, unless port is specified
+                            # 1: Plot to first AxiDraw unit located
+                            # 2: Plot to a specific AxiDraw only, given by port.
+
+auto_rotate = True     # Auto-select portrait vs landscape orientation
+
+resolution = 1        # Resolution: Either 1 for (smoother, slightly slower) high resolution mode or 2 (coarser) low resolution
 
 # Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
 # Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
 # not along the XY axes of the machine. This parameter chooses 8X or 16X microstepping on the motors.
-
-
-resolution = 1        # Resolution: Either 1 for (smoother, slightly slower) high resolution mode or 2 (coarser) low resolution
-auto_rotate = True     # Auto-select portrait vs landscape orientation
 
 
 

@@ -172,17 +172,18 @@ class AxiDrawClass(inkex.Effect):
             default=axidraw_conf.model,\
             help="AxiDraw Model (1-3). 1: AxiDraw V2 or V3. " \
             + "2:AxiDraw V3/A3. 3: AxiDraw V3 XLX.")
-
+            
         self.OptionParser.add_option("--port",\
             type="string", action="store", dest="port",\
             default=axidraw_conf.port,\
             help="Serial port or named AxiDraw to use")
-                        
+
         self.OptionParser.add_option("--port_option",\
             type="int", action="store", dest="port_option",\
-            default=None,\
-            help="Port use code (1-3). 1: First AxiDraw Found. " \
-            + "2:AxiDraw at --port only.")
+            default=axidraw_conf.port_option,\
+            help="Port use code (0-2)."\
+            +" 0: Plot to first unit found, unless port is specified"\
+            + "1: Plot to first AxiDraw Found. ")
 
         self.OptionParser.add_option("--setup_type",\
             type="string", action="store", dest="setup_type",\
@@ -378,7 +379,6 @@ class AxiDrawClass(inkex.Effect):
                         self.text_log(EBB)
                 return    
                 
-                
         if self.options.mode == "sysinfo":
             self.options.mode = "manual"  # Use "manual" command mechanism to handle sysinfo request.
             self.options.manual_cmd = "sysinfo"
@@ -398,7 +398,7 @@ class AxiDrawClass(inkex.Effect):
                 self.options.mode = "toggle"
 
         if not skip_serial:
-            self.serial_connect()
+            self.connect()
             if self.serial_port is None:
                 return
 
@@ -524,7 +524,7 @@ class AxiDrawClass(inkex.Effect):
                 self.node_target = self.svg_node_count_old
                 self.svg_layer = self.svg_layer_old
                 self.ServoSetupWrapper()
-                self.penRaise()
+                self.pen_raise()
                 self.EnableMotors()  # Set plotting resolution
                 if self.options.mode == "resume-plot":
                     self.resume_mode = True
@@ -606,7 +606,7 @@ class AxiDrawClass(inkex.Effect):
         self.ServoSetupWrapper()
 
         if self.options.mode == "align":
-            self.penRaise()
+            self.pen_raise()
             ebb_motion.sendDisableMotors(self.serial_port)
         elif self.options.mode == "toggle":
             ebb_motion.TogglePen(self.serial_port)
@@ -682,10 +682,10 @@ class AxiDrawClass(inkex.Effect):
         self.queryEBBVoltage()
         if self.options.manual_cmd == "raise_pen":
             self.ServoSetupWrapper()
-            self.penRaise()
+            self.pen_raise()
         elif self.options.manual_cmd == "lower_pen":
             self.ServoSetupWrapper()
-            self.penLower()
+            self.pen_lower()
         elif self.options.manual_cmd == "enable_xy":
             self.EnableMotors()
         elif self.options.manual_cmd == "disable_xy":
@@ -772,7 +772,7 @@ class AxiDrawClass(inkex.Effect):
 
         try:  # wrap everything in a try so we can be sure to close the serial port
             self.ServoSetupWrapper()
-            self.penRaise()
+            self.pen_raise()
             self.EnableMotors()  # Set plotting resolution
 
             if self.options.mode == "resume-home" or self.options.mode == "resume-plot":
@@ -791,7 +791,7 @@ class AxiDrawClass(inkex.Effect):
 
             # Call the recursive routine to plot the document:
             self.traverse_svg(self.svg, self.svg_transform)
-            self.penRaise()  # Always end with pen-up
+            self.pen_raise()  # Always end with pen-up
 
             # Return to home after end of normal plot:
             if not self.b_stopped and self.pt_first:
@@ -1033,7 +1033,7 @@ class AxiDrawClass(inkex.Effect):
                 if node.get(inkex.addNS('groupmode', 'inkscape')) == 'layer':
                     self.s_current_layer_name = node.get(inkex.addNS('label', 'inkscape'))
                     self.DoWePlotLayer(self.s_current_layer_name)
-                    self.penRaise()
+                    self.pen_raise()
                 self.traverse_svg(node, mat_new, parent_visibility=visibility)
 
                 # Restore old layer status variables
@@ -1618,7 +1618,7 @@ class AxiDrawClass(inkex.Effect):
 
         if len(d) > 3000:  # Raise pen when computing extremely long paths.
             if not self.pen_up:  # skip if pen is already up
-                self.penRaise()
+                self.pen_raise()
 
         if len(simplepath.parsePath(d)) == 0:
             return
@@ -1650,13 +1650,13 @@ class AxiDrawClass(inkex.Effect):
 
                         if n_index == 0:
                             if plot_utils.distance(f_x - self.f_curr_x, f_y - self.f_curr_y) > axidraw_conf.MinGap:
-                                self.penRaise()
+                                self.pen_raise()
                                 self.plotSegmentWithVelocity(f_x, f_y, 0, 0)  # Pen up straight move, zero velocity at endpoints
                             else:
                                 self.plotSegmentWithVelocity(f_x, f_y, 0, 0)  # Super-short pen down move, in place of pen-up move.
                         #                                 self.node_count += 1    # Alternative: Increment node counter, at a slight accuracy cost.
                         elif n_index == 1:
-                            self.penLower()
+                            self.pen_lower()
                         n_index += 1
 
                         single_path.append([f_x, f_y])
@@ -2633,9 +2633,6 @@ class AxiDrawClass(inkex.Effect):
         if self.force_pause:
             str_button = 1  # simulate pause button press
 
-#         try:
-#             pause_state = str_button[0]
-#         except IndexError:
         if self.serial_port is not None:
             if str_button is None:
                 self.error_log('\nUSB connection to AxiDraw lost.')
@@ -2658,9 +2655,8 @@ class AxiDrawClass(inkex.Effect):
             if self.spew_debugdata:
                 self.text_log('\n (Paused after node number : ' + str(self.node_count) + ')')
 
-        if pause_state == 1 and not self.delay_between_copies:
+        if pause_state == 1 and self.delay_between_copies:
             self.error_log('Plot sequence ended between copies.')
-
 
         if self.force_pause:
             self.force_pause = False  # Clear the flag
@@ -2669,7 +2665,7 @@ class AxiDrawClass(inkex.Effect):
             self.svg_node_count = self.node_count
             self.svg_paused_pos_x = self.f_curr_x - axidraw_conf.StartPosX
             self.svg_paused_pos_y = self.f_curr_y - axidraw_conf.StartPosY
-            self.penRaise()
+            self.pen_raise()
             if not self.delay_between_copies:  # Only say this if we're not in the delay between copies.
                 self.text_log('Use the resume feature to continue.')
             self.b_stopped = True
@@ -2685,14 +2681,13 @@ class AxiDrawClass(inkex.Effect):
                     self.text_log('\nself.virtual_pen_up : ' + str(self.virtual_pen_up))
                     self.text_log('\nself.pen_up : ' + str(self.pen_up))
                 if not self.virtual_pen_up:  # This is the point where we switch from virtual to real pen
-                    self.penLower()
+                    self.pen_lower()
 
-    def serial_connect(self):
+    def connect(self):
         named_port = None
-        if self.options.port_option is not None:
-            if self.options.port_option == 1: # port_option with value "1" specifies to use first AxiDraw found.
-                self.options.port = None
-        if not self.options.port:
+        if self.options.port_option == 1: # port_option value "1" specifies to use first available AxiDraw.
+            self.options.port = None
+        if not self.options.port:   # Try to connect to first available AxiDraw.
             self.serial_port = ebb_serial.openPort()
         elif str(type(self.options.port)) == "<type 'str'>" or str(type(self.options.port)) == "<type 'unicode'>":
             # This function may be passed a port name to open (and later close).
@@ -2710,10 +2705,10 @@ class AxiDrawClass(inkex.Effect):
             # port object, and leave it open at the end.
             self.serial_port = self.options.port
         if self.serial_port is None:
-            if not named_port:
-                self.error_log(gettext.gettext("Failed to connect to AxiDraw. :("))
-            else:
+            if named_port:
                 self.error_log(gettext.gettext('Failed to connect to AxiDraw "' + named_port + '"'))
+            else:
+                self.error_log(gettext.gettext("Failed to connect to AxiDraw."))
             return
 #         else: # Successfully connected
 #             self.name_string = ebb_serial.query_nickname(self.serial_port, False) # read out assigned EBB name, if any.
@@ -2762,7 +2757,7 @@ class AxiDrawClass(inkex.Effect):
             #    get to it via a very short (1-2 segment only) acceleration period, rather than truly constant.
         # ebb_motion.PBOutConfig( self.serial_port, 3, 0 )    # Configure I/O Pin B3 as an output, low
 
-    def penRaise(self):
+    def pen_raise(self):
         self.virtual_pen_up = True  # Virtual pen keeps track of state for resuming plotting.
         if not self.resume_mode and not self.pen_up:  # skip if pen is already up, or if we're resuming.
             if self.use_custom_layer_pen_height:
@@ -2791,7 +2786,7 @@ class AxiDrawClass(inkex.Effect):
             self.pen_up = True
         self.path_data_pen_up = -1
 
-    def penLower(self):
+    def pen_lower(self):
         self.virtual_pen_up = False  # Virtual pen keeps track of state for resuming plotting.
         if self.pen_up:  # skip if pen is already down
             if not self.resume_mode and not self.b_stopped:  # skip if resuming or stopped
@@ -2950,16 +2945,20 @@ class AxiDrawClass(inkex.Effect):
         else:
             return True
 
-    def setup(self, input_file):
+    def plot_setup(self, input_file):
+        # Initialize AxiDraw options & parse SVG file
+        # For use as an imported python module
         inkex.localize()
         self.getoptions([])
         self.parse(input_file) 
         self.getdocids()
 
-    def run(self, output=False):
+    def plot_run(self, output=False):
+        # Plot the document, optionally return SVG file output
+        # For use as an imported python ModuleType
         self.effect()
         if output:
-            result = etree.tostring(self.document)        
+            result = etree.tostring(self.document)
             return result.decode("utf-8")
 
     def text_log(self,text_to_add):
