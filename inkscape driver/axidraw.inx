@@ -104,10 +104,10 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 
 <param indent="1" name="preview" type="boolean" _gui-text="Enable offline preview mode; Simulate plotting only">false</param> 
 <param indent="5" name="rendering" type="optiongroup" appearance="minimal" _gui-text="Preview mode rendering:">
-<_option value="0">None</_option>
-<_option value="1">Pen-down movement</_option>
-<_option value="2">Pen-up movement</_option>
 <_option value="3">All movement</_option>
+<_option value="2">Pen-up movement</_option>
+<_option value="1">Pen-down movement</_option>
+<_option value="0">None</_option>
 </param>
 
 </page>
