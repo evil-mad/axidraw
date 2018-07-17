@@ -205,7 +205,6 @@ class AxiDrawClass(inkex.Effect):
             default=axidraw_conf.resolution,\
             help="Resolution option selected (GUI Only)")
 
-
         # Set default values of certain parameters
         self.svg_layer_old = int(0)
         self.svg_node_count_old = int(0)
@@ -219,10 +218,12 @@ class AxiDrawClass(inkex.Effect):
         self.svg_row_old = int(0)
         self.svg_application_old = ""
 
+        self.version_string = "AxiDraw Control - Version 2.0.0, 2018-06-18."
+
+
     def effect(self):
         """Main entry point: check to see which mode/tab is selected, and act accordingly."""
 
-        self.version_string = "AxiDraw Control - Version 2.0.0, 2018-06-18."
         self.spew_debugdata = False
 
         self.start_time = time.time()
@@ -662,8 +663,7 @@ class AxiDrawClass(inkex.Effect):
             temp_string = temp_string.split("write_name",1)[1] # Get part after "write_name"
             temp_string = temp_string[:16] # Only use first 16 characters in name
             if not temp_string:
-                self.error_log("No name given; unable to write.")
-                return
+                temp_string = "" # Use empty string to clear nickname.
             version_status = ebb_serial.min_version(self.serial_port, "2.5.5")
             if version_status:
                 renamed = ebb_serial.write_nickname(self.serial_port, temp_string)
@@ -691,6 +691,8 @@ class AxiDrawClass(inkex.Effect):
         elif self.options.manual_cmd == "disable_xy":
             ebb_motion.sendDisableMotors(self.serial_port)
         else:  # self.options.manual_cmd is walk motor:
+            # Query if button pressed, to clear the result:
+            str_button = ebb_motion.QueryPRGButton(self.serial_port)  
             if self.options.manual_cmd == "walk_y":
                 n_delta_x = 0
                 n_delta_y = self.options.walk_dist

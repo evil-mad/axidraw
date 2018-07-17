@@ -145,7 +145,7 @@ Press 'Apply' to execute the command.
 <page name="layers" _gui-text="Layers">
 <_param name="instructions_layer" type="description"  appearance="header">Plot Individual Layers </_param>
 <_param  indent="1" name="instructions_layer2" type="description" >
-Normally, we plot paths from all visible layers.  
+Normally, all paths, from all visible layers will be plotted.  
 
 You can also choose to plot a single layer or group of layers, for example to plot only a single color of ink.
 
