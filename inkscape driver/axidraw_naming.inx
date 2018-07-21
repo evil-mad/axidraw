@@ -14,9 +14,10 @@
 Read AxiDraw Nickname
 </_param>
 
-<_param name="read2" type="description" >
-Click "Apply" to read the Nickname (if any) or USB port currently assigned
-to all AxiDraw units connected via USB. 
+<_param name="read2"  type="description" indent="2"  xml:space="preserve">
+Click "Apply" to read and list all AxiDraw units found via
+USB. Each is listed by assigned USB Nickname (if any) or by
+USB port enumeration.
 </_param>
 
 </page>
@@ -30,7 +31,7 @@ Write AxiDraw Nickname
 
 <param indent="1" name="nickname" type="string" max_length="16" _gui-text="Nickname:">East</param>
 
-<_param name="write2" type="description" >
+<_param name="write2" type="description"  indent="2" xml:space="preserve">
 Click "Apply" to assign the Nickname above to the AxiDraw
 connected via USB. After the name change, the AxiDraw will
 reboot to its power-on state. (If more than one AxiDraw is
@@ -43,7 +44,7 @@ connected, only the first one found will be updated.)
 
 <page name="about" _gui-text="About">
 
-<_param name="aboutpage" type="description" xml:space="preserve">
+<_param name="aboutpage" type="description" indent="2" xml:space="preserve">
 This extension allows you to assign "nickname" (a digital
 name tag) to a given AxiDraw, or to read out that name. 
 
@@ -55,8 +56,8 @@ AxiDraw Naming requires firmware version 2.5.5 or newer.
 You can use the "Version" tab in AxiDraw Control to check
 which firmware version is currently installed.
 
-Firmware update instructions may be found in the AxiDraw
-documentation at:  axidraw.com/docs
+Firmware update instructions may be found in the
+AxiDraw documentation online at axidraw.com/docs 
 </_param>
 
 
