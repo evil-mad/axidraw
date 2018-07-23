@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-<_name>AxiDraw Control</_name>
+<_name>AxiDraw Control (v2 inner)</_name>
 <id>command.evilmadscientist.axidraw</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw.py</dependency>
@@ -20,9 +20,10 @@ Need help? Visit http://axidraw.com/docs
 
 
 </_param>
+<_param name="instructions_timing4" type="description" appearance="header">Multiple Copies:</_param>
 
 <param indent="2" name="copies" type="int" min="0" max="9999"  _gui-text="Copies to Plot:">1</param>	
-<param indent="1" name="page_delay" type="int" min="0" max="3600" _gui-text="Seconds of delay between copies:">15</param>	
+<param indent="2" name="page_delay" type="int" min="0" max="3600" _gui-text="Seconds of delay between copies:">15</param>	
 
 <_param name="instructions_plot1" type="description" indent="4" > Tip: Select 0 copies to plot continuously until paused.</_param>
 
@@ -212,6 +213,7 @@ Press the physical pause button on the left side of the machine.
 <effect needs-live-preview="false" needs-document="no">
 <object-type>all</object-type>
 <effects-menu>
+<submenu _name="AxiDraw Utilities"/>
 </effects-menu>
 </effect>
 

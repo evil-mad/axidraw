@@ -35,19 +35,23 @@ from array import array
 libpath = os.path.join('axidraw', 'lib')
 sys.path.append('axidraw')
 sys.path.append(libpath)
-sys.path.append('lib')
+# sys.path.append('lib')
 
-import ebb_motion  # Requires v 0.15 in plotink     https://github.com/evil-mad/plotink
-import ebb_serial  # Requires v 0.11 in plotink
-import inkex       # From Inkscape
+import ebb_serial  # Requires v 0.13 in plotink
+import ebb_motion  # Requires v 0.16 in plotink     https://github.com/evil-mad/plotink
+    
 import plot_utils  # Requires v 0.10 in plotink
+import axidraw_conf  # Some settings can be changed here.
+
+import inkex       # Forked from Inkscape's extension framework
 import simplepath
 import simplestyle
-from lxml import etree
-from simpletransform import applyTransformToPath, composeTransform, parseTransform
 import cubicsuperpath
+from simpletransform import applyTransformToPath, composeTransform, parseTransform
 
-import axidraw_conf  # Some settings can be changed here.
+
+from lxml import etree
+
 
 try:
     xrange = xrange  # We have Python 2
@@ -185,8 +189,9 @@ class AxiDrawClass(inkex.Effect):
             default=axidraw_conf.port_option,\
             help="Port use code (0-2)."\
             +" 0: Plot to first unit found, unless port is specified"\
-            + "1: Plot to first AxiDraw Found. ")
-
+            + "1: Plot to first AxiDraw Found. "\
+            + "2: Plot to specified AxiDraw. ")
+            
         self.OptionParser.add_option("--setup_type",\
             type="string", action="store", dest="setup_type",\
             default="align",\
@@ -236,7 +241,7 @@ class AxiDrawClass(inkex.Effect):
         self.x_bounds_min = axidraw_conf.StartPosX
         self.y_bounds_min = axidraw_conf.StartPosY
         self.svg_transform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
-
+        self.delay_between_copies = False  # Not currently delaying between copies
 
 
     def update_options(self):
@@ -310,7 +315,6 @@ class AxiDrawClass(inkex.Effect):
         self.layer_speed_pendown = -1
         self.s_current_layer_name = ''
         self.copies_to_plot = 1
-        self.delay_between_copies = False  # Not currently delaying between copies
 
         # New values to write to file:
         self.svg_layer = int(0)
@@ -2657,13 +2661,15 @@ class AxiDrawClass(inkex.Effect):
             str_button = 1  # simulate pause button press
 
         if self.serial_port is not None:
-            if str_button is None:
+            try:
+                pause_state = int(str_button[0])
+            except:                    
                 self.error_log('\nUSB connection to AxiDraw lost.')
                 pause_state = 2  # Pause the plot; we appear to have lost connectivity.
                 if self.spew_debugdata:
                     self.error_log('\n (USB connection to AxiDraw lost after node number : ' + str(self.node_count) + ')')
-            else:
-                pause_state = int(str_button[0])
+
+
 
         if pause_state == 1 and not self.delay_between_copies:
             if self.force_pause:
@@ -2708,16 +2714,20 @@ class AxiDrawClass(inkex.Effect):
 
     def serial_connect(self):
         named_port = None
-        if self.options.port_option == 1: # port_option value "1" specifies to use first available AxiDraw.
+#         if self.options.port is not None:
+#             self.text_log('str(type(self.options.port)) : ' + str(type(self.options.port)))
+        
+        if self.options.port_option == 1: # port_option value "1": Use first available AxiDraw.
             self.options.port = None
-        if not self.options.port:   # Try to connect to first available AxiDraw.
+        if not self.options.port: # Try to connect to first available AxiDraw.
             self.serial_port = ebb_serial.openPort()
-        elif str(type(self.options.port)) == "<type 'str'>" or str(type(self.options.port)) == "<type 'unicode'>":
+        elif str(type(self.options.port)) in (
+            "<type 'str'>", "<type 'unicode'>", "<class 'str'>"):
             # This function may be passed a port name to open (and later close).
             tempstring = str(self.options.port)
             self.options.port = tempstring.strip('\"')
             named_port = self.options.port
-            # self.text_log( 'About to test serial port: ' + str(self.options.port) ) # debug message
+            # self.text_log( 'About to test serial port: ' + str(self.options.port) )
             the_port = ebb_serial.find_named_ebb(self.options.port)
             self.serial_port = ebb_serial.testPort(the_port)
             self.options.port = None  # Clear this input, to ensure that we close the port later.
@@ -2726,15 +2736,21 @@ class AxiDrawClass(inkex.Effect):
             # an instance of serial.serialposix.Serial.
             # In that case, we should interact with that given
             # port object, and leave it open at the end.
+
             self.serial_port = self.options.port
         if self.serial_port is None:
             if named_port:
-                self.error_log(gettext.gettext('Failed to connect to AxiDraw "' + named_port + '"'))
+                self.error_log(gettext.gettext('Failed to connect to AxiDraw "' + str(named_port) + '"'))
             else:
                 self.error_log(gettext.gettext("Failed to connect to AxiDraw."))
             return
-#         else: # Successfully connected
-#             self.name_string = ebb_serial.query_nickname(self.serial_port, False) # read out assigned EBB name, if any.
+            
+        elif self.spew_debugdata: # Successfully connected
+            if named_port:
+                self.text_log(gettext.gettext('Connected successfully to port:  ' + str(named_port) ))
+            else:
+              self.text_log (" Connected successfully")
+#             self.text_log ( ebb_serial.query_nickname(self.serial_port, False))
 
 
     def EnableMotors(self):
@@ -2853,7 +2869,9 @@ class AxiDrawClass(inkex.Effect):
             self.pen_up = True  # A fine assumption when in preview mode
             self.virtual_pen_up = True  #
         else:  # Need to figure out if we're in the pen-up or pen-down state... or neither!
-            if ebb_motion.queryEBBLV(self.serial_port) != self.options.pen_pos_up + 1:
+        
+            value = ebb_motion.queryEBBLV(self.serial_port)
+            if value != self.options.pen_pos_up + 1:
                 '''
                 When the EBB is reset, it goes to its default "pen up" position,
                 for which QueryPenUp will tell us that the EBB believes it is
@@ -2877,7 +2895,6 @@ class AxiDrawClass(inkex.Effect):
                 (self.options.pen_pos_up + 1), with possible values in the range
                 1 - 101 in EBBLV, to verify that the current position is
                 correct, and that we can  skip extra pen-up/pen-down movements.
-                
                 '''
 
                 self.pen_up = None
