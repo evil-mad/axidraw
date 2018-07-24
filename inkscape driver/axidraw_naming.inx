@@ -36,6 +36,8 @@ Click "Apply" to assign the Nickname above to the AxiDraw
 connected via USB. After the name change, the AxiDraw will
 reboot to its power-on state. (If more than one AxiDraw is
 connected, only the first one found will be updated.)
+
+Names should be 3-16 characters long.
 </_param>
 
 
