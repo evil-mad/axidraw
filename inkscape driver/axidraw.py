@@ -247,7 +247,7 @@ class AxiDraw(inkex.Effect):
         self.y_bounds_min = axidraw_conf.StartPosY
         self.svg_transform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
         self.delay_between_copies = False  # Not currently delaying between copies
-        self.interactive = False # interactive mode is off by default.
+        self.interactive_mode = False # interactive mode is off by default.
 
     def update_options(self):
         # Parse and update certain options; called in effect and in interactive modes
@@ -712,6 +712,8 @@ class AxiDraw(inkex.Effect):
             
         # Next: Commands that require both power and serial connectivity:
         self.queryEBBVoltage()
+        # Query if button pressed, to clear the result:
+        ebb_motion.QueryPRGButton(self.serial_port)  
         if self.options.manual_cmd == "raise_pen":
             self.ServoSetupWrapper()
             self.pen_raise()
@@ -723,8 +725,6 @@ class AxiDraw(inkex.Effect):
         elif self.options.manual_cmd == "disable_xy":
             ebb_motion.sendDisableMotors(self.serial_port)
         else:  # self.options.manual_cmd is walk motor:
-            # Query if button pressed, to clear the result:
-            str_button = ebb_motion.QueryPRGButton(self.serial_port)  
             if self.options.manual_cmd == "walk_y":
                 n_delta_x = 0
                 n_delta_y = self.options.walk_dist
@@ -2681,7 +2681,7 @@ class AxiDraw(inkex.Effect):
             if self.force_pause:
                 self.error_log('Plot paused by layer name control.')
             else:
-                if self.Secondary: 
+                if self.Secondary or self.interactive_mode: 
                     self.error_log('Plot halted by button press.')
                     self.error_log('Important: Manually home this AxiDraw before plotting next item.')
                 else:
@@ -2701,7 +2701,8 @@ class AxiDraw(inkex.Effect):
             self.svg_paused_pos_x = self.f_curr_x - axidraw_conf.StartPosX
             self.svg_paused_pos_y = self.f_curr_y - axidraw_conf.StartPosY
             self.pen_raise()
-            if not self.delay_between_copies and not self.Secondary:  
+            if not self.delay_between_copies and \
+                not self.Secondary and not self.interactive_mode:  
                 # Only say this if we're not in the delay between copies, nor a "second" unit.
                 self.text_log('Use the resume feature to continue.')
             self.b_stopped = True
@@ -3007,7 +3008,7 @@ class AxiDraw(inkex.Effect):
     def plot_setup(self, input_file):
         # For use as an imported python module
         # Initialize AxiDraw options & parse SVG file
-        self.interactive = False
+        self.interactive_mode = False
         inkex.localize()
         self.getoptions([])
         self.parse(input_file) 
@@ -3032,8 +3033,7 @@ class AxiDraw(inkex.Effect):
         self.options.preview = False
         self.options.mode = "manual"  # best approximation
         self.Secondary = False
-        self.interactive = True
-
+        self.interactive_mode = True
 
     def connect(self):
         # Begin session
@@ -3049,6 +3049,8 @@ class AxiDraw(inkex.Effect):
         self.update_options()
         self.f_curr_x = axidraw_conf.StartPosX
         self.f_curr_y = axidraw_conf.StartPosY
+        # Query if button pressed, to clear the result:
+        ebb_motion.QueryPRGButton(self.serial_port)  
         self.ServoSetupWrapper()
         self.pen_raise()
         self.EnableMotors()  # Set plotting resolution & speed
