@@ -184,9 +184,9 @@ class AxiDraw(inkex.Effect):
             default=axidraw_conf.port,\
             help="Serial port or named AxiDraw to use")
 
-        self.OptionParser.add_option("--port_option",\
-            type="int", action="store", dest="port_option",\
-            default=axidraw_conf.port_option,\
+        self.OptionParser.add_option("--port_config",\
+            type="int", action="store", dest="port_config",\
+            default=axidraw_conf.port_config,\
             help="Port use code (0-2)."\
             +" 0: Plot to first unit found, unless port is specified"\
             + "1: Plot to first AxiDraw Found. "\
@@ -2725,7 +2725,7 @@ class AxiDraw(inkex.Effect):
 #         if self.options.port is not None:
 #             self.text_log('str(type(self.options.port)) : ' + str(type(self.options.port)))
         
-        if self.options.port_option == 1: # port_option value "1": Use first available AxiDraw.
+        if self.options.port_config == 1: # port_config value "1": Use first available AxiDraw.
             self.options.port = None
         if not self.options.port: # Try to connect to first available AxiDraw.
             self.serial_port = ebb_serial.openPort()

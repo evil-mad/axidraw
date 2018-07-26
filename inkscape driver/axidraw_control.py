@@ -173,8 +173,8 @@ class AxiDrawWrapperClass( inkex.Effect ):
             default=axidraw_conf.port,\
             help="Serial port or named AxiDraw to use")
                         
-        self.OptionParser.add_option("--port_option",\
-            type="int", action="store", dest="port_option",\
+        self.OptionParser.add_option("--port_config",\
+            type="int", action="store", dest="port_config",\
             default=None,\
             help="Port use code (0-3)."\
             +" 0: Plot to first unit found, unless port is specified"\
@@ -220,7 +220,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
         self.options.mode = self.options.mode.strip("\"")
         
         '''
-        USB port use option (self.options.port_option)
+        USB port use option (self.options.port_config)
             
             Allowed values:
             
@@ -238,14 +238,14 @@ class AxiDrawWrapperClass( inkex.Effect ):
         
         
         if self.options.preview:
-            self.options.port_option = 1 # Ignore port & multi-machine options in preview
+            self.options.port_config = 1 # Ignore port & multi-machine options in preview
 
 
         if self.options.mode in ( "resume", "resume-plot", "resume-home"):
-            if self.options.port_option == 3: # If requested to use all machines,
-                self.options.port_option = 1  # Instead, only resume for first machine.
+            if self.options.port_config == 3: # If requested to use all machines,
+                self.options.port_config = 1  # Instead, only resume for first machine.
                 
-        if self.options.port_option == 3: # Use all available AxiDraw units.
+        if self.options.port_config == 3: # Use all available AxiDraw units.
             process_list = []
             EBBList = []
             EBBList = ebb_serial.listEBBports()
@@ -305,7 +305,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
                 # This includes: Preview mode and all cases of plotting to a single AxiDraw.
                 
             # If we are to use first available unit, blank the "port" variable.
-            if self.options.port_option == 1: # Use first available AxiDraw
+            if self.options.port_config == 1: # Use first available AxiDraw
                 self.options.port = None
             self.plot_to_axidraw(self.options.port, True)
 
@@ -360,9 +360,9 @@ class AxiDrawWrapperClass( inkex.Effect ):
         # If the port is None, change the port option
         # to be "use first available AxiDraw":
         if port is None:
-            ad.options.port_option = 1 # Use first available AxiDraw
+            ad.options.port_config = 1 # Use first available AxiDraw
         else:
-            ad.options.port_option = 2 # Use AxiDraw specified by port
+            ad.options.port_config = 2 # Use AxiDraw specified by port
         
         ad.document = self.document 
         ad.original_document = self.document
