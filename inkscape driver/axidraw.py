@@ -212,7 +212,16 @@ class AxiDraw(inkex.Effect):
             default=axidraw_conf.resolution,\
             help="Resolution option selected (GUI Only)")
 
+        self.version_string = "AxiDraw Control - Version 2.0.0, 2018-06-18."
+        self.spew_debugdata = False
+        self.set_defaults()
+        
+    def set_defaults(self):
         # Set default values of certain parameters
+        # These are set when the class is initialized.
+        # Also be called in plot_run(), to ensure that
+        # these defaults are set before plotting additional pages.
+        
         self.svg_layer_old = int(0)
         self.svg_node_count_old = int(0)
         self.svg_last_path_old = int(0)
@@ -224,10 +233,6 @@ class AxiDraw(inkex.Effect):
         self.svg_rand_seed_old = float(1.0)
         self.svg_row_old = int(0)
         self.svg_application_old = ""
-
-        self.version_string = "AxiDraw Control - Version 2.0.0, 2018-06-18."
-        self.spew_debugdata = False
-
         self.use_custom_layer_speed = False
         self.use_custom_layer_pen_height = False
         self.resume_mode = False
@@ -242,7 +247,7 @@ class AxiDraw(inkex.Effect):
         self.y_bounds_min = axidraw_conf.StartPosY
         self.svg_transform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
         self.delay_between_copies = False  # Not currently delaying between copies
-
+        self.interactive = False # interactive mode is off by default.
 
     def update_options(self):
         # Parse and update certain options; called in effect and in interactive modes
@@ -440,10 +445,12 @@ class AxiDraw(inkex.Effect):
             self.copies_to_plot = self.options.copies
             if self.copies_to_plot == 0:
                 self.copies_to_plot = -1
-                if self.options.preview:  # Special case: 0 (continuous copies) selected, but running in preview mode.
-                    self.copies_to_plot = 1  # In this case, revert back to single copy, since there's no way to terminate.
-                    # Otherwise, we enter an endless loop of plotting without a way to cancel.
-                    # (Canceling is initiated through the USB/button press!)
+                if self.options.preview:  
+                    # Special case: 0 (continuous copies), but in preview mode.
+                    self.copies_to_plot = 1  
+                    # In this case, revert back to single copy, since there is
+                    # no way to terminate. Canceling is initiated by 
+                    # USB/button press!
             while self.copies_to_plot != 0:
                 self.layers_found_to_plot = False
                 resume_data_needs_updating = True
@@ -2667,8 +2674,7 @@ class AxiDraw(inkex.Effect):
                 self.error_log('\nUSB connection to AxiDraw lost.')
                 pause_state = 2  # Pause the plot; we appear to have lost connectivity.
                 if self.spew_debugdata:
-                    self.error_log('\n (USB connection to AxiDraw lost after node number : ' + str(self.node_count) + ')')
-
+                    self.error_log('\n (Node # : ' + str(self.node_count) + ')')
 
 
         if pause_state == 1 and not self.delay_between_copies:
@@ -2677,7 +2683,7 @@ class AxiDraw(inkex.Effect):
             else:
                 if self.Secondary: 
                     self.error_log('Plot halted by button press.')
-                    self.error_log('Important: Manually home this AxiDraw before plotting next file.')
+                    self.error_log('Important: Manually home this AxiDraw before plotting next item.')
                 else:
                     self.error_log('Plot paused by button press.')
 
@@ -2695,7 +2701,8 @@ class AxiDraw(inkex.Effect):
             self.svg_paused_pos_x = self.f_curr_x - axidraw_conf.StartPosX
             self.svg_paused_pos_y = self.f_curr_y - axidraw_conf.StartPosY
             self.pen_raise()
-            if not self.delay_between_copies:  # Only say this if we're not in the delay between copies.
+            if not self.delay_between_copies and not self.Secondary:  
+                # Only say this if we're not in the delay between copies, nor a "second" unit.
                 self.text_log('Use the resume feature to continue.')
             self.b_stopped = True
             return  # Note: This segment is not plotted.
@@ -3000,6 +3007,7 @@ class AxiDraw(inkex.Effect):
     def plot_setup(self, input_file):
         # For use as an imported python module
         # Initialize AxiDraw options & parse SVG file
+        self.interactive = False
         inkex.localize()
         self.getoptions([])
         self.parse(input_file) 
@@ -3008,6 +3016,7 @@ class AxiDraw(inkex.Effect):
     def plot_run(self, output=False):
         # For use as an imported python module
         # Plot the document, optionally return SVG file output
+        self.set_defaults()
         self.effect()
         if output:
             result = etree.tostring(self.document)
@@ -3023,6 +3032,7 @@ class AxiDraw(inkex.Effect):
         self.options.preview = False
         self.options.mode = "manual"  # best approximation
         self.Secondary = False
+        self.interactive = True
 
 
     def connect(self):
@@ -3053,6 +3063,7 @@ class AxiDraw(inkex.Effect):
             self.EnableMotors()  # Set plotting resolution & speed
 
     def goto(self,x_target,y_target):
+        # For interactive-mode use as an imported python module
         if self.options.units: # If using centimeter units
             x_target = x_target / 2.54
             y_target = y_target / 2.54
@@ -3060,14 +3071,17 @@ class AxiDraw(inkex.Effect):
             self.plotSegmentWithVelocity(x_target, y_target, 0, 0)
 
     def moveto(self,x_target,y_target):
+        # For interactive-mode use as an imported python module
         self.pen_raise()
         self.goto(x_target, y_target)
 
     def lineto(self,x_target,y_target):
+        # For interactive-mode use as an imported python module
         self.pen_lower()
         self.goto(x_target, y_target)
 
     def go(self,x_delta,y_delta): # Relative 
+        # For interactive-mode use as an imported python module
         if self.options.units:  # If using centimeter units
             x_delta = x_delta / 2.54
             y_delta = y_delta / 2.54
@@ -3077,17 +3091,21 @@ class AxiDraw(inkex.Effect):
             self.plotSegmentWithVelocity(x_target, y_target, 0, 0)
 
     def move(self,x_delta,y_delta):
+        # For interactive-mode use as an imported python module
         self.pen_raise()
         self.go(x_delta, y_delta)
 
     def line(self,x_delta,y_delta):
+        # For interactive-mode use as an imported python module
         self.pen_lower()
         self.go(x_delta, y_delta)
 
     def penup(self):
+        # For interactive-mode use as an imported python module
         self.pen_raise()
 
     def pendown(self):
+        # For interactive-mode use as an imported python module
         self.pen_lower()
 
     def disconnect(self):
