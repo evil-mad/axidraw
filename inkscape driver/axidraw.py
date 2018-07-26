@@ -32,8 +32,8 @@ import time
 from array import array
 
 # Handle a few potential locations of this and its required files
-libpath = os.path.join('axidraw', 'lib')
-sys.path.append('axidraw')
+libpath = os.path.join('pyaxidraw', 'lib')
+sys.path.append('pyaxidraw')
 sys.path.append(libpath)
 # sys.path.append('lib')
 
@@ -64,7 +64,7 @@ except NameError:
     basestring = str
 
 
-class AxiDrawClass(inkex.Effect):
+class AxiDraw(inkex.Effect):
 
     def __init__(self):
         inkex.Effect.__init__(self)
@@ -3099,5 +3099,5 @@ class AxiDrawClass(inkex.Effect):
 
 
 if __name__ == '__main__':
-    e = AxiDrawClass()
+    e = AxiDraw()
     e.affect()
