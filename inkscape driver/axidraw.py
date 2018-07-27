@@ -214,8 +214,14 @@ class AxiDraw(inkex.Effect):
 
         self.version_string = "AxiDraw Control - Version 2.0.0, 2018-06-18."
         self.spew_debugdata = False
+
+        self.delay_between_copies = False  # Not currently delaying between copies
+        self.ignore_limits = False
         self.set_defaults()
-        
+        self.pen_up = None  # Initial state of pen is neither up nor down, but _unknown_.
+        self.virtual_pen_up = False  # Keeps track of pen postion when stepping through plot before resuming
+        self.Secondary = False
+
     def set_defaults(self):
         # Set default values of certain parameters
         # These are set when the class is initialized.
@@ -238,17 +244,13 @@ class AxiDraw(inkex.Effect):
         self.resume_mode = False
         self.b_stopped = False
         self.serial_port = None
-        self.pen_up = None  # Initial state of pen is neither up nor down, but _unknown_.
-        self.virtual_pen_up = False  # Keeps track of pen postion when stepping through plot before resuming
-        self.ignore_limits = False
         self.force_pause = False  # Flag to initiate forced pause
         self.node_count = int(0)  # NOTE: python uses 32-bit ints.
         self.x_bounds_min = axidraw_conf.StartPosX
         self.y_bounds_min = axidraw_conf.StartPosY
         self.svg_transform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
-        self.delay_between_copies = False  # Not currently delaying between copies
-        self.interactive_mode = False # interactive mode is off by default.
-
+        
+        
     def update_options(self):
         # Parse and update certain options; called in effect and in interactive modes
         # whenever the options are updated 
@@ -2681,7 +2683,7 @@ class AxiDraw(inkex.Effect):
             if self.force_pause:
                 self.error_log('Plot paused by layer name control.')
             else:
-                if self.Secondary or self.interactive_mode: 
+                if self.Secondary or self.options.mode == "interactive": 
                     self.error_log('Plot halted by button press.')
                     self.error_log('Important: Manually home this AxiDraw before plotting next item.')
                 else:
@@ -2702,7 +2704,7 @@ class AxiDraw(inkex.Effect):
             self.svg_paused_pos_y = self.f_curr_y - axidraw_conf.StartPosY
             self.pen_raise()
             if not self.delay_between_copies and \
-                not self.Secondary and not self.interactive_mode:  
+                not self.Secondary and self.options.mode != "interactive":  
                 # Only say this if we're not in the delay between copies, nor a "second" unit.
                 self.text_log('Use the resume feature to continue.')
             self.b_stopped = True
@@ -2828,14 +2830,14 @@ class AxiDraw(inkex.Effect):
                 ebb_motion.sendPenUp(self.serial_port, v_time)
                 # ebb_motion.PBOutValue( self.serial_port, 3, 0 )    # I/O Pin B3 output: low
                 if v_time > 50:
-                    if self.options.mode != "manual" and self.options.mode != "align" and self.options.mode != "toggle": 
+                    if self.options.mode != "manual":
                         time.sleep(float(v_time - 10) / 1000.0)  # pause before issuing next command
             self.pen_up = True
         self.path_data_pen_up = -1
 
     def pen_lower(self):
         self.virtual_pen_up = False  # Virtual pen keeps track of state for resuming plotting.
-        if self.pen_up:  # skip if pen is already down
+        if self.pen_up or self.pen_up is None:  # skip if pen is already down
             if not self.resume_mode and not self.b_stopped:  # skip if resuming or stopped
                 if self.use_custom_layer_pen_height:
                     pen_down_pos = self.layer_pen_pos_down
@@ -2908,6 +2910,7 @@ class AxiDraw(inkex.Effect):
                 self.pen_up = None
                 self.virtual_pen_up = False
                 ebb_motion.setEBBLV(self.serial_port, self.options.pen_pos_up + 1) 
+
             else:   # It looks like the EEBLV has already been set; we can trust the value from QueryPenUp:
                     # Note, however, that this does not ensure that the current 
                     #    Z position matches that in the settings.
@@ -3008,11 +3011,33 @@ class AxiDraw(inkex.Effect):
     def plot_setup(self, input_file):
         # For use as an imported python module
         # Initialize AxiDraw options & parse SVG file
-        self.interactive_mode = False
+        file_ok = False
         inkex.localize()
         self.getoptions([])
-        self.parse(input_file) 
-        self.getdocids()
+        
+        # Parse input file or SVG string
+        if input_file is not None:
+            try:
+                stream = open(input_file, 'r')
+                p = etree.XMLParser(huge_tree=True)
+                self.document = etree.parse(stream, parser=p)
+                self.original_document = copy.deepcopy(self.document)
+                stream.close()
+                file_ok = True
+            except IOError:
+                pass
+            if not file_ok:
+                try:
+                    p = etree.XMLParser(huge_tree=True)
+                    self.document = etree.fromstring(input_file, parser=p)
+                    self.original_document = copy.deepcopy(self.document)
+                    file_ok = True
+                except:
+                    self.error_log("Unable to open SVG input file.")
+                    quit()
+        if file_ok:
+            self.getdocids()
+        #self.Secondary = True # Suppress standard output stream
 
     def plot_run(self, output=False):
         # For use as an imported python module
@@ -3026,15 +3051,13 @@ class AxiDraw(inkex.Effect):
     def interactive(self):
         # Initialize AxiDraw options
         # For interactive-mode use as an imported python module
-        # 
         inkex.localize()
         self.getoptions([])
         self.options.units = 0 # inches, by default
         self.options.preview = False
-        self.options.mode = "manual"  # best approximation
+        self.options.mode = "interactive"
         self.Secondary = False
-        self.interactive_mode = True
-
+        
     def connect(self):
         # Begin session
         # For interactive-mode use as an imported python module
@@ -3116,6 +3139,9 @@ class AxiDraw(inkex.Effect):
         if self.serial_port:
             ebb_serial.closePort(self.serial_port)
         self.serial_port = None
+
+
+
 
 
 if __name__ == '__main__':
