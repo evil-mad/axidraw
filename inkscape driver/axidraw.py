@@ -3008,28 +3008,28 @@ class AxiDraw(inkex.Effect):
         else:
             self.error_out = self.error_out + '\n' + text_to_add
             
-    def plot_setup(self, input_file):
+    def plot_setup(self, svg_input):
         # For use as an imported python module
         # Initialize AxiDraw options & parse SVG file
         file_ok = False
         inkex.localize()
         self.getoptions([])
-        
         # Parse input file or SVG string
-        if input_file is not None:
+        if svg_input is not None:
             try:
-                stream = open(input_file, 'r')
+                stream = open(svg_input, 'r')
                 p = etree.XMLParser(huge_tree=True)
                 self.document = etree.parse(stream, parser=p)
                 self.original_document = copy.deepcopy(self.document)
                 stream.close()
                 file_ok = True
             except IOError:
-                pass
+                pass # It wasn't a file...
             if not file_ok:
                 try:
-                    p = etree.XMLParser(huge_tree=True)
-                    self.document = etree.fromstring(input_file, parser=p)
+                    svg_string = svg_input.encode('utf-8') # Need consistent encoding.
+                    p = etree.XMLParser(huge_tree=True, encoding='utf-8')
+                    self.document = etree.ElementTree(etree.fromstring(svg_string, parser=p))
                     self.original_document = copy.deepcopy(self.document)
                     file_ok = True
                 except:
@@ -3037,11 +3037,15 @@ class AxiDraw(inkex.Effect):
                     quit()
         if file_ok:
             self.getdocids()
-        #self.Secondary = True # Suppress standard output stream
+        #self.Secondary = True # Option: Suppress standard output stream
 
     def plot_run(self, output=False):
         # For use as an imported python module
         # Plot the document, optionally return SVG file output
+        if self.document is None:
+            self.error_log("No SVG input provided.")
+            self.error_log("Use plot_setup(svg_input) before plot_run().")
+            quit()
         self.set_defaults()
         self.effect()
         if output:
@@ -3139,9 +3143,6 @@ class AxiDraw(inkex.Effect):
         if self.serial_port:
             ebb_serial.closePort(self.serial_port)
         self.serial_port = None
-
-
-
 
 
 if __name__ == '__main__':
