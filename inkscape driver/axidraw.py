@@ -73,7 +73,7 @@ class AxiDraw(inkex.Effect):
             action="store", type="string", dest="mode",\
             default="plot", \
             help="Mode or GUI tab. One of: [plot, layers, align, toggle, manual"\
-            + ", sysinfo, version, resume-plot, resume-home]. Default: plot.")
+            + ", sysinfo, version,  res_plot, res_home]. Default: plot.")
             
         self.OptionParser.add_option("--speed_pendown",\
             type="int", action="store", dest="speed_pendown", \
@@ -417,11 +417,11 @@ class AxiDraw(inkex.Effect):
             self.options.manual_cmd = "sysinfo"
 
         if self.options.mode == "resume":
-            # resume mode + resume_type -> either resume-plot or resume-home modes.
+            # resume mode + resume_type -> either  res_plot or res_home modes.
             if self.options.resume_type == "home":
-                self.options.mode = "resume-home"
+                self.options.mode = "res_home"
             else:
-                self.options.mode = "resume-plot"
+                self.options.mode = " res_plot"
 
         if self.options.mode == "setup":
             # setup mode + setup_type -> either align or toggle modes.
@@ -481,12 +481,12 @@ class AxiDraw(inkex.Effect):
                             if self.b_stopped:
                                 self.copies_to_plot = 0
 
-        elif self.options.mode == "resume-home" or self.options.mode == "resume-plot":
+        elif self.options.mode == "res_home" or self.options.mode == " res_plot":
             resume_data_needs_updating = True
             self.resumePlotSetup()
             if self.resume_mode:
                 self.plot_document()
-            elif self.options.mode == "resume-home":
+            elif self.options.mode == "res_home":
                 if not self.svg_data_read or (self.svg_last_known_pos_x_old == 0 and self.svg_last_known_pos_y_old == 0):
                     self.text_log(gettext.gettext("No resume data found; unable to return to home position."))
                 else:
@@ -561,7 +561,7 @@ class AxiDraw(inkex.Effect):
                 self.ServoSetupWrapper()
                 self.pen_raise()
                 self.EnableMotors()  # Set plotting resolution
-                if self.options.mode == "resume-plot":
+                if self.options.mode == " res_plot":
                     self.resume_mode = True
                 self.f_speed = self.speed_pendown
                 self.f_curr_x = self.svg_last_known_pos_x_old + axidraw_conf.StartPosX
@@ -811,7 +811,7 @@ class AxiDraw(inkex.Effect):
             self.pen_raise()
             self.EnableMotors()  # Set plotting resolution
 
-            if self.options.mode == "resume-home" or self.options.mode == "resume-plot":
+            if self.options.mode == "res_home" or self.options.mode == " res_plot":
                 if self.resume_mode:
                     f_x = self.svg_paused_pos_x_old + axidraw_conf.StartPosX
                     f_y = self.svg_paused_pos_y_old + axidraw_conf.StartPosY
@@ -819,7 +819,7 @@ class AxiDraw(inkex.Effect):
                     self.plotSegmentWithVelocity(f_x, f_y, 0, 0)  # pen-up move to starting point
                     self.resume_mode = True
                     self.node_count = 0
-                else:  # i.e., ( self.options.mode == "resume-home" ):
+                else:  # i.e., ( self.options.mode == "res_home" ):
                     f_x = axidraw_conf.StartPosX
                     f_y = axidraw_conf.StartPosY
                     self.plotSegmentWithVelocity(f_x, f_y, 0, 0)
@@ -858,7 +858,7 @@ class AxiDraw(inkex.Effect):
                 self.svg = self.document.getroot()
 
             if not self.b_stopped:
-                if self.options.mode in ["plot", "layers", "resume-home", "resume-plot"]:
+                if self.options.mode in ["plot", "layers", "res_home", " res_plot"]:
                     # Clear saved plot data from the SVG file,
                     # IF we have _successfully completed_ a normal plot from the plot, layer, or resume mode.
                     self.svg_layer = 0

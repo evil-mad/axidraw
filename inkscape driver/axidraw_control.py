@@ -62,7 +62,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
             action="store", type="string", dest="mode",\
             default="plot", \
             help="Mode or GUI tab. One of: [plot, layers, align, toggle, manual"\
-            + ", sysinfo, version, resume-plot, resume-home]. Default: plot.")
+            + ", sysinfo, version, res_plot, res_home]. Default: plot.")
             
         self.OptionParser.add_option("--speed_pendown",\
             type="int", action="store", dest="speed_pendown", \
@@ -241,7 +241,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
             self.options.port_config = 1 # Ignore port & multi-machine options in preview
 
 
-        if self.options.mode in ( "resume", "resume-plot", "resume-home"):
+        if self.options.mode in ( "resume", "res_plot", "res_home"):
             if self.options.port_config == 3: # If requested to use all machines,
                 self.options.port_config = 1  # Instead, only resume for first machine.
                 
@@ -357,7 +357,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
         ad.options.resolution       = self.options.resolution
 
         # Special case for this wrapper function:
-        # If the port is None, change the port option
+        # If the port is None, change the port config option
         # to be "use first available AxiDraw":
         if port is None:
             ad.options.port_config = 1 # Use first available AxiDraw
