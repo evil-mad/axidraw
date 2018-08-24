@@ -53,23 +53,31 @@ copies = 1              # Copies to plot, or 0 for continuous plotting. Default:
 page_delay = 15         # Optional delay between copies (s).
 
 preview = False         # Preview mode; simulate plotting only.
-rendering = 3           # Preview mode rendering option (0-3)
+rendering = 3           # Preview mode rendering option (0-3):
                             # 0: Do not render layers
                             # 1: Render only pen-down movement
                             # 2: Render only pen-up movement
-                            # 3: Render all movement
+                            # 3: Render all movement (Default)
 
-model = 1             # AxiDraw Model (1-3). 1: AxiDraw V2 or V3, default. 2: AxiDraw V3/A3. 3: AxiDraw V3 XLX
-port = None           # Serial port or named AxiDraw to use. Default (none) will plot to first unit located.
+model = 1               # AxiDraw Model (1-3). 
+                            # 1: AxiDraw V2 or V3 (Default)
+                            # 2: AxiDraw V3/A3. 
+                            # 3: AxiDraw V3 XLX
+                            
+port = None             # Serial port or named AxiDraw to use. 
+                            # None (Default) will plot to first unit located.
 
-port_config = 0       # Serial port behavior option (0-2)
-                            # 0: Default: Plot to first unit found, unless port is specified
+port_config = 0         # Serial port behavior option (0-2)
+                            # 0: Plot to first unit found, unless port is specified (Default)
                             # 1: Plot to first AxiDraw unit located
                             # 2: Plot to a specific AxiDraw only, given by port.
 
-auto_rotate = True     # Auto-select portrait vs landscape orientation
+auto_rotate = True      # Auto-select portrait vs landscape orientation
+                            # Default: True
 
-resolution = 1        # Resolution: Either 1 for (smoother, slightly slower) high resolution mode or 2 (coarser) low resolution
+resolution = 1          # Resolution: (1-2):
+                            # 1: High resolution (smoother, slightly slower) (Default)
+                            # 2: Low resolution (coarser, slightly faster)
 
 # Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
 # Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),

@@ -838,7 +838,7 @@ class AxiDraw(inkex.Effect):
                 self.node_count = self.node_target
                 self.plotSegmentWithVelocity(f_x, f_y, 0, 0)
 
-            '''
+            """
             Revert back to original SVG document, prior to adding preview layers.
              and prior to saving updated "WCB" progress data in the file.
              No changes to the SVG document prior to this point will be saved.
@@ -846,7 +846,7 @@ class AxiDraw(inkex.Effect):
              Doing so allows us to use routines that alter the SVG
              prior to this point -- e.g., plot re-ordering for speed 
              or font substitutions.
-            '''
+            """
 
             try:
                 # If called from an external script that specifies a "backup_original",
@@ -905,7 +905,7 @@ class AxiDraw(inkex.Effect):
 
                 width_du = width_du * line_width_scale_factor  # Apply scaling
 
-                '''
+                """
                 Important note: stroke-width is a css style element, and cannot accept scientific notation.
                 
                 In cases with large scaling, i.e., high values of self.doc_unit_scale_factor
@@ -914,7 +914,7 @@ class AxiDraw(inkex.Effect):
                 has a reasonable width after being displayed greatly magnified thanks to the viewbox.
                 
                 Use log10(the number) to determine the scale, and thus the precision needed.
-                '''
+                """
 
                 log_ten = math.log10(width_du)
                 if log_ten > 0:  # For width_du > 1
@@ -1099,7 +1099,7 @@ class AxiDraw(inkex.Effect):
 
             elif node.tag == inkex.addNS('use', 'svg') or node.tag == 'use':
 
-                '''
+                """
                 A <use> element refers to another SVG element via an xlink:href="#blah"
                 attribute.  We will handle the element by doing an XPath search through
                 the document, looking for the element with the matching id="blah"
@@ -1113,7 +1113,7 @@ class AxiDraw(inkex.Effect):
                     for processing the referenced element.  The referenced element is
                     hidden only if its visibility is "inherit" or "hidden".
                  3. We may be able to unlink clones using the code in pathmodifier.py
-                '''
+                """
 
                 refid = node.get(inkex.addNS('href', 'xlink'))
                 if refid is not None:
@@ -1141,11 +1141,11 @@ class AxiDraw(inkex.Effect):
                     continue  # Do not plot this node if it is not visible.
                 if node.tag == inkex.addNS('path', 'svg'):
 
-                    '''
+                    """
                     If in resume mode AND self.pathcount < self.svg_last_path, then skip this path.
                     If in resume mode and self.pathcount = self.svg_last_path, then start here, and set
                     self.node_count equal to self.svg_last_path_nc
-                    '''
+                    """
 
                     do_we_plot_this_path = False
                     if self.resume_mode:
@@ -1162,7 +1162,7 @@ class AxiDraw(inkex.Effect):
 
                 elif node.tag == inkex.addNS('rect', 'svg') or node.tag == 'rect':
 
-                    '''
+                    """
                     Manually transform 
                        <rect x="X" y="Y" width="W" height="H"/> 
                     into 
@@ -1173,7 +1173,7 @@ class AxiDraw(inkex.Effect):
                     If in resume mode AND self.pathcount < self.svg_last_path, then skip this path.
                     If in resume mode and self.pathcount = self.svg_last_path, then start here, and set
                     self.node_count equal to self.svg_last_path_nc
-                    '''
+                    """
 
                     do_we_plot_this_path = False
                     if self.resume_mode:
@@ -1210,7 +1210,7 @@ class AxiDraw(inkex.Effect):
 
                 elif node.tag == inkex.addNS('line', 'svg') or node.tag == 'line':
 
-                    '''
+                    """
                     Convert
                       <line x1="X1" y1="Y1" x2="X2" y2="Y2/>
                     to
@@ -1218,7 +1218,7 @@ class AxiDraw(inkex.Effect):
                     If in resume mode AND self.pathcount < self.svg_last_path, then skip this path.
                     If in resume mode and self.pathcount = self.svg_last_path, then start here, and set
                     self.node_count equal to self.svg_last_path_nc
-                    '''
+                    """
 
                     do_we_plot_this_path = False
                     if self.resume_mode:
@@ -1251,7 +1251,7 @@ class AxiDraw(inkex.Effect):
 
                 elif node.tag == inkex.addNS('polyline', 'svg') or node.tag == 'polyline':
 
-                    '''
+                    """
                     Convert
                      <polyline points="x1,y1 x2,y2 x3,y3 [...]"/> 
                     OR  
@@ -1259,7 +1259,7 @@ class AxiDraw(inkex.Effect):
                     to 
                       <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...]"/> 
                     Note: we ignore polylines with no points, or polylines with only a single point.
-                    '''
+                    """
 
                     pl = node.get('points', '').strip()
                     if pl == '':
@@ -1305,13 +1305,13 @@ class AxiDraw(inkex.Effect):
 
                 elif node.tag == inkex.addNS('polygon', 'svg') or node.tag == 'polygon':
 
-                    '''
+                    """
                     Convert 
                      <polygon points="x1,y1 x2,y2 x3,y3 [...]"/> 
                     to 
                       <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...] Z"/> 
                     Note: we ignore polygons with no points
-                    '''
+                    """
 
                     pl = node.get('points', '').strip()
                     if pl == '':
@@ -1641,7 +1641,8 @@ class AxiDraw(inkex.Effect):
         """
         Plot the path while applying the transformation defined by the matrix [mat_transform].
         - Turn this path into a cubicsuperpath (list of beziers).
-        - We also identify "even and odd" parts of the path, to decide when the pen is up and down.
+        - Further subdivide the cubic path into a list of straight segments within tolerance
+        - Identify "even and odd" parts of the path, to decide when the pen is up and down.
         """
 
         d = path.get('d')
@@ -1660,43 +1661,158 @@ class AxiDraw(inkex.Effect):
             return
 
         if self.plot_current_layer:
+
+            bounds = [[self.x_bounds_min,self.y_bounds_min],
+                [self.x_bounds_max,self.y_bounds_max]]
+
+            tolerance = axidraw_conf.BoundsTolerance  
+            # Allow negligible violation of boundaries without throwing an error.
+
+            x_max = self.x_bounds_max + tolerance
+            x_min = self.x_bounds_min - tolerance
+            y_max = self.y_bounds_max + tolerance
+            y_min = self.y_bounds_min - tolerance
+
             p = cubicsuperpath.parsePath(d)
 
-            # ...and apply the transformation to each point
+            # Apply the transformation to each point
             applyTransformToPath(mat_transform, p)
 
             # p is now a list of lists of cubic beziers [control pt1, control pt2, endpoint]
             # where the start-point is the last point in the previous segment.
-            for sp in p:
+            for sp in p: # for subpaths in the path:
 
+                # Convert each path into a set of straight segments:
                 plot_utils.subdivideCubicPath(sp, 0.02 / axidraw_conf.smoothness)
-                n_index = 0
 
-                single_path = []
-                if self.plot_current_layer:
-                    for csp in sp:
+                """ 
+                Strategy:
+                * We are going to generate a new listthat contains path segments,
+                    clipped to be within the bounds.
+                * For each segment, check if end point is inside bounds.
+                    - If so, append it to sp_clipped.
+                    - If not:
+                        - find the intersection point with the bound.
+                        - Terminate the given segment at that bounding point.
+                        - Continue parsing the path segments, until one goes back inside (or the path ends).
+                        - If it goes back inside, start a new path at that boundary point.
+                        - Do not add path segments that are fully outside the bounds.
+                        - Can simplify paths into _linear_ paths at this stage,
+                            not copying all three parts of each
+                            csp element, but just element [1]-- the vertex without curvature. 
+                * Step through the new list of segments, as though they are subpaths.
+                    as in for sp in sp_clipped. (but do not re-subdivide!)
+                
+                """
+
+                """
+                Pre-parse the subdivided paths:
+                    - Clip path segments to the bounds; split into additional subpaths if necessary.
+                    - Apply auto-rotation
+                    - Pick out vertex location information (only) from the cubic bezier curve data
+                """
+                
+                subpath_list = []
+                a_path = []
+                prev_in_bounds = False # Don't assume that prior point was in bounds
+                first_point = True
+                prev_vertex = []
+                
+                for vertex in sp: # For each vertex in our subdivided path
+                    if self.print_portrait:
+                        t_x = float(vertex[1][1])  # Flipped X/Y
+                        t_y = self.svg_width - float(vertex[1][0])
+                    else:
+                        t_x = float(vertex[1][0])  
+                        t_y = float(vertex[1][1])
+                    this_vertex = [t_x,t_y]
+
+                    in_bounds = True
+
+                    if not self.ignore_limits:
+                        if t_x > x_max or t_x < x_min or t_y > y_max or t_y < y_min:
+                            in_bounds = False
+                            self.warn_out_of_bounds = True
+
+                    """
+                    Possible cases, for first vertex:
+                    (1) In bounds: Add the vertex to the path.
+                    (2) Not in bounds: Do not add the vertex. 
+                    
+                    Possible cases, for subsequent vertices:
+                    (1) In bounds, as was previous: Add the vertex.
+                      -> No segment between two in-bound points is clipped.
+                    (2) In bounds, prev was not: Clip & start new path.
+                    (3) OOB, prev was in bounds: Clip & end the path.
+                    (4) OOB, as was previous: Segment _may_ clip corner.
+                      -> Either add no points or start & end new path
+                    """
+
+                    if first_point:
+                        if in_bounds:
+                            a_path.append([t_x, t_y])
+                    else:
+                        if in_bounds and prev_in_bounds:
+                            a_path.append([t_x, t_y])
+                        else:
+                            segment =  [prev_vertex,this_vertex] 
+                            accept, seg = plot_utils.clip_segment(segment, bounds)
+                            if in_bounds and not prev_in_bounds:
+                                if len(a_path) > 0:
+                                    subpath_list.append(a_path)
+                                    a_path = [] # start new subpath
+                                a_path.append([seg[0][0], seg[0][1]])
+                                t_x = seg[1][0]
+                                t_y = seg[1][1]
+                                a_path.append([t_x, t_y])
+                            if prev_in_bounds and not in_bounds:
+                                t_x = seg[1][0]
+                                t_y = seg[1][1]
+                                a_path.append([t_x, t_y])
+                                subpath_list.append(a_path) # Save subpath
+                                a_path = [] # Start new subpath
+                            if (not prev_in_bounds) and not in_bounds:
+                                if accept:
+                                    if len(a_path) > 0:
+                                        subpath_list.append(a_path)
+                                        a_path = [] # start new subpath
+                                    a_path.append([seg[0][0], seg[0][1]])
+                                    t_x = seg[1][0]
+                                    t_y = seg[1][1]
+                                    a_path.append([t_x, t_y])
+                                    subpath_list.append(a_path) # Save subpath
+                                    a_path = [] # Start new subpath
+                    first_point = False
+                    prev_vertex = this_vertex
+                    prev_in_bounds = in_bounds
+                    
+                if len(a_path) > 0:
+                    subpath_list.append(a_path)
+
+                if not subpath_list: # Do not attempt to plot empty string sets
+                    continue
+
+                for subpath in subpath_list:
+                    n_index = 0
+                    single_path = []
+                    for vertex in subpath:
                         if self.b_stopped:
                             return
-                        if self.print_portrait:
-                            f_x = float(csp[1][1])  # Flipped X/Y
-                            f_y = self.svg_width - float(csp[1][0])
-                        else:
-                            f_x = float(csp[1][0])  # Set move destination
-                            f_y = float(csp[1][1])
-
+                        f_x = vertex[0]
+                        f_y = vertex[1]
+                        
                         if n_index == 0:
+                            # "Pen-up" move to new path start location. Skip pen-lift if the path is shorter than MinGap.
                             if plot_utils.distance(f_x - self.f_curr_x, f_y - self.f_curr_y) > axidraw_conf.MinGap:
                                 self.pen_raise()
-                                self.plotSegmentWithVelocity(f_x, f_y, 0, 0)  # Pen up straight move, zero velocity at endpoints
+                                self.plotSegmentWithVelocity(f_x, f_y, 0, 0) # Pen up straight move, zero velocity at endpoints
                             else:
-                                self.plotSegmentWithVelocity(f_x, f_y, 0, 0)  # Super-short pen down move, in place of pen-up move.
-                        #                                 self.node_count += 1    # Alternative: Increment node counter, at a slight accuracy cost.
+                                self.plotSegmentWithVelocity(f_x, f_y, 0, 0) # Short pen down move, in place of pen-up move.
+                            # self.node_count += 1    # Alternative: Increment node counter, at a slight accuracy cost.
                         elif n_index == 1:
                             self.pen_lower()
                         n_index += 1
-
-                        single_path.append([f_x, f_y])
-
+                        single_path.append([f_x, f_y])    
                     self.plan_trajectory(single_path)
 
             if not self.b_stopped:  # an "index" for resuming plots quickly-- record last complete path
@@ -1724,22 +1840,14 @@ class AxiDraw(inkex.Effect):
         if self.f_curr_x is None:
             return
 
-        # check page size limits:
-        if not self.ignore_limits:
-            tolerance = axidraw_conf.BoundsTolerance  # Truncate negligible violation of boundaries without throwing an error.
-            for xy in input_path:
-                xy[0], x_bounded = plot_utils.checkLimitsTol(xy[0], self.x_bounds_min, self.x_bounds_max, tolerance)
-                xy[1], y_bounded = plot_utils.checkLimitsTol(xy[1], self.y_bounds_min, self.y_bounds_max, tolerance)
-                if x_bounded or y_bounded:
-                    self.warn_out_of_bounds = True
-
         # Handle simple segments (lines) that do not require any complex planning:
         if len(input_path) < 3:
             if spew_trajectory_debug_data:
-                self.text_log('Drawing straight line, not a curve.')  # This is the "SHORTPATH ESCAPE"
-                self.text_log('plotSegmentWithVelocity({}, {}, {}, {})'.format(xy[0], xy[1], 0, 0))
-
-            self.plotSegmentWithVelocity(xy[0], xy[1], 0, 0)
+                self.text_log('Drawing straight line, not a curve.')  # "SHORTPATH ESCAPE"
+                self.text_log('plotSegmentWithVelocity({}, {}, {}, {})'.format(
+                    input_path[1][0], input_path[1][1], 0, 0))
+            # Get X & Y Destination coordinates from last element, input_path[1]:
+            self.plotSegmentWithVelocity(input_path[1][0], input_path[1][1], 0, 0)
             return
 
         # For other trajectories, we need to go deeper.
@@ -1751,7 +1859,7 @@ class AxiDraw(inkex.Effect):
                 self.text_log('x: {0:1.3f},  y: {1:1.3f}'.format(xy[0], xy[1]))
             self.text_log('\ntraj_length: ' + str(traj_length))
 
-        speed_limit = self.speed_pendown  # speed_limit is maximum travel rate, in inches/second, in the XY  plane.
+        speed_limit = self.speed_pendown  # speed_limit is maximum travel rate (in/s), in XY plane.
         if self.pen_up:
             speed_limit = self.speed_penup  # Unlikely case, but handle it anyway...
 
@@ -1842,7 +1950,7 @@ class AxiDraw(inkex.Effect):
             self.text_log('accel_dist: {0:1.3f}'.format(accel_dist))
             cosine_print_array = array('f')
 
-        '''
+        """
         Now, step through every vertex in the trajectory, and calculate what the speed
         should be when arriving at that vertex.
         
@@ -1908,7 +2016,7 @@ class AxiDraw(inkex.Effect):
         at which there are little or no resonances. Even when the path must directly reverse
         itself, we can usually travel at a non-zero speed. This, of course, presumes that we 
         still have a solution for getting to the endpoint at zero speed.
-        '''
+        """
 
         delta = axidraw_conf.cornering / 5000  # Corner rounding/tolerance factor-- not sure how high this should be set.
 
@@ -1917,12 +2025,12 @@ class AxiDraw(inkex.Effect):
 
             v_prev_exit = traj_vels[i - 1]  # Velocity when leaving previous vertex
 
-            '''
+            """
             Velocity at vertex: Part I
             
             Check to see what our plausible maximum speeds are, from 
             acceleration only, without concern about cornering, nor deceleration.
-            '''
+            """
 
             if dcurrent > accel_dist:
                 # There _is_ enough distance in the segment for us to either
@@ -1942,7 +2050,7 @@ class AxiDraw(inkex.Effect):
                 if spew_trajectory_debug_data:
                     self.text_log('traj_vels I: {0:1.3f}'.format(vcurrent_max))
 
-            '''
+            """
             Velocity at vertex: Part II 
             
             Assuming that we have the same velocity when we enter and
@@ -1957,7 +2065,7 @@ class AxiDraw(inkex.Effect):
             two unit vectors, giving the deflection between the incoming and outgoing angles. 
             Note that this angle is (pi - theta), in the convention of that article, giving us
             a sign inversion. [cos(pi - theta) = - cos(theta)]
-            '''
+            """
             cosine_factor = - plot_utils.dotProductXY(traj_vectors[i - 1], traj_vectors[i])
 
             root_factor = math.sqrt((1 - cosine_factor) / 2)
@@ -1984,7 +2092,7 @@ class AxiDraw(inkex.Effect):
                 self.text_log('traj_vels II: {0:1.3f}'.format(dist))
             self.text_log(' ')
 
-        '''            
+        """            
         Velocity at vertex: Part III
 
         We have, thus far, ensured that we could reach the desired velocities, going forward, but
@@ -1992,7 +2100,7 @@ class AxiDraw(inkex.Effect):
 
         We now go through the completed array in reverse, limiting velocities to ensure that we 
         can properly decelerate in the given distances.        
-        '''
+        """
 
         for j in xrange(1, traj_length):
             i = traj_length - j  # Range: From (traj_length - 1) down to 1.
@@ -2059,7 +2167,6 @@ class AxiDraw(inkex.Effect):
             motor_dist2 = ( xDist - yDist ) # Distance for motor to move, Axis 2
 
         We will only discuss motor steps, and resolution, within the context of native axes.
-
 
         """
 
@@ -2226,7 +2333,7 @@ class AxiDraw(inkex.Effect):
         position = 0.0
         velocity = vi_inches_per_sec
 
-        '''
+        """
         
         Next, we wish to estimate total time duration of this segment. 
         In doing so, we must consider the possible cases:
@@ -2257,13 +2364,13 @@ class AxiDraw(inkex.Effect):
         Because we may end up with slight over/undershoot in position along the paths
         with this approach, we perform a final scaling operation (to the correct distance) at the end.
         
-        '''
+        """
 
         if not constant_vel_mode or self.pen_up:  # Allow accel when pen is up.
             if segment_length_inches > (accel_dist_max + decel_dist_max + time_slice * speed_limit):
-                ''' 
+                """ 
                 Case 1: 'Trapezoid'
-                '''
+                """
 
                 if spew_segment_debug_data:
                     self.text_log('Type 1: Trapezoid' + '\n')
@@ -2320,7 +2427,7 @@ class AxiDraw(inkex.Effect):
                         self.text_log('Decel intervals: ' + str(intervals))
 
             else:
-                ''' 
+                """ 
                 Case 2: 'Triangle' 
                 
                 We will _not_ reach full cruising speed, but let's go as fast as we can!
@@ -2372,7 +2479,7 @@ class AxiDraw(inkex.Effect):
                     [We pick the positive root in the quadratic formula, since Ta must be positive.]
                 
                 (vii) From Ta and part (iv) above, we can find Vmax and Td.
-                '''
+                """
 
                 if spew_segment_debug_data:
                     self.text_log('\nType 2: Triangle')
@@ -2451,7 +2558,7 @@ class AxiDraw(inkex.Effect):
                         if spew_segment_debug_data:
                             self.text_log('Note: Skipping decel phase in triangle.')
                 else:
-                    ''' 
+                    """ 
                     Case 3: 'Linear or constant velocity changes' 
                     
                     Picked for segments that are shorter than 6 time slices. 
@@ -2462,7 +2569,7 @@ class AxiDraw(inkex.Effect):
                     
                     For very short segments (less than 2 time slices), use a single 
                         segment with constant velocity.
-                    '''
+                    """
 
                     if spew_segment_debug_data:
                         self.text_log('Type 3: Linear' + '\n')
@@ -2505,9 +2612,9 @@ class AxiDraw(inkex.Effect):
                             constant_vel_mode = True
 
         if constant_vel_mode:
-            '''
+            """
             Case 4: 'Constant Velocity mode'
-            '''
+            """
 
             if spew_segment_debug_data:
                 self.text_log('-> [Constant Velocity Mode Segment]' + '\n')
@@ -2532,12 +2639,12 @@ class AxiDraw(inkex.Effect):
             dist_array.append(segment_length_inches)  # Estimated distance along direction of travel
             position += segment_length_inches
 
-        ''' 
+        """ 
         The time & distance motion arrays for this path segment are now computed.
         Next: We scale to the correct intended travel distance, 
         round into integer motor steps and manage the process
         of sending the output commands to the motors.
-        '''
+        """
 
         if spew_segment_debug_data:
             self.text_log('position/segment_length_inches: ' + str(position / segment_length_inches))
@@ -2882,7 +2989,7 @@ class AxiDraw(inkex.Effect):
         
             value = ebb_motion.queryEBBLV(self.serial_port)
             if value != self.options.pen_pos_up + 1:
-                '''
+                """
                 When the EBB is reset, it goes to its default "pen up" position,
                 for which QueryPenUp will tell us that the EBB believes it is
                 in the pen-up position. However, its actual position is the
@@ -2905,7 +3012,7 @@ class AxiDraw(inkex.Effect):
                 (self.options.pen_pos_up + 1), with possible values in the range
                 1 - 101 in EBBLV, to verify that the current position is
                 correct, and that we can  skip extra pen-up/pen-down movements.
-                '''
+                """
 
                 self.pen_up = None
                 self.virtual_pen_up = False
@@ -2943,7 +3050,7 @@ class AxiDraw(inkex.Effect):
             int_temp = int(round(axidraw_conf.ServoMin + servo_slope * pen_down_pos))
             ebb_motion.setPenDownPos(self.serial_port, int_temp)
 
-            ''' 
+            """ 
             Servo speed units (as set with setPenUpRate) are units of %/second,
             referring to the percentages above.  
             The EBB takes speeds in units of 1/(12 MHz) steps
@@ -2954,7 +3061,7 @@ class AxiDraw(inkex.Effect):
             
             Our input range (1-100%) corresponds to speeds up to 
             100% range in 0.25 seconds, or 4 * 4.5 = 18 steps/24 ms.
-            '''
+            """
 
             int_temp = 18 * self.options.pen_rate_raise
             ebb_motion.setPenUpRate(self.serial_port, int_temp)

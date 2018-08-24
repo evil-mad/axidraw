@@ -392,7 +392,6 @@ class AxiDrawWrapperClass( inkex.Effect ):
     def parseFile(self, input_file):
         self.parse(input_file) 
 
-
 if __name__ == '__main__':
     e = AxiDrawWrapperClass()
     e.affect()
