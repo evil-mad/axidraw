@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-<_name>AxiDraw Control (v2 inner)</_name>
+<_name>AxiDraw Control (Legacy)</_name>
 <id>command.evilmadscientist.axidraw</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw.py</dependency>
