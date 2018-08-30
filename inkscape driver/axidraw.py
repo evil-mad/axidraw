@@ -212,7 +212,7 @@ class AxiDraw(inkex.Effect):
             default=axidraw_conf.resolution,\
             help="Resolution option selected (GUI Only)")
 
-        self.version_string = "AxiDraw Control - Version 2.0.0, 2018-06-18."
+        self.version_string = "AxiDraw Control - Version 2.1.0, 2018-08-24."
         self.spew_debugdata = False
 
         self.delay_between_copies = False  # Not currently delaying between copies
@@ -265,6 +265,10 @@ class AxiDraw(inkex.Effect):
             self.x_bounds_max = axidraw_conf.XTravel_Default
             self.y_bounds_max = axidraw_conf.YTravel_Default
 
+        self.bounds = [[self.x_bounds_min,self.y_bounds_min],
+                       [self.x_bounds_max,self.y_bounds_max]]
+
+
         self.speed_pendown = axidraw_conf.speed_pendown * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
         self.speed_penup = axidraw_conf.speed_penup * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
 
@@ -281,7 +285,6 @@ class AxiDraw(inkex.Effect):
 
     def effect(self):
         """Main entry point: check to see which mode/tab is selected, and act accordingly."""
-
 
         self.start_time = time.time()
 
@@ -1661,10 +1664,6 @@ class AxiDraw(inkex.Effect):
             return
 
         if self.plot_current_layer:
-
-            bounds = [[self.x_bounds_min,self.y_bounds_min],
-                [self.x_bounds_max,self.y_bounds_max]]
-
             tolerance = axidraw_conf.BoundsTolerance  
             # Allow negligible violation of boundaries without throwing an error.
 
@@ -1682,28 +1681,8 @@ class AxiDraw(inkex.Effect):
             # where the start-point is the last point in the previous segment.
             for sp in p: # for subpaths in the path:
 
-                # Convert each path into a set of straight segments:
+                # Divide each path into a set of straight segments:
                 plot_utils.subdivideCubicPath(sp, 0.02 / axidraw_conf.smoothness)
-
-                """ 
-                Strategy:
-                * We are going to generate a new listthat contains path segments,
-                    clipped to be within the bounds.
-                * For each segment, check if end point is inside bounds.
-                    - If so, append it to sp_clipped.
-                    - If not:
-                        - find the intersection point with the bound.
-                        - Terminate the given segment at that bounding point.
-                        - Continue parsing the path segments, until one goes back inside (or the path ends).
-                        - If it goes back inside, start a new path at that boundary point.
-                        - Do not add path segments that are fully outside the bounds.
-                        - Can simplify paths into _linear_ paths at this stage,
-                            not copying all three parts of each
-                            csp element, but just element [1]-- the vertex without curvature. 
-                * Step through the new list of segments, as though they are subpaths.
-                    as in for sp in sp_clipped. (but do not re-subdivide!)
-                
-                """
 
                 """
                 Pre-parse the subdivided paths:
@@ -1756,7 +1735,7 @@ class AxiDraw(inkex.Effect):
                             a_path.append([t_x, t_y])
                         else:
                             segment =  [prev_vertex,this_vertex] 
-                            accept, seg = plot_utils.clip_segment(segment, bounds)
+                            accept, seg = plot_utils.clip_segment(segment, self.bounds)
                             if in_bounds and not prev_in_bounds:
                                 if len(a_path) > 0:
                                     subpath_list.append(a_path)
@@ -1789,7 +1768,7 @@ class AxiDraw(inkex.Effect):
                 if len(a_path) > 0:
                     subpath_list.append(a_path)
 
-                if not subpath_list: # Do not attempt to plot empty string sets
+                if not subpath_list: # Do not attempt to plot empty segments
                     continue
 
                 for subpath in subpath_list:
@@ -3173,21 +3152,23 @@ class AxiDraw(inkex.Effect):
         # Begin session
         # For interactive-mode use as an imported python module
         #
-        # Parse settings
-        # Connect to AxiDraw
-        # Raise pen
-        # Set position as (0,0)
-        self.serial_connect()
+        # Parse settings,
+        # Connect to AxiDraw,
+        # Raise pen,
+        # Set position as (0,0).
+        self.serial_connect()                   # Open USB serial session
         if self.serial_port is None:
             return False
-        self.update_options()
-        self.f_curr_x = axidraw_conf.StartPosX
+        self.update_options()                   # Apply general settings
+        self.f_curr_x = axidraw_conf.StartPosX  # Set XY position to (0,0)
         self.f_curr_y = axidraw_conf.StartPosY
+        self.turtle_x = f_curr_x                # Set turtle position to (0,0)
+        self.turtle_y = f_curr_y
         # Query if button pressed, to clear the result:
         ebb_motion.QueryPRGButton(self.serial_port)  
-        self.ServoSetupWrapper()
-        self.pen_raise()
-        self.EnableMotors()  # Set plotting resolution & speed
+        self.ServoSetupWrapper()                # Apply servo settings
+        self.pen_raise()                        # Raise pen
+        self.EnableMotors()     # Set plot resolution & speed & enable motors
         return True
         
     def update(self):
@@ -3198,43 +3179,67 @@ class AxiDraw(inkex.Effect):
             self.ServoSetup()
             self.EnableMotors()  # Set plotting resolution & speed
 
-    def goto(self,x_target,y_target):
-        # For interactive-mode use as an imported python module
+    def _xy_plot_segment(self,relative,x_value,y_value): # Absolute move
+        """
+        Perform movements for interactive context XY movement commands.
+        Internal function; uses inch units.
+        Maintains internal record of "turtle" position, and
+        directs the carriage to move from the last turtle position to
+        the new turtle position, clipping that movement segment to
+        the allowed bounds of movement. Commands directing movement
+        outside of the bounds are clipped with pen up.
+        """
+        
         if self.options.units: # If using centimeter units
-            x_target = x_target / 2.54
-            y_target = y_target / 2.54
-        if self.serial_port:
-            self.plotSegmentWithVelocity(x_target, y_target, 0, 0)
+            x_value = x_value / 2.54
+            y_value = y_value / 2.54
+        if relative:
+            x_value = self.turtle_x + x_value
+            y_value = self.turtle_y + y_value
+        segment =  [[self.turtle_x,self.turtle_y],
+                    [x_value,y_value]] 
+        accept, seg = plot_utils.clip_segment(segment, self.bounds)
+        
+        if accept: # If some part of the segment is within bounds
+            if self.serial_port:
+                self.plotSegmentWithVelocity(seg[1][0], seg[1][1], 0, 0)
+
+        self.turtle_x = x_value
+        self.turtle_y = y_value
+
+    def goto(self,x_target,y_target): # Absolute move
+        # absolute position move
+        # For interactive-mode use as an imported python module
+        self._xy_plot_segment(False,x_target, y_target)
 
     def moveto(self,x_target,y_target):
+        # pen-up absolute position move
         # For interactive-mode use as an imported python module
         self.pen_raise()
-        self.goto(x_target, y_target)
+        self._xy_plot_segment(False,x_target, y_target)
 
     def lineto(self,x_target,y_target):
+        # pen-down absolute position move
         # For interactive-mode use as an imported python module
         self.pen_lower()
-        self.goto(x_target, y_target)
+        self._xy_plot_segment(False,x_target, y_target)
 
-    def go(self,x_delta,y_delta): # Relative 
+    def go(self,x_delta,y_delta):
+        # relative position move
         # For interactive-mode use as an imported python module
-        if self.options.units:  # If using centimeter units
-            x_delta = x_delta / 2.54
-            y_delta = y_delta / 2.54
-        x_target = self.f_curr_x + x_delta
-        y_target = self.f_curr_y + y_delta
-        if self.serial_port:
-            self.plotSegmentWithVelocity(x_target, y_target, 0, 0)
+        self._xy_plot_segment(True,x_target, y_target)
 
     def move(self,x_delta,y_delta):
+        # pen-up relative position move
         # For interactive-mode use as an imported python module
         self.pen_raise()
-        self.go(x_delta, y_delta)
+        self._xy_plot_segment(True,x_delta, y_delta)
 
     def line(self,x_delta,y_delta):
+        # pen-down relative position move
         # For interactive-mode use as an imported python module
         self.pen_lower()
-        self.go(x_delta, y_delta)
+        self._xy_plot_segment(True,x_delta, y_delta)
 
     def penup(self):
         # For interactive-mode use as an imported python module

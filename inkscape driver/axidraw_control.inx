@@ -11,11 +11,11 @@
 <_param indent="1" name="splashpage" type="description" appearance="header">Welcome to AxiDraw Control!</_param>
 <_param indent="2" name="splashpage2" type="description" xml:space="preserve" >Press 'Apply' to begin plotting.
 
-Or, look in the other tabs to adjust your settings
-and use additional AxiDraw functions.
+Use other tabs to adjust your settings
+or access additional AxiDraw functions.
 
 Need help? Visit http://axidraw.com/docs
-
+or write to contact@evilmadscientist.com
 
 </_param>
 
@@ -25,9 +25,6 @@ Need help? Visit http://axidraw.com/docs
 <param indent="2" name="page_delay" type="int" min="0" max="3600" _gui-text="Seconds of delay between copies:">15</param>	
 
 <_param name="instructions_plot1" type="description" indent="4" > Tip: Select 0 copies to plot continuously until paused.</_param>
-
-
-
 
 </page>
 
