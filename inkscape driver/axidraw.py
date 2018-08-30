@@ -3162,8 +3162,8 @@ class AxiDraw(inkex.Effect):
         self.update_options()                   # Apply general settings
         self.f_curr_x = axidraw_conf.StartPosX  # Set XY position to (0,0)
         self.f_curr_y = axidraw_conf.StartPosY
-        self.turtle_x = f_curr_x                # Set turtle position to (0,0)
-        self.turtle_y = f_curr_y
+        self.turtle_x = self.f_curr_x                # Set turtle position to (0,0)
+        self.turtle_y = self.f_curr_y
         # Query if button pressed, to clear the result:
         ebb_motion.QueryPRGButton(self.serial_port)  
         self.ServoSetupWrapper()                # Apply servo settings
@@ -3183,11 +3183,11 @@ class AxiDraw(inkex.Effect):
         """
         Perform movements for interactive context XY movement commands.
         Internal function; uses inch units.
-        Maintains internal record of "turtle" position, and
-        directs the carriage to move from the last turtle position to
-        the new turtle position, clipping that movement segment to
-        the allowed bounds of movement. Commands directing movement
-        outside of the bounds are clipped with pen up.
+        Maintains record of "turtle" position, and directs the carriage to
+        move from the last turtle position to the new turtle position,
+        clipping that movement segment to the allowed bounds of movement.
+        Commands directing movement outside of the bounds are clipped
+        with pen up.
         """
         
         if self.options.units: # If using centimeter units
