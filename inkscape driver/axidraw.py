@@ -344,7 +344,7 @@ class AxiDraw(inkex.Effect):
 
         self.svg_width = 0
         self.svg_height = 0
-        self.print_portrait = False
+        self.rotate_page = False
 
 
         self.speed_pendown = axidraw_conf.speed_pendown * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
@@ -1698,7 +1698,7 @@ class AxiDraw(inkex.Effect):
                 prev_vertex = []
                 
                 for vertex in sp: # For each vertex in our subdivided path
-                    if self.print_portrait:
+                    if self.rotate_page:
                         t_x = float(vertex[1][1])  # Flipped X/Y
                         t_y = self.svg_width - float(vertex[1][0])
                     else:
@@ -2690,7 +2690,7 @@ class AxiDraw(inkex.Effect):
                                 self.updateVCharts(velocity_local1, velocity_local2, velocity_local)
                                 self.vel_data_time += move_time
                                 self.updateVCharts(velocity_local1, velocity_local2, velocity_local)
-                            if self.print_portrait:
+                            if self.rotate_page:
                                 x_new_t = self.doc_unit_scale_factor * (self.svg_width - f_new_y)
                                 y_new_t = self.doc_unit_scale_factor * f_new_x
                                 x_old_t = self.doc_unit_scale_factor * (self.svg_width - self.f_curr_y)
@@ -3076,7 +3076,7 @@ class AxiDraw(inkex.Effect):
         if self.options.no_rotate:
             self.options.auto_rotate = False
         if self.options.auto_rotate and (self.svg_height > self.svg_width):
-            self.print_portrait = True
+            self.rotate_page = True
         if self.svg_height is None or self.svg_width is None:
             return False
         else:
