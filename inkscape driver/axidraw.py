@@ -209,7 +209,7 @@ class AxiDraw(inkex.Effect):
             default=axidraw_conf.resolution,\
             help="Resolution option selected (GUI Only)")
 
-        self.version_string = "AxiDraw Control - Version 2.1.1, 2018-08-31."
+        self.version_string = "AxiDraw Control - Version 2.1.2, 2018-09-01."
         self.spew_debugdata = False
 
         self.delay_between_copies = False  # Not currently delaying between copies
@@ -3119,7 +3119,12 @@ class AxiDraw(inkex.Effect):
             inkex.errormsg(text_to_add)
         else:
             self.error_out = self.error_out + '\n' + text_to_add
-            
+    
+    def get_output(self):
+        # Return serialized copy of svg document output
+        result = etree.tostring(self.document)
+        return result.decode("utf-8")
+    
     def plot_setup(self, svg_input):
         # For use as an imported python module
         # Initialize AxiDraw options & parse SVG file
@@ -3161,8 +3166,7 @@ class AxiDraw(inkex.Effect):
         self.set_defaults()
         self.effect()
         if output:
-            result = etree.tostring(self.document)
-            return result.decode("utf-8")
+            return self.get_output()
 
     def interactive(self):
         # Initialize AxiDraw options
@@ -3253,7 +3257,7 @@ class AxiDraw(inkex.Effect):
     def go(self,x_delta,y_delta):
         # relative position move
         # For interactive-mode use as an imported python module
-        self._xy_plot_segment(True,x_target, y_target)
+        self._xy_plot_segment(True,x_delta, y_delta)
 
     def move(self,x_delta,y_delta):
         # pen-up relative position move

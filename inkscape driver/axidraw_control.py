@@ -376,7 +376,8 @@ class AxiDrawWrapperClass( inkex.Effect ):
         
         if primary:
             # Collect output from axidraw.py 
-            self.document = ad.document 
+            self.document = ad.document
+            self.outdoc =  ad.get_output()
         else:
             if ad.error_out:
                 try:
