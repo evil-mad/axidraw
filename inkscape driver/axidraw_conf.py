@@ -164,3 +164,6 @@ ServoMin = 9855   # Lowest allowed position; "0%" on the scale.        Default v
 # More importantly, it constrains the servo to within the travel ranges that they are typically calibrated, following best practice.
 
 SkipVoltageCheck = False  # Set to True if you would like to disable EBB input power voltage checks. Default: False
+
+clip_to_page = True  # Clip plotting area to SVG document size. Default: True
+

@@ -49,9 +49,7 @@ import simplestyle
 import cubicsuperpath
 from simpletransform import applyTransformToPath, composeTransform, parseTransform
 
-
 from lxml import etree
-
 
 try:
     xrange = xrange  # We have Python 2
@@ -62,7 +60,6 @@ try:
     basestring
 except NameError:
     basestring = str
-
 
 class AxiDraw(inkex.Effect):
 
@@ -225,7 +222,7 @@ class AxiDraw(inkex.Effect):
     def set_defaults(self):
         # Set default values of certain parameters
         # These are set when the class is initialized.
-        # Also be called in plot_run(), to ensure that
+        # Also called in plot_run(), to ensure that
         # these defaults are set before plotting additional pages.
         
         self.svg_layer_old = int(0)
@@ -255,6 +252,8 @@ class AxiDraw(inkex.Effect):
         # Parse and update certain options; called in effect and in interactive modes
         # whenever the options are updated 
         
+        # Plot area bounds, based on AxiDraw model:
+        # These bounds may be restricted further by (e.g.,) document size.
         if self.options.model == 2:
             self.x_bounds_max = axidraw_conf.XTravel_V3A3
             self.y_bounds_max = axidraw_conf.YTravel_V3A3
@@ -268,12 +267,13 @@ class AxiDraw(inkex.Effect):
         self.bounds = [[self.x_bounds_min,self.y_bounds_min],
                        [self.x_bounds_max,self.y_bounds_max]]
 
+        self.x_max_phy = self.x_bounds_max  # Copy for physical limit reference
+        self.y_max_phy = self.y_bounds_max
 
         self.speed_pendown = axidraw_conf.speed_pendown * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
         self.speed_penup = axidraw_conf.speed_penup * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
 
         # Input limit checking::
-
         self.options.pen_pos_up = plot_utils.constrainLimits(self.options.pen_pos_up, 0, 100)  # Constrain input values
         self.options.pen_pos_down = plot_utils.constrainLimits(self.options.pen_pos_down, 0, 100)  # Constrain input values
         self.options.pen_rate_raise = plot_utils.constrainLimits(self.options.pen_rate_raise, 1, 200)  # Prevent zero speed
@@ -301,26 +301,15 @@ class AxiDraw(inkex.Effect):
         self.doc_units = "in"
         self.doc_unit_scale_factor = 1
 
-#         self.serial_port = None
-#         self.pen_up = None  # Initial state of pen is neither up nor down, but _unknown_.
-#         self.virtual_pen_up = False  # Keeps track of pen postion when stepping through plot before resuming
-#         self.ignore_limits = False
-#         self.force_pause = False  # Flag to initiate forced pause
-
         f_x = None
         f_y = None
         self.f_curr_x = axidraw_conf.StartPosX
         self.f_curr_y = axidraw_conf.StartPosY
         self.pt_first = (axidraw_conf.StartPosX, axidraw_conf.StartPosY)
-#         self.b_stopped = False
         self.f_speed = 1
-#         self.resume_mode = False
-#         self.node_count = int(0)  # NOTE: python uses 32-bit ints.
         self.node_target = int(0)
         self.pathcount = int(0)
         self.layers_found_to_plot = False
-#         self.use_custom_layer_speed = False
-#         self.use_custom_layer_pen_height = False
         self.layer_pen_pos_down = -1
         self.layer_speed_pendown = -1
         self.s_current_layer_name = ''
@@ -338,14 +327,12 @@ class AxiDraw(inkex.Effect):
         self.svg_paused_pos_x = float(0.0)
         self.svg_paused_pos_y = float(0.0)
         self.svg_rand_seed = float(1.0)
-
-        self.print_in_layers_mode = False
-        self.use_tag_nest_level = 0
-
         self.svg_width = 0
         self.svg_height = 0
         self.rotate_page = False
-
+        
+        self.print_in_layers_mode = False
+        self.use_tag_nest_level = 0
 
         self.speed_pendown = axidraw_conf.speed_pendown * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
         self.speed_penup = axidraw_conf.speed_penup * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
@@ -809,6 +796,20 @@ class AxiDraw(inkex.Effect):
 
         self.svg_transform = parseTransform('scale({0:f},{1:f}) translate({2:f},{3:f})'.format(sx, sy, offset0, offset1))
 
+        if axidraw_conf.clip_to_page: # Clip at edges of page size (default)
+            if self.rotate_page:
+                if self.y_bounds_max > self.svg_width:
+                    self.y_bounds_max = self.svg_width
+                if self.x_bounds_max > self.svg_height:
+                    self.x_bounds_max = self.svg_height
+            else:
+                if self.x_bounds_max > self.svg_width:
+                    self.x_bounds_max = self.svg_width
+                if self.y_bounds_max > self.svg_height:
+                    self.y_bounds_max = self.svg_height
+            self.bounds = [[self.x_bounds_min,self.y_bounds_min],
+                           [self.x_bounds_max,self.y_bounds_max]]
+
         try:  # wrap everything in a try so we can be sure to close the serial port
             self.ServoSetupWrapper()
             self.pen_raise()
@@ -875,7 +876,12 @@ class AxiDraw(inkex.Effect):
                     self.svg_rand_seed = 0
 
             if self.warn_out_of_bounds:
-                self.text_log(gettext.gettext('Warning: AxiDraw movement was limited by its physical range of motion. If everything looks right, your document may have an error with its units or scaling. Contact technical support for help.'))
+                warning_text = "Warning: AxiDraw movement was limited by its "
+                warning_text += "physical range of motion. If everything looks "
+                warning_text += "right, your document may have an error with "
+                warning_text += "its units or scaling. Contact technical "
+                warning_text += "support for help."
+                self.text_log(gettext.gettext(warning_text))
 
             if self.options.preview:
                 # Remove old preview layers, whenever preview mode is enabled
@@ -1092,7 +1098,6 @@ class AxiDraw(inkex.Effect):
 
             elif node.tag == inkex.addNS('symbol', 'svg') or node.tag == 'symbol':
                 # A symbol is much like a group, except that it should only be rendered when called within a "use" tag.
-
                 if self.use_tag_nest_level > 0:
                     self.traverse_svg(node, mat_new, parent_visibility=visibility)
 
@@ -1110,7 +1115,7 @@ class AxiDraw(inkex.Effect):
                 any necessary (x,y) translation.
                 
                 Notes:
-                 1. We ignore the height and width attributes as they do not apply to
+                 1. We ignore the height and g attributes as they do not apply to
                     path-like elements, and
                  2. Even if the use element has visibility="hidden", SVG still calls
                     for processing the referenced element.  The referenced element is
@@ -1672,6 +1677,22 @@ class AxiDraw(inkex.Effect):
             y_max = self.y_bounds_max + tolerance
             y_min = self.y_bounds_min - tolerance
 
+            # Page clip warnings: Need to warn if physical X_max is less than
+            # page-clip X_Max AND a path is clipped on X.
+
+            x_pmax = 3.0E8
+            y_pmax = 3.0E8
+            if self.rotate_page:
+                if self.x_max_phy < self.svg_height:
+                    x_pmax = self.y_max_phy + tolerance
+                if self.y_max_phy < self.svg_width:
+                    y_pmax = self.x_max_phy + tolerance
+            else:
+                if self.x_max_phy < self.svg_width:
+                    x_pmax = self.x_max_phy + tolerance
+                if self.y_max_phy < self.svg_height:
+                    y_pmax = self.y_max_phy + tolerance
+
             p = cubicsuperpath.parsePath(d)
 
             # Apply the transformation to each point
@@ -1711,7 +1732,11 @@ class AxiDraw(inkex.Effect):
                     if not self.ignore_limits:
                         if t_x > x_max or t_x < x_min or t_y > y_max or t_y < y_min:
                             in_bounds = False
-                            self.warn_out_of_bounds = True
+                            if axidraw_conf.clip_to_page:
+                                if t_x > x_pmax or t_y > y_pmax:
+                                    self.warn_out_of_bounds = True
+                            else:
+                                self.warn_out_of_bounds = True
 
                     """
                     Possible cases, for first vertex:
@@ -1906,7 +1931,8 @@ class AxiDraw(inkex.Effect):
             self.text_log('\nAfter removing any zero-length segments, we are left with: ')
             self.text_log('traj_dists[0]: {0:1.3f}'.format(traj_dists[0]))
             for i in xrange(0, len(trimmed_path)):
-                self.text_log('i: {0:1.0f}, x: {1:1.3f},  y: {2:1.3f}, distance: {3:1.3f}'.format(i, trimmed_path[i][0], trimmed_path[i][1], traj_dists[i + 1]))
+                self.text_log('i: {0:1.0f}, x: {1:1.3f}, y: {2:1.3f}, distance: {3:1.3f}'.format(i,
+                    trimmed_path[i][0], trimmed_path[i][1], traj_dists[i + 1]))
                 self.text_log('  And... traj_dists[i+1]: {0:1.3f}'.format(traj_dists[i + 1]))
 
         # Acceleration/deceleration rates:
