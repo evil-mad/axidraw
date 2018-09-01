@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-<_name>AxiDraw Control - v2 Beta</_name>
+<_name>AxiDraw Control</_name>
 <id>command.evilmadscientist.axidraw-manager</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw_control.py</dependency>
@@ -11,8 +11,8 @@
 <_param indent="1" name="splashpage" type="description" appearance="header">Welcome to AxiDraw Control!</_param>
 <_param indent="2" name="splashpage2" type="description" xml:space="preserve" >Press 'Apply' to begin plotting.
 
-Use other tabs to adjust your settings
-or access additional AxiDraw functions.
+Use other tabs to adjust your settings or access
+additional AxiDraw functions.
 
 Need help? Visit http://axidraw.com/docs
 or write to contact@evilmadscientist.com
