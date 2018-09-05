@@ -209,7 +209,7 @@ class AxiDraw(inkex.Effect):
             default=axidraw_conf.resolution,\
             help="Resolution option selected (GUI Only)")
 
-        self.version_string = "AxiDraw Control - Version 2.1.2, 2018-09-01."
+        self.version_string = "AxiDraw Control - Version 2.1.3, 2018-09-04."
         self.spew_debugdata = False
 
         self.delay_between_copies = False  # Not currently delaying between copies

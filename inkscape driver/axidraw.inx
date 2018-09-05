@@ -39,8 +39,8 @@ _gui-text="Pen height: UP (%):">60</param>
 _gui-text="Pen height: DOWN, (%):">30</param>
 
 <param name="setup_type"  indent="1" type="optiongroup" _gui-text="       Action on 'Apply':">
-<_option value="align-mode">Raise pen, turn off motors</_option>	
-<_option value="toggle-pen">Toggle pen between UP, DOWN</_option>
+<_option value="align">Raise pen, turn off motors</_option>	
+<_option value="toggle">Toggle pen between UP, DOWN</_option>
 </param>
 <_param indent="1" name="instructions_setup3" type="description" xml:space="preserve">
 - Raise pen and turn off stepper motors to manually move carriage to the Home Corner (upper left).
@@ -196,7 +196,7 @@ You can resume directly where you paused, or after using the Return to Home Corn
 <param indent="6" name="port" type="string" _gui-text="Name of the AxiDraw:"></param>
 
 <_param name="instructions_general2" type="description" indent="1" xml:space="preserve">
-AxiDraw Control v 2.1.2  	2018-09-01
+AxiDraw Control v 2.1.3  	2018-09-04
 
 Copyright 2018 Evil Mad Science LLC
 Documentation is online at: axidraw.com/docs
