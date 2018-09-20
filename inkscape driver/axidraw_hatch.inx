@@ -23,7 +23,7 @@ will be filled.
 
 Hatched figures will be grouped with their fills.
   </_param>
-  <param name="hatchSpacing" type="float" min="0" max="1000" _gui-text="   Hatch spacing (px)">3.0</param>
+  <param name="hatchSpacing" type="float" min="0.1" max="1000" _gui-text="   Hatch spacing (px)">3.0</param>
   <param name="hatchAngle" type="float" min="-360" max="360" _gui-text="   Hatch angle (degrees)">45</param>
   <param name="crossHatch" type="boolean" _gui-text="   Crosshatch?">false</param>
 
