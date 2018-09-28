@@ -209,7 +209,7 @@ class AxiDraw(inkex.Effect):
             default=axidraw_conf.resolution,\
             help="Resolution option selected (GUI Only)")
 
-        self.version_string = "AxiDraw Control - Version 2.1.3, 2018-09-04."
+        self.version_string = "AxiDraw Control - Version 2.1.4, 2018-09-27."
         self.spew_debugdata = False
 
         self.delay_between_copies = False  # Not currently delaying between copies
@@ -299,7 +299,7 @@ class AxiDraw(inkex.Effect):
         self.pt_estimate = 0.0  # plot time estimate, milliseconds
 
         self.doc_units = "in"
-        self.doc_unit_scale_factor = 1
+        self.unit_scaling = 1.0 # Document unit scale factor
 
         f_x = None
         f_y = None
@@ -350,7 +350,7 @@ class AxiDraw(inkex.Effect):
         self.path_data_pu = []  # pen-up path data for preview layers
         self.path_data_pd = []  # pen-down path data for preview layers
         self.path_data_pen_up = -1  # A value of -1 indicates an indeterminate state- requiring new "M" in path.
-        # self.PreviewScaleFactor = 1.0 # Allow scaling in case of non-viewbox rendering
+        self.preview_scale = 1.0 # Preview Scaling Factor
 
         self.vel_data_plot = False
         self.vel_data_time = 0
@@ -738,11 +738,11 @@ class AxiDraw(inkex.Effect):
 
     def updateVCharts(self, v1, v2, v_total):
         # Update velocity charts, using some appropriate scaling for X and Y display.
-        temp_time = self.doc_unit_scale_factor * self.vel_data_time / 1000.0
+        temp_time = self.unit_scaling * self.vel_data_time / 1000.0
         scale_factor = 10.0 / self.options.resolution
-        self.vel_data_chart1.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.doc_unit_scale_factor * v1 / scale_factor))
-        self.vel_data_chart2.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.doc_unit_scale_factor * v2 / scale_factor))
-        self.vel_data_chart_t.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.doc_unit_scale_factor * v_total / scale_factor))
+        self.vel_data_chart1.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.unit_scaling * v1 / scale_factor))
+        self.vel_data_chart2.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.unit_scaling * v2 / scale_factor))
+        self.vel_data_chart_t.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.unit_scaling * v_total / scale_factor))
 
     def plot_document(self):
         # Plot the actual SVG document, if so selected in the interface
@@ -759,7 +759,7 @@ class AxiDraw(inkex.Effect):
             return
 
         user_units_width = plot_utils.unitsToUserUnits("1in")
-        self.doc_unit_scale_factor = plot_utils.userUnitToUnits(user_units_width, self.doc_units)
+        self.unit_scaling = plot_utils.userUnitToUnits(user_units_width, self.doc_units)
 
         if not self.options.preview:
             self.options.rendering = 0  # Only render previews if we are in preview mode.
@@ -786,13 +786,14 @@ class AxiDraw(inkex.Effect):
                     sy = self.svg_height / float(vinfo[3])
                 else:
                     sy = sx
-                self.doc_unit_scale_factor = 1.0 / sx  # Scale preview to viewbox
+                self.unit_scaling = 1.0 / sx  # Scale preview to viewbox
         else:
             # Handle case of no viewbox provided.
             sx = 1.0 / float(plot_utils.PX_PER_INCH)
             sy = sx
             offset0 = 0.0
             offset1 = 0.0
+            self.preview_scale = float(plot_utils.PX_PER_INCH)
 
         self.svg_transform = parseTransform('scale({0:f},{1:f}) translate({2:f},{3:f})'.format(sx, sy, offset0, offset1))
 
@@ -910,14 +911,14 @@ class AxiDraw(inkex.Effect):
                 width_uu = plot_utils.unitsToUserUnits(stroke_width)  # Convert stroke width to user units (typ. px)
                 width_du = plot_utils.userUnitToUnits(width_uu, self.doc_units)  # Convert to document units (typ. mm)
 
-                line_width_scale_factor = self.doc_unit_scale_factor / plot_utils.PX_PER_INCH
+                line_width_scale_factor = self.unit_scaling / plot_utils.PX_PER_INCH
 
-                width_du = width_du * line_width_scale_factor  # Apply scaling
+                width_du = self.preview_scale * width_du * line_width_scale_factor  # Apply scaling
 
                 """
                 Important note: stroke-width is a css style element, and cannot accept scientific notation.
                 
-                In cases with large scaling, i.e., high values of self.doc_unit_scale_factor
+                In cases with large scaling, i.e., high values of self.unit_scaling
                 resulting from the viewbox attribute of the SVG document, it may be necessary to use 
                 a _very small_ stroke width, so that the stroke width displayed on the screen
                 has a reasonable width after being displayed greatly magnified thanks to the viewbox.
@@ -2717,27 +2718,35 @@ class AxiDraw(inkex.Effect):
                                 self.vel_data_time += move_time
                                 self.updateVCharts(velocity_local1, velocity_local2, velocity_local)
                             if self.rotate_page:
-                                x_new_t = self.doc_unit_scale_factor * (self.svg_width - f_new_y)
-                                y_new_t = self.doc_unit_scale_factor * f_new_x
-                                x_old_t = self.doc_unit_scale_factor * (self.svg_width - self.f_curr_y)
-                                y_old_t = self.doc_unit_scale_factor * self.f_curr_x
+                                x_new_t = self.unit_scaling * (self.svg_width - f_new_y)
+                                y_new_t = self.unit_scaling * f_new_x
+                                x_old_t = self.unit_scaling * (self.svg_width - self.f_curr_y)
+                                y_old_t = self.unit_scaling * self.f_curr_x
                             else:
-                                x_new_t = self.doc_unit_scale_factor * f_new_x
-                                y_new_t = self.doc_unit_scale_factor * f_new_y
-                                x_old_t = self.doc_unit_scale_factor * self.f_curr_x
-                                y_old_t = self.doc_unit_scale_factor * self.f_curr_y
+                                x_new_t = self.unit_scaling * f_new_x
+                                y_new_t = self.unit_scaling * f_new_y
+                                x_old_t = self.unit_scaling * self.f_curr_x
+                                y_old_t = self.unit_scaling * self.f_curr_y
                             if self.pen_up:
                                 if self.options.rendering > 1:  # rendering is 2 or 3. Show pen-up movement
                                     if self.path_data_pen_up != 1:
-                                        self.path_data_pu.append("M{0:0.3f} {1:0.3f}".format(x_old_t, y_old_t))
+                                        self.path_data_pu.append("M{0:0.3f} {1:0.3f}".format(
+                                            self.preview_scale * x_old_t,
+                                            self.preview_scale * y_old_t))
                                         self.path_data_pen_up = 1  # Reset pen state indicator
-                                    self.path_data_pu.append(" {0:0.3f} {1:0.3f}".format(x_new_t, y_new_t))
+                                    self.path_data_pu.append(" {0:0.3f} {1:0.3f}".format(
+                                        self.preview_scale * x_new_t,
+                                        self.preview_scale * y_new_t))
                             else:
                                 if self.options.rendering == 1 or self.options.rendering == 3:  # If 1 or 3, show pen-down movement
                                     if self.path_data_pen_up != 0:
-                                        self.path_data_pd.append("M{0:0.3f} {1:0.3f}".format(x_old_t, y_old_t))
+                                        self.path_data_pd.append("M{0:0.3f} {1:0.3f}".format(
+                                            self.preview_scale * x_old_t,
+                                            self.preview_scale * y_old_t))
                                         self.path_data_pen_up = 0  # Reset pen state indicator
-                                    self.path_data_pd.append(" {0:0.3f} {1:0.3f}".format(x_new_t, y_new_t))
+                                    self.path_data_pd.append(" {0:0.3f} {1:0.3f}".format(
+                                        self.preview_scale * x_new_t,
+                                        self.preview_scale * y_new_t))
                     else:
                         ebb_motion.doXYMove(self.serial_port, move_steps2, move_steps1, move_time)
                         if move_time > 50:
