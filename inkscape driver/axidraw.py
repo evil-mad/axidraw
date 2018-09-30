@@ -1003,9 +1003,11 @@ class AxiDraw(inkex.Effect):
                     m = int(m)
                     s = int(s)
                     down_dist = 0.0254 * self.pen_down_travel_inches
-                    tot_dist = down_dist + (0.0254 * self.pen_up_travel_inches)
+                    up_dist = 0.0254 * self.pen_up_travel_inches
+                    tot_dist = down_dist + up_dist
                     if self.options.preview:
                         self.text_log("Length of path to draw: {0:1.2f} m.".format(down_dist))
+                        self.text_log("Pen-up travel distance: {0:1.2f} m.".format(up_dist))
                         self.text_log("Total movement distance: {0:1.2f} m.".format(tot_dist))
                         if self.options.rendering > 0:
                             self.text_log("This estimate took: {0:d}:{1:02d}:{2:02d} (Hours, minutes, seconds)".format(h, m, s))
