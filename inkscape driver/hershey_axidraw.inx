@@ -129,7 +129,7 @@ distribution or visit:
 </page>
 </param>
 
-  <effect needs-live-preview="true" needs-document="true">
+  <effect needs-live-preview="true">
     <object-type>all</object-type>
     <effects-menu>
     <submenu _name="AxiDraw Utilities"/>

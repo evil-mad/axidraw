@@ -21,7 +21,7 @@ AxiDraw - Disable XY Motors
 </page>
 </param>
 
-<effect needs-live-preview="false" needs-document="no">
+<effect needs-live-preview="false" needs-document="false">
 <object-type>all</object-type>
 <effects-menu>
 <submenu _name="AxiDraw Utilities"/>

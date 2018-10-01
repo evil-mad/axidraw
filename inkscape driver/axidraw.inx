@@ -202,7 +202,7 @@ Copyright 2018 Evil Mad Science LLC
 Documentation is online at: axidraw.com/docs
 
 Press 'Apply' to query the firmware version;
-EBB firmware 2.5.5 or newer is recommended.
+EBB firmware 2.6.0 or newer is recommended.
 
 Note: Inkscape's "Cancel" button does not work while plotting;
 Press the physical pause button on the left side of the machine.
@@ -211,7 +211,7 @@ Press the physical pause button on the left side of the machine.
 </page>
 
 </param>
-<effect needs-live-preview="false" needs-document="no">
+<effect needs-live-preview="false">
 <object-type>all</object-type>
 <effects-menu>
 </effects-menu>
