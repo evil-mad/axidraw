@@ -196,7 +196,7 @@ You can resume directly where you paused, or after using the Return to Home Corn
 <param indent="6" name="port" type="string" _gui-text="Name of the AxiDraw:"></param>
 
 <_param name="instructions_general2" type="description" indent="1" xml:space="preserve">
-AxiDraw Control v 2.1.4  	2018-09-27
+AxiDraw Control v 2.2.0  	2018-09-30
 
 Copyright 2018 Evil Mad Science LLC
 Documentation is online at: axidraw.com/docs

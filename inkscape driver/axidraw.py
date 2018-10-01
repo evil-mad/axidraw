@@ -202,14 +202,14 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option("--auto_rotate",\
             type="inkbool", action="store", dest="auto_rotate",\
             default=axidraw_conf.auto_rotate,\
-            help="Boolean: Auto select portrait vs landscape (GUI Only)")       
+            help="Boolean: Auto select portrait vs landscape (GUI Only)")
 
         self.OptionParser.add_option("--resolution",\
             type="int", action="store", dest="resolution",\
             default=axidraw_conf.resolution,\
             help="Resolution option selected (GUI Only)")
 
-        self.version_string = "AxiDraw Control - Version 2.1.4, 2018-09-27."
+        self.version_string = "AxiDraw Control - Version 2.2.0, 2018-09-30."
         self.spew_debugdata = False
 
         self.delay_between_copies = False  # Not currently delaying between copies
