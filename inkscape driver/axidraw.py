@@ -209,7 +209,9 @@ class AxiDraw(inkex.Effect):
             default=axidraw_conf.resolution,\
             help="Resolution option selected (GUI Only)")
 
-        self.version_string = "AxiDraw Control - Version 2.2.0, 2018-09-30."
+        
+        self.version_string = "2.2.0" # Dated 2018-09-30
+        
         self.spew_debugdata = False
 
         self.delay_between_copies = False  # Not currently delaying between copies
@@ -650,11 +652,82 @@ class AxiDraw(inkex.Effect):
             return
 
         if self.options.manual_cmd == "sysinfo":
-            ebb_version_string = ebb_serial.queryVersion(self.serial_port)  # Full string, human readable
-            self.text_log('EBB version information:\n ' + ebb_version_string)
-            self.text_log('Additional system information:')
-            self.text_log(gettext.gettext(self.version_string))
+            try:
+                ebb_version_string = ebb_serial.queryVersion(self.serial_port)
+                ebb_version_string = ebb_version_string.split("Firmware Version ", 1)
+                if len(ebb_version_string) > 1:
+                    ebb_version_string = ebb_version_string[1]
+                    ebb_version_string = ebb_version_string.strip() # For number comparisons
+                else:
+                    ebb_version_string = None
+            except:
+                ebb_version_string = None
+
+            text = None
+            online_check_failed = False
+            if axidraw_conf.check_updates:
+                import ast
+                from distutils.version import LooseVersion
+                url = "http://evilmadscience.s3.amazonaws.com/sites/axidraw/versions.txt"
+                # TODO: Migrate this to https. 
+                # If you edit the above to https, it works in python 2 and 3
+                # from the CLI on both Mac and Windows, but fails in Inkscape
+                # on Windows only. Something is off about the https config
+                # in Inkscape for Windows.
+                try:
+                    if sys.version_info < (3,): 
+                        import urllib # python 2 version
+                        text = urllib.urlopen(url).read()
+                    else:
+                        import urllib.request # python 3 version
+                        text = urllib.request.urlopen(url).read().decode('utf8')
+                except:
+                    online_check_failed = True
+
+            if text:
+                try:
+                    dictionary = ast.literal_eval(text)
+                    axi_v_online = dictionary['AxiDraw Control']
+                    ebb_v_online = dictionary['EBB Firmware']
+                    dev_v_online = dictionary['AxiDraw Control (unstable)']
+                except:
+                    online_check_failed = True
+
+            if ebb_version_string is not None:
+                self.text_log("Your AxiDraw has firmware version " + str(ebb_version_string) + ".")
+
+                if axidraw_conf.check_updates and not online_check_failed:
+                    if LooseVersion(ebb_v_online) > LooseVersion(ebb_version_string):
+                        self.text_log("An update is available to EBB firmware v. " + str(ebb_v_online) +";")
+                        self.text_log("To download the updater, please visit: axidraw.com/fw\n")
+                    else:
+                        self.text_log("Your firmware is up to date; no updates are available.\n")
+
+            self.text_log("This is AxiDraw Control version " + str(self.version_string) + ".")
+
+            if axidraw_conf.check_updates and not online_check_failed:
+                if LooseVersion(axi_v_online) > LooseVersion(self.version_string):
+                    self.text_log("An update is available to a newer version, v. " + str(axi_v_online) +".")
+                    self.text_log("Please visit: axidraw.com/sw for the latest software.")
+                elif LooseVersion(self.version_string) > LooseVersion(axi_v_online):
+                    self.text_log("~~ An early-release (beta) version ~~")
+                    if LooseVersion(dev_v_online) > LooseVersion(self.version_string):
+                        self.text_log("An update is available to a newer version, v. " + str(dev_v_online) +".")
+                        self.text_log("To update, please contact AxiDraw technical support.")
+                    elif LooseVersion(dev_v_online) == LooseVersion(self.version_string):
+                        self.text_log("This is the newest available development version.")
+                    self.text_log('(The current "stable" release is v.'+str(axi_v_online) + ".)")
+                else:
+                    self.text_log("Your AxiDraw Control software is up to date.")
+
+            self.text_log(gettext.gettext('\nAdditional system information:'))
             self.text_log(sys.version)
+            if not axidraw_conf.check_updates:
+                self.text_log('Note: Online version checking disabled.\n')
+            if online_check_failed:
+                self.text_log('Unable to check online for latest version numbers.\n')
+
+
             return
 
         if self.options.manual_cmd == "ebb_version":
@@ -2842,13 +2915,11 @@ class AxiDraw(inkex.Effect):
                     self.text_log('\nRESUMING PLOT at node : ' + str(self.node_count))
                     self.text_log('\nself.virtual_pen_up : ' + str(self.virtual_pen_up))
                     self.text_log('\nself.pen_up : ' + str(self.pen_up))
-                if not self.virtual_pen_up:  # This is the point where we switch from virtual to real pen
+                if not self.virtual_pen_up:  # Switch from virtual to real pen
                     self.pen_lower()
 
     def serial_connect(self):
         named_port = None
-#         if self.options.port is not None:
-#             self.text_log('str(type(self.options.port)) : ' + str(type(self.options.port)))
         
         if self.options.port_config == 1: # port_config value "1": Use first available AxiDraw.
             self.options.port = None
@@ -2883,7 +2954,6 @@ class AxiDraw(inkex.Effect):
                 self.text_log(gettext.gettext('Connected successfully to port:  ' + str(named_port) ))
             else:
               self.text_log (" Connected successfully")
-#             self.text_log ( ebb_serial.query_nickname(self.serial_port, False))
 
 
     def EnableMotors(self):

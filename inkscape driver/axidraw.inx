@@ -185,7 +185,7 @@ You can resume directly where you paused, or after using the Return to Home Corn
 >Model and Version</_param>
 <param name="model" type="optiongroup" appearance="minimal" indent="4" _gui-text="AxiDraw Model:">
 <_option value="1">AxiDraw V2 or AxiDraw V3</_option>
-<_option value="2">AxiDraw V3/A3</_option>
+<_option value="2">AxiDraw V3/A3 or SE/A3</_option>
 <_option value="3">AxiDraw V3 XLX</_option>
 </param>
 <param name="port_config" type="optiongroup" appearance="minimal" indent="4" _gui-text="Plot to:">
@@ -201,8 +201,8 @@ AxiDraw Control v 2.2.0  	2018-09-30
 Copyright 2018 Evil Mad Science LLC
 Documentation is online at: axidraw.com/docs
 
-Press 'Apply' to query the firmware version;
-EBB firmware 2.6.0 or newer is recommended.
+Press 'Apply' to query the firmware version and check online
+for any available firmware and software updates.
 
 Note: Inkscape's "Cancel" button does not work while plotting;
 Press the physical pause button on the left side of the machine.

@@ -84,8 +84,6 @@ resolution = 1          # Resolution: (1-2):
 # not along the XY axes of the machine. This parameter chooses 8X or 16X microstepping on the motors.
 
 
-
-
 '''
 Additional user-adjustable control parameters:
 
@@ -94,9 +92,16 @@ visible from within the Inkscape GUI.
 
 '''
 
+check_updates = True  # If True, allow AxiDraw Control to check online to see
+                      #    what the current software version is, when you
+                      #    query the version. Set to False to disable. Note that
+                      #    this is the only internet-enabled function in the
+                      #    AxiDraw software.
+
 smoothness = 10.0     # Curve smoothing (default: 10.0)
 
 cornering = 10.0      # Cornering speed factor (default: 10.0)
+
 
 '''
 Secondary control parameters:
