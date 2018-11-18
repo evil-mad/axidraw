@@ -26,11 +26,7 @@ import time
 
 import threading
 
-# Handle a few potential locations of this and its required files
-libpath = os.path.join('pyaxidraw', 'lib')
 sys.path.append('pyaxidraw')
-sys.path.append(libpath)
-sys.path.append('lib')
 
 import gettext
 

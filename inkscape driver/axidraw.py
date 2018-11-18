@@ -31,12 +31,6 @@ import sys
 import time
 from array import array
 
-# Handle a few potential locations of this and its required files
-libpath = os.path.join('pyaxidraw', 'lib')
-sys.path.append('pyaxidraw')
-sys.path.append(libpath)
-# sys.path.append('lib')
-
 import ebb_serial  # Requires v 0.13 in plotink
 import ebb_motion  # Requires v 0.16 in plotink     https://github.com/evil-mad/plotink
     
@@ -210,7 +204,7 @@ class AxiDraw(inkex.Effect):
             help="Resolution option selected (GUI Only)")
 
         
-        self.version_string = "2.2.0" # Dated 2018-09-30
+        self.version_string = "2.3.0" # Dated 2018-11-17
         
         self.spew_debugdata = False
 
@@ -2980,6 +2974,9 @@ class AxiDraw(inkex.Effect):
             self.StepScaleFactor = 2.0 * axidraw_conf.NativeResFactor
             self.speed_pendown = local_speed_pendown * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
             self.speed_penup = self.options.speed_penup * axidraw_conf.SpeedLimXY_HR / 110.0  # Speed given as maximum inches/second in XY plane
+            if self.options.const_speed:
+                self.speed_pendown = self.speed_pendown * axidraw_conf.const_speedFactor_HR
+
 
         else:  # i.e., self.options.resolution == 2; Low-resolution ("Normal") mode
             if not self.options.preview:
@@ -2988,15 +2985,9 @@ class AxiDraw(inkex.Effect):
             # In low-resolution mode, allow faster pen-up moves. Keep maximum pen-down speed the same.
             self.speed_penup = self.options.speed_penup * axidraw_conf.SpeedLimXY_LR / 110.0  # Speed given as maximum inches/second in XY plane
             self.speed_pendown = local_speed_pendown * axidraw_conf.SpeedLimXY_LR / 110.0  # Speed given as maximum inches/second in XY plane
-
-        if self.options.const_speed:
-            if self.options.resolution == 1:  # High-resolution ("Super") mode
+            if self.options.const_speed:
                 self.speed_pendown = self.speed_pendown * axidraw_conf.const_speedFactor_LR
-            else:
-                self.speed_pendown = self.speed_pendown * axidraw_conf.const_speedFactor_HR
 
-            # TODO: Re-evaluate this approach. It may be better to allow a higher maximum speed, but
-            #    get to it via a very short (1-2 segment only) acceleration period, rather than truly constant.
         # ebb_motion.PBOutConfig( self.serial_port, 3, 0 )    # Configure I/O Pin B3 as an output, low
 
     def pen_raise(self):
