@@ -295,7 +295,6 @@ class AxiDraw(inkex.Effect):
         self.pt_estimate = 0.0  # plot time estimate, milliseconds
 
         self.doc_units = "in"
-        self.unit_scaling = 1.0 # Document unit scale factor
 
         f_x = None
         f_y = None
@@ -346,7 +345,7 @@ class AxiDraw(inkex.Effect):
         self.path_data_pu = []  # pen-up path data for preview layers
         self.path_data_pd = []  # pen-down path data for preview layers
         self.path_data_pen_up = -1  # A value of -1 indicates an indeterminate state- requiring new "M" in path.
-        self.preview_scale = 1.0 # Preview Scaling Factor
+        self.p_scale = 1.0 # Preview Scale Factor
 
         self.vel_data_plot = False
         self.vel_data_time = 0
@@ -805,11 +804,12 @@ class AxiDraw(inkex.Effect):
 
     def updateVCharts(self, v1, v2, v_total):
         # Update velocity charts, using some appropriate scaling for X and Y display.
-        temp_time = self.unit_scaling * self.vel_data_time / 1000.0
+        temp_time = self.p_scale * self.vel_data_time / 1000.0
         scale_factor = 10.0 / self.options.resolution
-        self.vel_data_chart1.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.unit_scaling * v1 / scale_factor))
-        self.vel_data_chart2.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.unit_scaling * v2 / scale_factor))
-        self.vel_data_chart_t.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - self.unit_scaling * v_total / scale_factor))
+        self.vel_data_chart1.append(" {0:0.3f} {1:0.3f}".format(temp_time, self.p_scale * (8.5 - v1 / scale_factor)))
+        self.vel_data_chart2.append(" {0:0.3f} {1:0.3f}".format(temp_time, self.p_scale * (8.5 - v2 / scale_factor)))
+        self.vel_data_chart_t.append(" {0:0.3f} {1:0.3f}".format(temp_time, self.p_scale * (8.5 - v_total / scale_factor)))
+
 
     def plot_document(self):
         # Plot the actual SVG document, if so selected in the interface
@@ -825,9 +825,6 @@ class AxiDraw(inkex.Effect):
             self.text_log(gettext.gettext('using File > Document Properties.'))
             return
 
-        user_units_width = plot_utils.unitsToUserUnits("1in")
-        self.unit_scaling = plot_utils.userUnitToUnits(user_units_width, self.doc_units)
-
         if not self.options.preview:
             self.options.rendering = 0  # Only render previews if we are in preview mode.
             vel_data_plot = False
@@ -836,33 +833,35 @@ class AxiDraw(inkex.Effect):
             self.queryEBBVoltage()
             unused = ebb_motion.QueryPRGButton(self.serial_port)  # Initialize button-press detection
 
-        # Modifications to SVG -- including re-ordering and text substitution may be made at this point, and will not be preserved.
+        # Modifications to SVG -- including re-ordering and text substitution
+        #   may be made at this point, and will not be preserved.
 
         # Viewbox handling
-        # Ignores translations and the preserveAspectRatio attribute
+        # Ignores the preserveAspectRatio attribute
 
         viewbox = self.svg.get('viewBox')
         if viewbox:
             vinfo = viewbox.strip().replace(',', ' ').split(' ')
-            offset0 = -float(vinfo[0])
-            offset1 = -float(vinfo[1])
+            offs_x = -float(vinfo[0])
+            offs_y = -float(vinfo[1])
             if vinfo[2] != 0:
                 # TODO: Handle a wider yet range of viewBox formats and values
-                sx = self.svg_width / float(vinfo[2])
+                sx = self.svg_width / float(vinfo[2]) # self.svg_width is in inches
                 if vinfo[3] != 0:
-                    sy = self.svg_height / float(vinfo[3])
+                    sy = self.svg_height / float(vinfo[3]) # self.svg_height is in inches
                 else:
                     sy = sx
-                self.unit_scaling = 1.0 / sx  # Scale preview to viewbox
+                self.p_scale = 1.0/sx # Scales the inch units (used for motion) into px for display.
         else:
             # Handle case of no viewbox provided.
             sx = 1.0 / float(plot_utils.PX_PER_INCH)
             sy = sx
-            offset0 = 0.0
-            offset1 = 0.0
-            self.preview_scale = float(plot_utils.PX_PER_INCH)
+            offs_x = 0.0
+            offs_y = 0.0
+            self.p_scale = float(plot_utils.PX_PER_INCH) # Scales the inch units (used for motion) into px for display.
 
-        self.svg_transform = parseTransform('scale({0:f},{1:f}) translate({2:f},{3:f})'.format(sx, sy, offset0, offset1))
+        # Initial transform of document is based on viewbox, if present:
+        self.svg_transform = parseTransform('scale({0:f},{1:f}) translate({2:f},{3:f})'.format(sx, sy, offs_x, offs_y))
 
         if axidraw_conf.clip_to_page: # Clip at edges of page size (default)
             if self.rotate_page:
@@ -973,19 +972,17 @@ class AxiDraw(inkex.Effect):
                 self.previewSLU.set(inkex.addNS('label', 'inkscape'), '% Pen-up transit')
                 self.svg.append(self.previewLayer)
 
-                stroke_width = "0.2mm"  # Adjust this here, in your preferred units.
 
-                width_uu = plot_utils.unitsToUserUnits(stroke_width)  # Convert stroke width to user units (typ. px)
-                width_du = plot_utils.userUnitToUnits(width_uu, self.doc_units)  # Convert to document units (typ. mm)
-
-                line_width_scale_factor = self.unit_scaling / plot_utils.PX_PER_INCH
-
-                width_du = self.preview_scale * width_du * line_width_scale_factor  # Apply scaling
+                # Preview stroke width: 1/1000 of page width or height, whichever is smaller
+                if self.svg_width < self.svg_height:
+                    width_du = self.p_scale * self.svg_width / 1000.0
+                else:
+                    width_du = self.p_scale * self.svg_height / 1000.0
 
                 """
-                Important note: stroke-width is a css style element, and cannot accept scientific notation.
+                Stroke-width is a css style element, and cannot accept scientific notation.
                 
-                In cases with large scaling, i.e., high values of self.unit_scaling
+                Thus, in cases with large scaling, i.e., high values of self.p_scale
                 resulting from the viewbox attribute of the SVG document, it may be necessary to use 
                 a _very small_ stroke width, so that the stroke width displayed on the screen
                 has a reasonable width after being displayed greatly magnified thanks to the viewbox.
@@ -995,12 +992,13 @@ class AxiDraw(inkex.Effect):
 
                 log_ten = math.log10(width_du)
                 if log_ten > 0:  # For width_du > 1
-                    width_string = "{0:.3f}".format(width_du) + str(self.doc_units)
+                    width_string = "{0:.3f}".format(width_du)
                 else:
                     prec = int(math.ceil(-log_ten) + 3)
-                    width_string = "{0:.{1}f}".format(width_du, prec) + str(self.doc_units)
+                    width_string = "{0:.{1}f}".format(width_du, prec)
 
-                p_style = {'stroke-width': width_string, 'fill': 'none', 'stroke-linejoin': 'round', 'stroke-linecap': 'round'}
+                p_style = {'stroke-width': width_string, 'fill': 'none',
+                    'stroke-linejoin': 'round', 'stroke-linecap': 'round'}
 
                 ns_prefix = "plot"
                 if self.options.rendering > 1:
@@ -1267,10 +1265,11 @@ class AxiDraw(inkex.Effect):
                         # Create (but do not add to SVG) a path with the outline of the rectangle
                         newpath = etree.Element(inkex.addNS('path', 'svg'))
 
-                        x = float(node.get('x'))
-                        y = float(node.get('y'))
-                        w = float(node.get('width'))
-                        h = float(node.get('height'))
+                        x = plot_utils.unitsToUserUnits(node.get('x'))
+                        y = plot_utils.unitsToUserUnits(node.get('y'))
+                        w = plot_utils.unitsToUserUnits(node.get('width'))
+                        h = plot_utils.unitsToUserUnits(node.get('height'))
+
                         s = node.get('style')
                         if s:
                             newpath.set('style', s)
@@ -1311,10 +1310,10 @@ class AxiDraw(inkex.Effect):
                         self.pathcount += 1
                         # Create (but do not add to SVG) a path to contain the line
                         newpath = etree.Element(inkex.addNS('path', 'svg'))
-                        x1 = float(node.get('x1'))
-                        y1 = float(node.get('y1'))
-                        x2 = float(node.get('x2'))
-                        y2 = float(node.get('y2'))
+                        x1 = plot_utils.unitsToUserUnits(node.get('x1'))
+                        y1 = plot_utils.unitsToUserUnits(node.get('y1'))
+                        x2 = plot_utils.unitsToUserUnits(node.get('x2'))
+                        y2 = plot_utils.unitsToUserUnits(node.get('y2'))
                         s = node.get('style')
                         if s:
                             newpath.set('style', s)
@@ -1442,10 +1441,10 @@ class AxiDraw(inkex.Effect):
                     # Note: ellipses or circles with a radius attribute of value 0 are ignored
 
                     if node.tag == inkex.addNS('ellipse', 'svg') or node.tag == 'ellipse':
-                        rx = float(node.get('rx', '0'))
-                        ry = float(node.get('ry', '0'))
+                        rx = plot_utils.unitsToUserUnits(node.get('rx', '0'))
+                        ry = plot_utils.unitsToUserUnits(node.get('ry', '0'))
                     else:
-                        rx = float(node.get('r', '0'))
+                        rx = plot_utils.unitsToUserUnits(node.get('r', '0'))
                         ry = rx
                     if rx == 0 or ry == 0:
                         continue
@@ -1468,8 +1467,8 @@ class AxiDraw(inkex.Effect):
                     if do_we_plot_this_path:
                         self.pathcount += 1
 
-                        cx = float(node.get('cx', '0'))
-                        cy = float(node.get('cy', '0'))
+                        cx = plot_utils.unitsToUserUnits(node.get('cx', '0'))
+                        cy = plot_utils.unitsToUserUnits(node.get('cy', '0'))
                         x1 = cx - rx
                         x2 = cx + rx
                         d = 'M {0:f},{1:f} '.format(x1, cy) + \
@@ -2787,35 +2786,31 @@ class AxiDraw(inkex.Effect):
                                 self.vel_data_time += move_time
                                 self.updateVCharts(velocity_local1, velocity_local2, velocity_local)
                             if self.rotate_page:
-                                x_new_t = self.unit_scaling * (self.svg_width - f_new_y)
-                                y_new_t = self.unit_scaling * f_new_x
-                                x_old_t = self.unit_scaling * (self.svg_width - self.f_curr_y)
-                                y_old_t = self.unit_scaling * self.f_curr_x
+                                x_new_t = self.p_scale * (self.svg_width - f_new_y)
+                                y_new_t = self.p_scale * f_new_x
+                                x_old_t = self.p_scale * (self.svg_width - self.f_curr_y)
+                                y_old_t = self.p_scale * self.f_curr_x
                             else:
-                                x_new_t = self.unit_scaling * f_new_x
-                                y_new_t = self.unit_scaling * f_new_y
-                                x_old_t = self.unit_scaling * self.f_curr_x
-                                y_old_t = self.unit_scaling * self.f_curr_y
+                                x_new_t = self.p_scale * f_new_x
+                                y_new_t = self.p_scale * f_new_y
+                                x_old_t = self.p_scale * self.f_curr_x
+                                y_old_t = self.p_scale * self.f_curr_y
                             if self.pen_up:
                                 if self.options.rendering > 1:  # rendering is 2 or 3. Show pen-up movement
                                     if self.path_data_pen_up != 1:
                                         self.path_data_pu.append("M{0:0.3f} {1:0.3f}".format(
-                                            self.preview_scale * x_old_t,
-                                            self.preview_scale * y_old_t))
+                                            x_old_t, y_old_t))
                                         self.path_data_pen_up = 1  # Reset pen state indicator
                                     self.path_data_pu.append(" {0:0.3f} {1:0.3f}".format(
-                                        self.preview_scale * x_new_t,
-                                        self.preview_scale * y_new_t))
+                                        x_new_t, y_new_t))
                             else:
                                 if self.options.rendering == 1 or self.options.rendering == 3:  # If 1 or 3, show pen-down movement
                                     if self.path_data_pen_up != 0:
                                         self.path_data_pd.append("M{0:0.3f} {1:0.3f}".format(
-                                            self.preview_scale * x_old_t,
-                                            self.preview_scale * y_old_t))
+                                            x_old_t, y_old_t))
                                         self.path_data_pen_up = 0  # Reset pen state indicator
                                     self.path_data_pd.append(" {0:0.3f} {1:0.3f}".format(
-                                        self.preview_scale * x_new_t,
-                                        self.preview_scale * y_new_t))
+                                        x_new_t, y_new_t))
                     else:
                         ebb_motion.doXYMove(self.serial_port, move_steps2, move_steps1, move_time)
                         if move_time > 50:
