@@ -1819,22 +1819,22 @@ class AxiDraw(inkex.Effect):
                         else:
                             segment =  [prev_vertex,this_vertex] 
                             accept, seg = plot_utils.clip_segment(segment, self.bounds)
-                            if in_bounds and not prev_in_bounds:
-                                if len(a_path) > 0:
-                                    subpath_list.append(a_path)
-                                    a_path = [] # start new subpath
-                                a_path.append([seg[0][0], seg[0][1]])
-                                t_x = seg[1][0]
-                                t_y = seg[1][1]
-                                a_path.append([t_x, t_y])
-                            if prev_in_bounds and not in_bounds:
-                                t_x = seg[1][0]
-                                t_y = seg[1][1]
-                                a_path.append([t_x, t_y])
-                                subpath_list.append(a_path) # Save subpath
-                                a_path = [] # Start new subpath
-                            if (not prev_in_bounds) and not in_bounds:
-                                if accept:
+                            if accept:
+                                if in_bounds and not prev_in_bounds:
+                                    if len(a_path) > 0:
+                                        subpath_list.append(a_path)
+                                        a_path = [] # start new subpath
+                                    a_path.append([seg[0][0], seg[0][1]])
+                                    t_x = seg[1][0]
+                                    t_y = seg[1][1]
+                                    a_path.append([t_x, t_y])    
+                                if prev_in_bounds and not in_bounds:
+                                    t_x = seg[1][0]
+                                    t_y = seg[1][1]
+                                    a_path.append([t_x, t_y])
+                                    subpath_list.append(a_path) # Save subpath
+                                    a_path = [] # Start new subpath
+                                if (not prev_in_bounds) and not in_bounds:
                                     if len(a_path) > 0:
                                         subpath_list.append(a_path)
                                         a_path = [] # start new subpath
@@ -1844,6 +1844,8 @@ class AxiDraw(inkex.Effect):
                                     a_path.append([t_x, t_y])
                                     subpath_list.append(a_path) # Save subpath
                                     a_path = [] # Start new subpath
+                            else:
+                                    in_bounds = False
                     first_point = False
                     prev_vertex = this_vertex
                     prev_in_bounds = in_bounds
