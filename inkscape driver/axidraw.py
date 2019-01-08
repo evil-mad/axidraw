@@ -204,7 +204,7 @@ class AxiDraw(inkex.Effect):
             help="Resolution option selected (GUI Only)")
 
         
-        self.version_string = "2.3.0" # Dated 2018-11-17
+        self.version_string = "2.3.1" # Dated 2018-12-17
         
         self.spew_debugdata = False
 
@@ -846,7 +846,7 @@ class AxiDraw(inkex.Effect):
             oy = 0.0
         
         # Initial transform of document is based on viewbox, if present:
-        self.svg_transform = parseTransform('scale({0:f},{1:f}) translate({2:f},{3:f})'.format(sx, sy, ox, oy))
+        self.svg_transform = parseTransform('scale({0:.6E},{1:.6E}) translate({2:.6E},{3:.6E})'.format(sx, sy, ox, oy))
 
         if axidraw_conf.clip_to_page: # Clip at edges of page size (default)
             if self.rotate_page:
@@ -929,10 +929,11 @@ class AxiDraw(inkex.Effect):
 
             if self.warn_out_of_bounds:
                 warning_text = "Warning: AxiDraw movement was limited by its "
-                warning_text += "physical range of motion. If everything looks "
-                warning_text += "right, your document may have an error with "
-                warning_text += "its units or scaling. Contact technical "
-                warning_text += "support for help."
+                warning_text += "physical range of motion. If everything else "
+                warning_text += "looks correct, you may have an issue with "
+                warning_text += "your document size, or you may have the "
+                warning_text += "wrong AxiDraw model selected in the Version "
+                warning_text += "tab. Contact technical support for help."
                 self.text_log(gettext.gettext(warning_text))
 
             if self.options.preview:
@@ -946,7 +947,7 @@ class AxiDraw(inkex.Effect):
 
             if self.options.rendering > 0:  # Render preview. Only possible when in preview mode.
                 preview_transform = parseTransform(
-                    'translate({2:f},{3:f}) scale({0:f},{1:f})'.format(
+                    'translate({2:.6E},{3:.6E}) scale({0:.6E},{1:.6E})'.format(
                     1.0/sx, 1.0/sy, -ox, -oy))
                 path_attrs = { 'transform': formatTransform(preview_transform)}
                 self.previewLayer = etree.Element(inkex.addNS('g', 'svg'),
@@ -1192,7 +1193,7 @@ class AxiDraw(inkex.Effect):
                         y = float(node.get('y', '0'))
                         # Note: the transform has already been applied
                         if x != 0 or y != 0:
-                            mat_new2 = composeTransform(mat_new, parseTransform('translate({0:f},{1:f})'.format(x, y)))
+                            mat_new2 = composeTransform(mat_new, parseTransform('translate({0:.6E},{1:.6E})'.format(x, y)))
                         else:
                             mat_new2 = mat_new
                         visibility = node.get('visibility', visibility)
@@ -1727,29 +1728,47 @@ class AxiDraw(inkex.Effect):
             return
 
         if self.plot_current_layer:
-            tolerance = axidraw_conf.BoundsTolerance  
-            # Allow negligible violation of boundaries without throwing an error.
+            """
+            Notes on boundaries and warnings about clipping:
+            
+            We will generate a warning if the requested motion
+            (1) Exceeds the physical bounds by at least the value of
+                axidraw_conf.BoundsTolerance, and
+            (2) Is clipped by physical limits, rather than the page size, and
+            (3) Is clipped in the positive direction (not at X = 0 or Y = 0).
 
-            x_max = self.x_bounds_max + tolerance
-            x_min = self.x_bounds_min - tolerance
-            y_max = self.y_bounds_max + tolerance
-            y_min = self.y_bounds_min - tolerance
+            No warning will be issued when travel is limited by a document
+            size smaller than the travel, nor at the lower limit of travel.
 
-            # Page clip warnings: Need to warn if physical X_max is less than
-            # page-clip X_Max AND a path is clipped on X.
-
-            x_pmax = 3.0E8
-            y_pmax = 3.0E8
-            if self.rotate_page:
-                if self.x_max_phy < self.svg_height:
-                    x_pmax = self.y_max_phy + tolerance
-                if self.y_max_phy < self.svg_width:
-                    y_pmax = self.x_max_phy + tolerance
+            More succinctly:
+            if clip_to_page:
+                warn if ((physical limit + tolerance) < x < page size) or
+                        ((physical limit + tolerance) < y < page size) 
             else:
-                if self.x_max_phy < self.svg_width:
-                    x_pmax = self.x_max_phy + tolerance
-                if self.y_max_phy < self.svg_height:
-                    y_pmax = self.y_max_phy + tolerance
+                warn if ((physical limit + tolerance) < x) or
+                        ((physical limit + tolerance) < y)
+            
+            """
+
+            clip_warn_x = True # Allow warnings about X clipping
+            clip_warn_y = True # Allow warnings about Y clipping
+
+            # Positive limits with tolerance:
+            x_max_tol = self.x_max_phy + axidraw_conf.BoundsTolerance
+            y_max_tol = self.y_max_phy + axidraw_conf.BoundsTolerance
+
+            if axidraw_conf.clip_to_page:
+                if self.rotate_page:
+                    clip_page_x = self.svg_height
+                    clip_page_y = self.svg_width
+                else:
+                    clip_page_x = self.svg_width
+                    clip_page_y = self.svg_height
+                    
+                if x_max_tol >= clip_page_x:
+                    clip_warn_x = False # Limited by page size, not travel size
+                if y_max_tol >= clip_page_y:
+                    clip_warn_y = False # Limited by page size, not travel size
 
             p = cubicsuperpath.parsePath(d)
 
@@ -1788,15 +1807,28 @@ class AxiDraw(inkex.Effect):
                     in_bounds = True
 
                     if not self.ignore_limits:
-                        if t_x > x_max or t_x < x_min or t_y > y_max or t_y < y_min:
+                        if (t_x > self.x_bounds_max or t_x < self.x_bounds_min
+                        or  t_y > self.y_bounds_max or t_y < self.y_bounds_min):
                             in_bounds = False
-                            if axidraw_conf.clip_to_page:
-                                if t_x > x_pmax or t_y > y_pmax:
-                                    self.warn_out_of_bounds = True
-                            else:
-                                self.warn_out_of_bounds = True
+
+                            if clip_warn_x:
+                                if t_x > x_max_tol:
+                                    if axidraw_conf.clip_to_page:
+                                        if t_x < clip_page_x:
+                                            self.warn_out_of_bounds = True
+                                    else:
+                                        self.warn_out_of_bounds = True
+                            if clip_warn_y:
+                                if t_y > y_max_tol:
+                                    if axidraw_conf.clip_to_page:
+                                        if t_y < clip_page_y:
+                                            self.warn_out_of_bounds = True
+                                    else:
+                                        self.warn_out_of_bounds = True
 
                     """
+                    Clipping logic:
+                    
                     Possible cases, for first vertex:
                     (1) In bounds: Add the vertex to the path.
                     (2) Not in bounds: Do not add the vertex. 
@@ -1902,6 +1934,9 @@ class AxiDraw(inkex.Effect):
         if self.b_stopped:
             return
         if self.f_curr_x is None:
+            return
+
+        if len(input_path) < 2: # Invalid path segment
             return
 
         # Handle simple segments (lines) that do not require any complex planning:
