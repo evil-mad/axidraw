@@ -196,9 +196,9 @@ You can resume directly where you paused, or after using the Return to Home Corn
 <param indent="6" name="port" type="string" _gui-text="Name of the AxiDraw:"></param>
 
 <_param name="instructions_general2" type="description" indent="1" xml:space="preserve">
-AxiDraw Control v 2.3.1  	2018-12-17
+AxiDraw Control v 2.3.2  	2019-01-22
 
-Copyright 2018 Evil Mad Science LLC
+Copyright 2019 Evil Mad Science LLC
 Documentation is online at: axidraw.com/docs
 
 Press 'Apply' to query the firmware version and check online

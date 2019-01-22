@@ -5,7 +5,7 @@
 #
 # See version_string below for current version and date.
 #
-# Copyright 2018 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2019 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ from array import array
 
 import ebb_serial  # Requires v 0.13 in plotink    https://github.com/evil-mad/plotink
 import ebb_motion  # Requires v 0.16 in plotink
-import plot_utils  # Requires v 0.13 in plotink
+import plot_utils  # Requires v 0.14 in plotink
 
 import axidraw_conf  # Some settings can be changed here.
 
@@ -204,7 +204,7 @@ class AxiDraw(inkex.Effect):
             help="Resolution option selected (GUI Only)")
 
         
-        self.version_string = "2.3.1" # Dated 2018-12-17
+        self.version_string = "2.3.2" # Dated 2019-01-22
         
         self.spew_debugdata = False
 
@@ -405,7 +405,7 @@ class AxiDraw(inkex.Effect):
             if self.options.resume_type == "home":
                 self.options.mode = "res_home"
             else:
-                self.options.mode = " res_plot"
+                self.options.mode = "res_plot"
 
         if self.options.mode == "setup":
             # setup mode + setup_type -> either align or toggle modes.
@@ -465,7 +465,7 @@ class AxiDraw(inkex.Effect):
                             if self.b_stopped:
                                 self.copies_to_plot = 0
 
-        elif self.options.mode == "res_home" or self.options.mode == " res_plot":
+        elif self.options.mode == "res_home" or self.options.mode == "res_plot":
             resume_data_needs_updating = True
             self.resumePlotSetup()
             if self.resume_mode:
@@ -545,7 +545,7 @@ class AxiDraw(inkex.Effect):
                 self.ServoSetupWrapper()
                 self.pen_raise()
                 self.EnableMotors()  # Set plotting resolution
-                if self.options.mode == " res_plot":
+                if self.options.mode == "res_plot":
                     self.resume_mode = True
                 self.f_speed = self.speed_pendown
                 self.f_curr_x = self.svg_last_known_pos_x_old + axidraw_conf.StartPosX
@@ -867,7 +867,7 @@ class AxiDraw(inkex.Effect):
             self.pen_raise()
             self.EnableMotors()  # Set plotting resolution
 
-            if self.options.mode == "res_home" or self.options.mode == " res_plot":
+            if self.options.mode == "res_home" or self.options.mode == "res_plot":
                 if self.resume_mode:
                     f_x = self.svg_paused_pos_x_old + axidraw_conf.StartPosX
                     f_y = self.svg_paused_pos_y_old + axidraw_conf.StartPosY
@@ -914,7 +914,7 @@ class AxiDraw(inkex.Effect):
                 self.svg = self.document.getroot()
 
             if not self.b_stopped:
-                if self.options.mode in ["plot", "layers", "res_home", " res_plot"]:
+                if self.options.mode in ["plot", "layers", "res_home", "res_plot"]:
                     # Clear saved plot data from the SVG file,
                     # IF we have _successfully completed_ a normal plot from the plot, layer, or resume mode.
                     self.svg_layer = 0
@@ -3218,33 +3218,34 @@ class AxiDraw(inkex.Effect):
         result = etree.tostring(self.document)
         return result.decode("utf-8")
     
-    def plot_setup(self, svg_input):
+    def plot_setup(self, svg_input=None):
         # For use as an imported python module
         # Initialize AxiDraw options & parse SVG file
         file_ok = False
         inkex.localize()
         self.getoptions([])
         # Parse input file or SVG string
-        if svg_input is not None:
+        if svg_input is None:
+            svg_input = plot_utils.trivial_svg
+        try:
+            stream = open(svg_input, 'r')
+            p = etree.XMLParser(huge_tree=True)
+            self.document = etree.parse(stream, parser=p)
+            self.original_document = copy.deepcopy(self.document)
+            stream.close()
+            file_ok = True
+        except IOError:
+            pass # It wasn't a file...
+        if not file_ok:
             try:
-                stream = open(svg_input, 'r')
-                p = etree.XMLParser(huge_tree=True)
-                self.document = etree.parse(stream, parser=p)
+                svg_string = svg_input.encode('utf-8') # Need consistent encoding.
+                p = etree.XMLParser(huge_tree=True, encoding='utf-8')
+                self.document = etree.ElementTree(etree.fromstring(svg_string, parser=p))
                 self.original_document = copy.deepcopy(self.document)
-                stream.close()
                 file_ok = True
-            except IOError:
-                pass # It wasn't a file...
-            if not file_ok:
-                try:
-                    svg_string = svg_input.encode('utf-8') # Need consistent encoding.
-                    p = etree.XMLParser(huge_tree=True, encoding='utf-8')
-                    self.document = etree.ElementTree(etree.fromstring(svg_string, parser=p))
-                    self.original_document = copy.deepcopy(self.document)
-                    file_ok = True
-                except:
-                    self.error_log("Unable to open SVG input file.")
-                    quit()
+            except:
+                self.error_log("Unable to open SVG input file.")
+                quit()
         if file_ok:
             self.getdocids()
         #self.Secondary = True # Option: Suppress standard output stream
