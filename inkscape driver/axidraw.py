@@ -674,7 +674,13 @@ class AxiDrawClass(inkex.Effect):
                     self.svg_rand_seed = 0
 
             if self.warn_out_of_bounds:
-                self.text_log(gettext.gettext('Warning: AxiDraw movement was limited by its physical range of motion. If everything else looks right, your document may have an issue with its size, or you may have the wrong AxiDraw model selected in the Version tab. Contact technical support for help.'))
+                warning_text = "Warning: AxiDraw movement was limited by its "
+                warning_text += "physical range of motion. If everything else "
+                warning_text += "looks correct, you may have an issue with "
+                warning_text += "your document size, or you may have the "
+                warning_text += "wrong AxiDraw model selected in the Version "
+                warning_text += "tab. Contact technical support for help."
+                self.text_log(gettext.gettext(warning_text))
 
             if self.options.preview_only:
                 # Remove old preview layers, whenever preview mode is enabled
