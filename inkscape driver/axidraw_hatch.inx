@@ -4,14 +4,6 @@
   <id>command.evilmadscientist.axidraw_hatch</id>
   <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
   <dependency type="executable" location="extensions">eggbot_hatch.py</dependency>
-  <dependency type="executable" location="extensions">inkex.py</dependency>
-  <dependency type="executable" location="extensions">simplepath.py</dependency>
-  <dependency type="executable" location="extensions">simpletransform.py</dependency>
-  <dependency type="executable" location="extensions">simplestyle.py</dependency>
-  <dependency type="executable" location="extensions">cubicsuperpath.py</dependency>
-  <dependency type="executable" location="extensions">cspsubdiv.py</dependency>
-  <dependency type="executable" location="extensions">bezmisc.py</dependency>
-  <dependency type="executable" location="extensions">plot_utils.py</dependency>
 
 <param name="tab" type="notebook">
   <page name="splash" _gui-text="Hatch Fill">
@@ -34,7 +26,7 @@ Hatched figures will be grouped with their fills.
   <param name="tolerance" type="float" min="0.1" max="100" _gui-text="   Tolerance (default: 3.0)">3.0</param>
 
   <param name="footer" type="description" xml:space="preserve">
-            (v2.2.1, June 3, 2018)</param>
+            (v2.3.1, June 19, 2019)</param>
 
   </page>
   <page name="info" _gui-text="More info...">
