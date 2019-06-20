@@ -30,10 +30,15 @@ sys.path.append('pyaxidraw')
 
 import gettext
 
-import inkex # Forked from Inkscape's extension framework (GPLv2)
+try:
+    from plot_utils_import import from_dependency_import # plotink
+    inkex = from_dependency_import('ink_extensions.inkex')
+except:
+    import inkex
 
 import ebb_serial # Requires v 0.13 in plotink:	 https://github.com/evil-mad/plotink
 import axidraw_conf # Some settings can be changed here.
+from axidraw_options import common_options
 
 try:
     from . import axidraw
@@ -54,121 +59,11 @@ class AxiDrawWrapperClass( inkex.Effect ):
     def __init__( self ):
         inkex.Effect.__init__( self )
 
-        self.OptionParser.add_option("--mode",\
-            action="store", type="string", dest="mode",\
-            default="plot", \
-            help="Mode or GUI tab. One of: [plot, layers, align, toggle, manual"\
-            + ", sysinfo, version, res_plot, res_home]. Default: plot.")
-            
-        self.OptionParser.add_option("--speed_pendown",\
-            type="int", action="store", dest="speed_pendown", \
-            default=axidraw_conf.speed_pendown, \
-            help="Maximum plotting speed, when pen is down (1-100)")
-            
-        self.OptionParser.add_option("--speed_penup",\
-            type="int", action="store", dest="speed_penup", \
-            default=axidraw_conf.speed_penup, \
-            help="Maximum transit speed, when pen is up (1-100)")
-        
-        self.OptionParser.add_option("--accel",\
-            type="int", action="store", dest="accel", \
-            default=axidraw_conf.accel, \
-            help="Acceleration rate factor (1-100)")
+        self.OptionParser.add_option_group(
+            common_options.core_options(self.OptionParser, axidraw_conf.__dict__))
+        self.OptionParser.add_option_group(
+            common_options.core_mode_options(self.OptionParser, axidraw_conf.__dict__))
 
-        self.OptionParser.add_option("--pen_pos_up",\
-            type="int", action="store", dest="pen_pos_up", \
-            default=axidraw_conf.pen_pos_up, \
-            help="Height of pen when raised (0-100)")
-
-        self.OptionParser.add_option("--pen_pos_down",\
-            type="int", action="store", dest="pen_pos_down",\
-            default=axidraw_conf.pen_pos_down,\
-            help="Height of pen when lowered (0-100)")
-        
-        self.OptionParser.add_option("--pen_rate_raise",\
-            type="int", action="store", dest="pen_rate_raise",\
-            default=axidraw_conf.pen_rate_raise,\
-            help="Rate of raising pen (1-100)")
-         
-        self.OptionParser.add_option("--pen_rate_lower",\
-            type="int", action="store", dest="pen_rate_lower",\
-            default=axidraw_conf.pen_rate_lower, \
-            help="Rate of lowering pen (1-100)")
-        
-        self.OptionParser.add_option("--pen_delay_up",\
-            type="int", action="store", dest="pen_delay_up", \
-            default=axidraw_conf.pen_delay_up,\
-            help="Optional delay after pen is raised (ms)")
-           
-        self.OptionParser.add_option("--pen_delay_down",\
-            type="int", action="store", dest="pen_delay_down",\
-            default=axidraw_conf.pen_delay_down,\
-            help="Optional delay after pen is lowered (ms)")
-            
-        self.OptionParser.add_option("--no_rotate",\
-            type="inkbool", action="store", dest="no_rotate",\
-           default=False,\
-           help="Disable auto-rotate; preserve plot orientation")
-           
-        self.OptionParser.add_option("--const_speed",\
-            type="inkbool", action="store", dest="const_speed",\
-            default=axidraw_conf.const_speed,\
-            help="Use constant velocity when pen is down")
-         
-        self.OptionParser.add_option("--report_time",\
-            type="inkbool", action="store", dest="report_time",\
-            default=axidraw_conf.report_time,\
-            help="Report time elapsed")
-        
-        self.OptionParser.add_option("--manual_cmd",\
-            type="string", action="store", dest="manual_cmd",\
-            default="ebb_version",\
-            help="Manual command. One of: [ebb_version, raise_pen, lower_pen, " \
-            + "walk_x, walk_y, enable_xy, disable_xy, bootload, strip_data, " \
-            + "read_name, list_names,  write_name]. Default: ebb_version")
-        
-        self.OptionParser.add_option("--walk_dist",\
-            type="float", action="store", dest="walk_dist",\
-            default=1,\
-            help="Distance for manual walk (inches)")
-
-        self.OptionParser.add_option("--layer",\
-            type="int", action="store", dest="layer",\
-            default=axidraw_conf.default_Layer,\
-            help="Layer(s) selected for layers mode (1-1000). Default: 1")
-
-        self.OptionParser.add_option("--copies",\
-            type="int", action="store", dest="copies",\
-            default=axidraw_conf.copies,\
-            help="Copies to plot, or 0 for continuous plotting. Default: 1")
-            
-        self.OptionParser.add_option("--page_delay",\
-            type="int", action="store", dest="page_delay",\
-            default=axidraw_conf.page_delay,\
-            help="Optional delay between copies (s).")
-
-        self.OptionParser.add_option("--preview",\
-            type="inkbool", action="store", dest="preview",\
-            default=axidraw_conf.preview,\
-            help="Preview mode; simulate plotting only.")
-            
-        self.OptionParser.add_option("--rendering",\
-            type="int", action="store", dest="rendering",\
-            default=axidraw_conf.rendering,\
-            help="Preview mode rendering option (0-3). 0: None. " \
-            + "1: Pen-down movement. 2: Pen-up movement. 3: All movement.")
-
-        self.OptionParser.add_option("--model",\
-            type="int", action="store", dest="model",\
-            default=axidraw_conf.model,\
-            help="AxiDraw Model (1-3). 1: AxiDraw V2 or V3. " \
-            + "2:AxiDraw V3/A3. 3: AxiDraw V3 XLX.")
-
-        self.OptionParser.add_option("--port",\
-            type="string", action="store", dest="port",\
-            default=axidraw_conf.port,\
-            help="Serial port or named AxiDraw to use")
-                        
         self.OptionParser.add_option("--port_config",\
             type="int", action="store", dest="port_config",\
             default=None,\
@@ -177,28 +72,6 @@ class AxiDrawWrapperClass( inkex.Effect ):
             + "1: Plot to first AxiDraw Found. "\
             + "2: Plot to specified AxiDraw. "\
             + "3: Plot to all AxiDraw units. ")
-
-        self.OptionParser.add_option("--setup_type",\
-            type="string", action="store", dest="setup_type",\
-            default="align",\
-            help="Setup option selected (GUI Only)")
-            
-        self.OptionParser.add_option("--resume_type",\
-            type="string", action="store", dest="resume_type",\
-            default="plot",
-            help="The resume option selected (GUI Only)")
-
-        self.OptionParser.add_option("--auto_rotate",\
-            type="inkbool", action="store", dest="auto_rotate",\
-            default=axidraw_conf.auto_rotate,\
-            help="Boolean: Auto select portrait vs landscape (GUI Only)")       
-
-        self.OptionParser.add_option("--resolution",\
-            type="int", action="store", dest="resolution",\
-            default=axidraw_conf.resolution,\
-            help="Resolution option selected (GUI Only)")
-
-
 
     def effect( self ):
         '''
@@ -351,6 +224,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
         ad.options.resume_type      = self.options.resume_type
         ad.options.auto_rotate      = self.options.auto_rotate
         ad.options.resolution       = self.options.resolution
+        ad.options.reordering       = self.options.reordering
 
         # Special case for this wrapper function:
         # If the port is None, change the port config option
