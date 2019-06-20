@@ -5,7 +5,7 @@
 # See versionString below for detailed version number.
 
 '''
-Copyright 2018 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2019 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 
 The MIT License (MIT)
@@ -47,7 +47,7 @@ class AxiDrawNamingClass( inkex.Effect ):
 	def effect( self ):
 		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		self.versionString = "AxiDraw Naming - Version 2.0.0 dated 2018-07-10"
+		self.versionString = "AxiDraw Naming - Version 2.1.0 dated 2019-05-15"
 		
 		# Input sanitization:
 		self.options.mode = self.options.mode.strip("\"")

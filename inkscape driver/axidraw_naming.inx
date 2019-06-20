@@ -47,7 +47,7 @@ Names should be 3-16 characters long.
 <page name="about" _gui-text="About">
 
 <_param name="aboutpage" type="description" indent="2" xml:space="preserve">
-This extension allows you to assign "nickname" (a digital
+This extension allows you to assign a "nickname" (a digital
 name tag) to a given AxiDraw, or to read out that name. 
 
 Nicknames are not required, but can be helpful if you have
@@ -55,7 +55,7 @@ more than one AxiDraw connected: You can specify which
 AxiDraw to plot to when using AxiDraw Control.
 
 AxiDraw Naming requires firmware version 2.5.5 or newer. 
-You can use the "Version" tab in AxiDraw Control to check
+You can use the "Config" tab in AxiDraw Control to check
 which firmware version is currently installed.
 
 Firmware update instructions may be found in the
@@ -71,7 +71,7 @@ AxiDraw documentation online at axidraw.com/docs
 
 
 
-<effect needs-live-preview="false" needs-document="false">
+<effect needs-live-preview="false">
 <object-type>all</object-type>
 <effects-menu>
 <submenu _name="AxiDraw Utilities"/>
