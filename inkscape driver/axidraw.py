@@ -682,7 +682,7 @@ class AxiDrawClass(inkex.Effect):
                 warning_text += "tab. Contact technical support for help."
                 self.text_log(gettext.gettext(warning_text))
 
-            if self.options.preview_only:
+            if self.options.preview:
                 # Remove old preview layers, whenever preview mode is enabled
                 for node in self.svg:
                     if node.tag == inkex.addNS('g', 'svg') or node.tag == 'g':
