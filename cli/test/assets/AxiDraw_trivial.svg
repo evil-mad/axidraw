@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   inkscape:version="0.91 r13725"
+   version="1.1"
+   id="svg15158"
+   viewBox="0 0 297 210"
+   height="210mm"
+   width="297mm"
+   sodipodi:docname="AxiDraw_trivial.svg">
+  <sodipodi:namedview
+     inkscape:window-maximized="1"
+     inkscape:window-y="1"
+     inkscape:window-x="0"
+     inkscape:window-height="855"
+     inkscape:window-width="1436"
+     showgrid="false"
+     id="namedview15162"
+     inkscape:current-layer="layer6"
+     inkscape:cy="372.04724"
+     inkscape:cx="526.1811"
+     inkscape:zoom="0.43878836"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     borderopacity="1.0"
+     bordercolor="#666666"
+     pagecolor="#ffffff"
+     inkscape:document-units="mm" />
+  <defs
+     id="defs15160">
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect4310"
+       is_visible="true" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect4306"
+       is_visible="true" />
+    <inkscape:path-effect
+       effect="spiro"
+       id="path-effect4154"
+       is_visible="true" />
+  </defs>
+  <metadata
+     id="metadata15164">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     style="display:inline"
+     inkscape:label="1-outline"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       inkscape:connector-curvature="0"
+       id="path4288"
+       d="m 13.506891,15.436447 10.612557,10.93415"
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.28222221px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer6"
+     inkscape:label="2+S75">
+    <path
+       style="display:inline;fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:0.28222221px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 10.860416,55.447917 c 0,0 -14.619791,-30.492707 12.113542,-24.227083 26.733334,6.265627 35.087501,-25.8979149 50.125001,-11.278124 15.0375,14.61979 -8.771876,32.163541 -8.771876,32.163541"
+       id="path4314"
+       inkscape:connector-curvature="0" />
+  </g>
+  <WCB
+     pausedposy="0"
+     pausedposx="0"
+     lastknownposy="0"
+     lastknownposx="0"
+     lastpathnc="0"
+     lastpath="0"
+     node="0"
+     layer="0" />
+</svg>

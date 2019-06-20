@@ -1,0 +1,300 @@
+AxiDraw API Change Log    
+
+This document notes changes that affect the various interfaces. It does
+not cover all internal changes nor bug fixes.
+
+Please see https://axidraw.com/doc/cli_api/ for full documentation
+
+=========================================
+
+v 2.5.0 (May 2019)
+
+Added option (-f, --config) for local configuration file.
+
+Renamed "group_sorting" option to "reordering", (-G, --reordering) and
+changed parameter values.  Reordering is now available directly in
+the plotting modes, which allows full previews to be rendered.
+
+Reordering is also now possible within the python library
+when using the plot context.
+
+Removed the (old, limited) preview options from reorder mode.
+
+
+Changed names of some parameters in axidraw_conf.py. 
+
+=========================================
+
+v 2.4.0 (April 2019)
+
+Refactoring of CLI and python interfaces. CLI is now
+accessible system-wide and called as "axicli" directly
+rather than as "python axicli.py".
+
+Inkscape-based dependencies moved out of this project,
+to a separately maintained project (available on pypi):
+https://github.com/evil-mad/ink_extensions
+
+=========================================
+
+v 2.3.2 (January 2019)
+
+CLI no longer requires input files for the "utility" modes 
+align, toggle, sysinfo, or manual.  An input file is still
+required whenever an output file is specified.
+
+Python library now accepts plot_setup() with no arguments, which
+may be helpful for using those same utility modes in some
+circumstances.
+
+=========================================
+
+v 2.3.1 (December 2018)
+
+All types of viewboxes should be handled now.
+
+Significant improvements to clipping.
+
+=========================================
+
+v. 2.3.0 (December 2018)
+
+Remove pyserial from distribution. It now needs to be installed on your
+system in order to run this software. Remove axidraw_legacy.inx
+
+25% increase in maximum XY speed now allowed.
+
+Change installation process to allow installation via pip.
+
+=========================================
+
+v. 2.2.0 (September 2018)
+
+The sysinfo mode now checks for updates. This behavior can be turned off
+by editing the value of "check_updates" in the axidraw_conf.py file. 
+
+Added axidraw_svg_reorder extension, and interface to use it from
+within the CLI. It is not yet accessible from within the python API.
+
+Added mode: reorder
+
+Added new option group_sorting (-G), to select how groups are handled
+when sorting the SVG file.
+
+=========================================
+
+v. 2.1.1 (August 2018)
+
+Plots (CLI or Python API in Plot context) are now clipped at the
+edges of the SVG document.
+
+=========================================
+
+v. 2.1.0 (August 2018)
+
+Previous versions of the AxiDraw software truncated XY moves at the extents
+of travel, such that a move to (-1,1) would instead go to (0,1).
+
+Paths are now clipped with pen-up at the edges of machine travel.
+This applies to both paths in SVG documents and individual moves in
+XY interactive mode.
+
+=========================================
+
+v. 2.0.x (July 2018)
+Significant changes to options, names, and syntax, for clarity and
+compatibility moving forward.
+
+Summary:
+
+* Changed command line argument format
+* Changed four mode+option combinations to be separate modes
+* Removed some redundant and/or infrequently-adjusted arguments
+* Changed names of most arguments for clarity and consistency
+* Updated default value parameter names in axidraw_conf.py to match
+* Added short names for arguments
+* Output file name now specified by option argument, rather than by position
+* Added new argument: "port_config"
+* All boolean input arguments have been changed to input flags. That is,
+    instead of using  syntax like "--reportTime=True", one now uses
+    "--report_time" or simply "-T"
+* Removed parameter "autoRotate" (default True) in favor of new optional boolean
+    (flag) argument, "no_rotate" (default False)
+* Changed pen-lifting and pen-lowering speed parameters to be a relative
+ percentage (1-100% of speed), rather than an open-ended input.
+* Default value of rendering is now 3 (full rendering, not none).
+* Added interactive mode for direct XY control with moveto/lineto type commands
+* Moved documentation from included text files to online.
+    CLI: https://axidraw.com/doc/cli_api/
+    Python API: https://axidraw.com/doc/py_api
+
+
+== Changes to command line argument format: ==
+
+Input file is now a positional argument; the first argument.
+Output file is now specified with an explicit argument, rather than by position.
+
+The input parser is now more flexible about the format of its arguments.
+
+The following are examples of valid command line arguments:
+
+python axicli.py filename.svg -m version
+python axicli.py filename.svg -m=version
+python axicli.py filename.svg -m="version"
+python axicli.py filename.svg --mode version
+python axicli.py filename.svg --mode=version
+python axicli.py filename.svg --mode="version" 
+
+python axicli.py filename.svg -T
+python axicli.py filename.svg --report_time
+
+python axicli.py filename.svg -C -T
+
+
+Single-character commands (like -m or -C) may be lumped together, and may have their arguments
+follow directly without a space.
+
+python axicli.py filename.svg -CT
+python axicli.py filename.svg -R5 
+python axicli.py filename.svg -mversion
+python axicli.py filename.svg -mlayers -CTl2  
+
+
+== Changes to modes: ==
+
+Removed mode "setup", in favor of specifying its two options as modes.
+Removed mode "resume", in favor of specifying its two options as modes.
+
+Added four new modes, to replace the two removed modes with their options:
+    -m align:       Replaces --mode=setup --setupType=align-mode
+    -m toggle:      Replaces --mode=setup --setupType=toggle-pen
+    -m res_plot: Replaces --mode=resume --resumeType=ResumeNow
+    -m res_home: Replaces --mode=resume --resumeType=justGoHome
+
+
+== arguments removed: ==
+
+Removed argument "smoothness".    (Still adjustable in axidraw_conf.py)
+Removed argument "cornering".     (Still adjustable in axidraw_conf.py)
+Removed argument "resolution".    (Still adjustable in axidraw_conf.py)
+Removed argument "copiesOfLayer". (Use the main "copies" argument, now)
+Removed argument "setupType".     (Replaced by new modes added.)
+Removed argument "resumeType".    (Replaced by new modes added.)
+Removed argument "autoRotate".    (Replaced by new argument, "no_rotate".)
+
+
+== Renamed arguments and values: ==
+
+Renamed argument "manualType" to "manual_cmd"
+Renamed argument "WalkDistance" to "walk_dist"
+Renamed argument "layerNumber" to "layer"
+Renamed argument "penDownSpeed" to "speed_pendown"
+Renamed argument "penUpSpeed" to "speed_penup"
+Renamed argument "accelFactor" to "accel"
+
+Renamed argument "penUpPosition" to "pen_pos_up"
+Renamed argument "penDownPosition" to "pen_pos_down"
+Renamed argument "penLiftRate" to "pen_rate_raise"
+Renamed argument "penLowerRate" to "pen_rate_lower"
+Renamed argument "penLiftDelay" to "pen_delay_up"
+Renamed argument "penLowerDelay" to "pen_delay_down"
+
+Renamed argument "constSpeed" to "const_speed"
+Renamed argument "reportTime" to "report_time"
+Renamed argument "previewType" to "rendering"
+Renamed argument "previewOnly" to "preview"
+
+Renamed argument "copiesOfDocument" to "copies"
+Renamed argument "copyDelay" to "page_delay"
+
+
+Renamed manual-mode command "version" to "ebb_version"
+Renamed manual-mode command "raise-pen" to "raise_pen"
+Renamed manual-mode command "lower-pen" to "lower_pen"
+Renamed manual-mode command "walk-x-motor" to "walk_x"
+Renamed manual-mode command "walk-y-motor" to "walk_y"
+Renamed manual-mode command "enable-motors" to "enable_xy" 
+Renamed manual-mode command "disable-motors" to "disable_xy" 
+Renamed manual-mode command "strip-data" to "strip_data"
+Renamed manual-mode command "read-name" to "read_name"
+Renamed manual-mode command "write-name" to "write_name"
+
+
+== Added arguments: ==
+
+Added new argument "port_config".
+Added new argument "no_rotate".
+Added new argument "output_file".
+
+Added manual-mode command "list_names"
+
+
+== Added short names for arguments: ==
+
+added "-m", for "--mode"
+added "-s", for "--speed_pendown"
+added "-S", for "--speed_penup"
+added "-a", for "--accel"
+added "-u", for "--pen_pos_up"
+added "-d", for "--pen_pos_down"
+added "-R", for "--pen_rate_raise"
+added "-r", for "--pen_rate_lower"
+added "-y", for "--pen_delay_up"
+added "-z", for "--pen_delay_down"
+added "-N", for "--no_rotate"
+added "-C", for "--const_speed"
+added "-T", for "--report_time"
+added "-M", for "--manual_cmd"
+added "-w", for "--walk_dist"
+added "-l", for "--layer"
+added "-c", for "--copies"
+added "-D", for "--page_delay"
+added "-v", for "--preview"
+added "-g", for "--rendering"
+added "-L", for "--model"
+added "-p", for "--port"
+added "-P", for "--port_config"
+added "-o", for "--output_file"
+
+
+
+== Changes to default arguments in axidraw_conf.py: == 
+
+Renamed argument "accelFactor" to "accel"
+Renamed argument "DefaultLayer" to "default_Layer"
+Renamed argument "PenUpSpeed" to "speed_penup"
+Renamed argument "PenDownSpeed" to "speed_pendown"
+Renamed argument "penUpPosition" to "pen_pos_up"
+Renamed argument "penDownPosition" to "pen_pos_down"
+Renamed argument "penLiftRate" to "pen_rate_raise"
+Renamed argument "penLowerRate" to "pen_rate_lower"
+Renamed argument "penLiftDelay" to "pen_delay_up"
+Renamed argument "penLowerDelay" to "pen_delay_down"
+Renamed argument "constSpeed" to "const_speed"
+Renamed argument "reportTime" to "report_time"
+Renamed argument "previewType" to "rendering"
+Renamed argument "copiesOfDocument" to "copies"
+Renamed argument "copyDelay" to "page_delay"
+
+Removed argument "autoRotate"
+
+Added argument "no_rotate" 
+
+Default value of rendering parameter is now 3 (not 0).
+
+
+=========================================
+
+v 1.8.0 (AxiDraw Standalone Beta build 32):
+The version syntax has been revised. Use --mode=manual --manualType=fwversion to
+query the EBB firmware version and other system information.
+aximulti.py removed.
+ 
+=========================================
+
+v 1.6.5 (AxiDraw Standalone Beta build 22):
+The --fileOutput option was removed in favor of being able to directly specify
+the output file name on the command line argument.
+
+
+~~~ Copyright 2019 Windell H. Oskay, Evil Mad Scientist Laboratories ~~~

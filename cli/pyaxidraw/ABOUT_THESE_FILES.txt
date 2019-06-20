@@ -1,0 +1,30 @@
+This directory contains duplicate, non-authoritative, copies of files from the following upstream sources, both from this and other repositories. 
+
+These duplicate copies are provided here for convenience only. Please direct issue reports and feature suggestions to the relevant upstream source, not here. The files in this directory are not necessarily up to date with the authoritative sources.
+
+
+(1) From AxiDraw driver for Inkscape:
+https://github.com/evil-mad/axidraw/tree/master/inkscape%20driver
+
+axidraw_control.py		
+axidraw.py
+axidraw_conf.py
+axidraw_options
+axidraw_svg_reorder.py
+
+
+(2) From EggBot software:
+https://github.com/evil-mad/EggBot
+
+eggbot_hatch.py
+
+
+(3) From Plotink:
+https://github.com/evil-mad/plotink
+
+ebb_motion.py
+ebb_serial.py
+plot_utils.py 
+plot_utils_import.py
+
+	

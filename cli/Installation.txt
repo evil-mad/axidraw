@@ -1,0 +1,213 @@
+AxiDraw CLI and Python API — Installation
+
+Supported on python 2.7, python 3.6, 
+Mac, Windows, and Linux.
+
+
+—————————————————————————————————————————
+INSTALLATION
+
+1.) Install python
+
+Macs and linux boxes usually have python pre-installed.
+
+If you are on Windows, you'll probably not already have this on your computer. 
+Go to: https://www.python.org/download/
+
+If you have a choice, we highly recommend installing python 3.6 or newer. :)
+
+
+2.) Install pip
+
+python versions 2.7.9+ and 3.4+ come with pip pre-installed.
+
+If you do not have pip, download and install it, following the instructions at:
+https://pip.pypa.io/en/stable/installing/
+
+
+3.) [Optional:] Use virtualenv to control versioning
+
+This is a particularly good idea if you are using the python API or want to be able to run this software in both pythons 2 and 3.
+
+Install virtualenv:
+
+```
+pip install virtualenv
+```
+
+Create a virtual python environment:
+
+```
+virtualenv -p $(where python3) venv
+```
+
+This creates a directory called `venv` which contains the files for the new environment.
+Replace `python3` with the name of the python on your system you want to use, e.g. `python2`, `python2.7`, `python3.5`, `python3.6`, etc.
+
+Enter the environment:
+
+```
+source venv/bin/activate
+```
+
+Now your command prompt should be prefixed with "(venv)", indicating that you are now in the virtual environment you created.
+You can now continue as normal.
+More reading: https://docs.python-guide.org/dev/virtualenvs/#lower-level-virtualenv
+
+
+4). Install this software (pyaxidraw and axicli)
+
+Unzip the archive and move into the folder:
+
+```
+cd /Users/username/Documents/axidraw-api/  (Your location and path will vary)
+```
+
+Then use pip to install it.
+
+To use all the latest versions of the dependencies:
+
+```
+pip install .
+```
+
+(On Windows, you may need to use "python -m pip install .")
+
+
+To use a known working set of versions:
+
+```
+pip install -r requirements.txt
+```
+
+
+5.) Test that the software is operational:
+
+A (very simple) sample file is included. You can plot it with the following command line:
+
+axicli test/assets/AxiDraw_trivial.svg
+
+If everything is set up correctly, this should plot the SVG file, which contains a very simple drawing.
+
+
+
+—————————————————————————————————————————
+GETTING STARTED
+
+* Getting started with the command-line interface:
+You can get additional documentation and command-line usage options by using
+    axicli --help
+or refer to the full documentation, at: https://axidraw.com/doc/cli_api/
+
+An example file is included. To plot it, use:
+    axicli test/assets/AxiDraw_trivial.svg
+
+* Getting started with the python API:
+Two example python scripts are included. See README.txt for instructions.
+For the full python API documentation, please see: https://axidraw.com/doc/py_api/
+
+
+________________________________________
+TROUBLESHOOTING
+
+(A) If you get errors (especially on Windows) indicating that axicli is not a recognized command, you may need to use
+    python -m axicli <input> 
+instead. You can add the python scripts directory to your system path in order to use axicli directly.
+
+(B) If you get the error “The fantastic lxml wrapper for libxml2 is required [...]”,
+then you do not have lxml installed. See supplementary instructions below and/or contact technical support.
+
+(C) If you get the error "ImportError: No module named pyserial", then you do not have pyserial installed.
+
+(D) If you get the error "Failed to connect to AxiDraw", then your computer cannot locate the AxiDraw via USB. Check that it's plugged in.
+
+If you do not have an AxiDraw in front of you, you can still use various offline functions. The following will render a preview of how the file will plot, and report the time that it will take to plot, even with no AxiDraw machine present:
+
+axicli test/assets/AxiDraw_trivial.svg -Tvg3 -o outputfile.svg
+
+
+
+_________________________________________
+UNINSTALLING
+
+If you used `virtualenv` (step 3), uninstalling is as simple as leaving the virtual environment.
+The easiest way to do that is to close your terminal.
+
+If you did not use `virtualenv`, use pip to uninstall:
+
+```
+pip uninstall pyaxidraw
+```
+
+You may also want to uninstall pyaxidraw's dependencies, assuming you aren't using them for anything else:
+
+```
+pip uninstall ink_extensions lxml pyserial
+```
+
+
+
+—————————————————————————————————————————
+SUPPLEMENTARY INSTRUCTIONS
+
+If you don't already have pip installed or want to install dependencies manually, you may find the following helpful.
+
+Recommended procedures for installing this software:
+
+(A) Mac Users:
+
+From the terminal, enter these three, providing password when requested:
+sudo easy_install pip
+xcode-select --install
+
+Then, in the AxiDraw API directory: 
+sudo -H pip install .
+
+
+Additional help for lxml installation is available here:
+http://lxml.de/installation.html
+
+
+(B) Windows Users:
+
+Install PIP on your computer, following the instructors here:
+https://pip.pypa.io/en/stable/installing/
+
+
+If pip is not directly accessible with the command 'pip' after installation, you may need to use:
+
+python -m pip install .
+
+You may need to open your command prompt with a right-click and "Run as administrator" in order to avoid permissions errors.
+
+
+If you run into difficulties with installing lxml, you may prefer to start with precompiled binaries for your particular version of Windows and Python.
+
+Download the appropriate "WHL" file for your version of
+http://www.lfd.uci.edu/~gohlke/pythonlibs/#lxml
+
+* For a typical modern Windows 10 computer running python 2.7, the download might be something similar to: lxml‑3.7.3‑cp27‑cp27m‑win_amd64.whl
+
+* For a typical modern Windows 10 computer running python 3.6, the download might be something similar to: lxml‑3.7.3‑cp36‑cp36m‑win_amd64.whl
+
+
+Once you have this "whl" package downloaded, you can install it with:
+python -m pip install some-package.whl
+
+(As before, you may need to run your command prompt as administrator.)
+
+Additional help for lxml installation is available here:
+http://lxml.de/installation.html
+
+
+(C) Linux Users
+
+Install PIP on your computer, following the instructors here:
+https://pip.pypa.io/en/stable/installing/
+
+If you run into difficulty with the lxml installation, additional is available here:
+http://lxml.de/installation.html
+
+
+—————————————————————————————————————————
+Copyright 2019 Windell H Oskay, Evil Mad Scientist Laboratories
