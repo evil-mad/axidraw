@@ -7,7 +7,41 @@ import ebb_serial  # Requires v 0.13 in plotink    https://github.com/evil-mad/p
 
 Versions = namedtuple("Versions", "axidraw_control ebb_firmware dev_axidraw_control")
 
+
 def get_versions_online():
+    ''' check online for current versions. does not require connection to Axidraw,
+    but DOES require connection to the internet.
+
+    returns namedtuple with the versions
+    raises RuntimeError if online check fails.
+    '''
+    url = "http://evilmadscience.s3.amazonaws.com/sites/axidraw/versions.txt"
+    text = None
+    try:
+        if sys.version_info < (3,): 
+            import urllib # python 2 version
+            text = urllib.urlopen(url).read()
+        else:
+            import urllib.request # python 3 version
+            text = urllib.request.urlopen(url).read().decode('utf8')
+
+    except Exception as e:
+        raise RuntimeError("Could not contact server to check for updates. " +
+                           "Are you connected to the internet? (Error: {})".format(e))
+    if text:
+        try:
+            dictionary = ast.literal_eval(text)
+            online_versions = Versions(axidraw_control=dictionary['AxiDraw Control'],
+                                       ebb_firmware=dictionary['EBB Firmware'],
+                                       dev_axidraw_control=dictionary['AxiDraw Control (unstable)'])
+        except Exception as e:
+            raise RuntimeError("Could not parse server response. " +
+                               "This is probably the server's fault. (Error: {})".format(e))
+
+    return online_versions
+
+
+def get_versions_online_new():
     ''' check online for current versions. does not require connection to Axidraw,
     but DOES require connection to the internet.
 
