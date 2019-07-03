@@ -56,7 +56,7 @@ Version 3.0, 2019-06-16
 <_param name="otherFontDesc" type="description" xml:space="preserve">
 Other SVG font name or path (if "Other" selected above):
 </_param>
-<param indent="0" name="otherfont" type="string" indent="2" _gui-text="Name/Path:">HersheySans1</param>
+<param name="otherfont" type="string" indent="2" _gui-text="Name/Path:">HersheySans1</param>
 
 <param name="preserve" indent="4" type="boolean" _gui-text="Preserve original text" >false</param>
 
