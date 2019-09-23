@@ -211,6 +211,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
         ad.options.no_rotate        = self.options.no_rotate
         ad.options.const_speed      = self.options.const_speed
         ad.options.report_time      = self.options.report_time
+        ad.options.progress_bar     = self.options.progress_bar
         ad.options.manual_cmd       = self.options.manual_cmd
         ad.options.walk_dist        = self.options.walk_dist
         ad.options.layer            = self.options.layer

@@ -68,6 +68,11 @@ def core_options(parser, config):
                        default=config["report_time"],\
                        help="Report time elapsed")
 
+    options.add_option("--progress_bar",\
+                       type="inkbool", action="store", dest="progress_bar",\
+                       default=config["progress_bar"],\
+                       help="Show progress bar")
+    
     options.add_option("--page_delay",\
                        type="int", action="store", dest="page_delay",\
                        default=config["page_delay"],\

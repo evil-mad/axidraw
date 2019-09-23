@@ -154,6 +154,10 @@ def axidraw_CLI():
             action="store_const", const='True', \
             help="Report time elapsed")
 
+    parser.add_argument("--progress_bar", \
+            action="store_const", const='True', \
+            help="Show progress bar.")
+
     parser.add_argument("-M","--manual_cmd", \
             metavar='COMMAND', type=str, \
             help="Manual command. One of: [ebb_version, lower_pen, raise_pen, "\
@@ -324,7 +328,7 @@ def axidraw_CLI():
     config_file = common_options.load_config(args.config)
     option_names = ["mode", "speed_pendown", "speed_penup", "accel", "pen_pos_down", "pen_pos_up",
                     "pen_rate_lower", "pen_rate_raise", "pen_delay_down", "pen_delay_up", "reordering",
-                    "no_rotate", "const_speed", "report_time", "manual_cmd", "walk_dist", "layer",
+                    "no_rotate", "const_speed", "report_time", "progress_bar", "manual_cmd", "walk_dist", "layer",
                     "copies", "page_delay", "preview", "rendering", "model", "port", "port_config"]
     common_options.assign_option_values(adc.options, args, [config_file], option_names)
 

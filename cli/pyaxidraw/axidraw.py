@@ -23,6 +23,7 @@
 #
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 
+import tqdm
 import copy
 import gettext
 import math
@@ -99,7 +100,8 @@ class AxiDraw(inkex.Effect):
         # unsupported SVG element, we use a dictionary to track
         # which elements have received a warning
         self.warnings = {}
-        
+
+
     def set_defaults(self):
         # Set default values of certain parameters
         # These are set when the class is initialized.
@@ -177,6 +179,7 @@ class AxiDraw(inkex.Effect):
         self.text_out = '' # Text log for basic communication messages
         self.error_out = '' # Text log for significant errors
         
+        self.steps_count = 0 # Number of plotting steps 
         self.pt_estimate = 0.0  # plot time estimate, milliseconds
 
         self.doc_units = "in"
@@ -446,6 +449,7 @@ class AxiDraw(inkex.Effect):
                 wcb_node = node
         if wcb_node is not None:
             try:
+                self.svg_steps_size = float(wcb_node.get('print_steps'))
                 self.svg_layer_old = int(wcb_node.get('layer'))
                 self.svg_node_count_old = int(wcb_node.get('node'))
                 self.svg_last_path_old = int(wcb_node.get('lastpath'))
@@ -472,7 +476,8 @@ class AxiDraw(inkex.Effect):
                 self.svg.remove(node)
         
             wcb_data = etree.SubElement(self.svg, 'WCB')
-        
+
+            wcb_data.set('print_steps', str(self.steps_count))
             wcb_data.set('layer', str(self.svg_layer))
             wcb_data.set('node', str(self.svg_node_count))
             wcb_data.set('lastpath', str(self.svg_last_path))
@@ -610,9 +615,33 @@ class AxiDraw(inkex.Effect):
         self.vel_data_chart_t.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - v_total / scale_factor))
 
 
+    def update_progress_bar(self):
+        # Update tqdm progress bar.
+        if self.options.progress_bar and not self.options.preview:
+            # The n_steps sets the frequency at which the progress bar
+            # is updated. 
+            n_steps = 1
+            if self.svg_steps_size > 100:
+                n_steps = int(self.svg_steps_size/100)
+            self.steps_count += 1
+            if self.steps_count % n_steps == 0:
+                self.tqdm_pbar.update(n_steps)
+
+        if self.options.preview:
+            self.steps_count += 1
+
+
     def plot_document(self):
         # Plot the actual SVG document, if so selected in the interface
         # parse the svg data as a series of line segments and send each segment to be plotted
+        
+        if self.options.progress_bar and not hasattr(self, 'svg_steps_size'):
+            self.text_log(gettext.gettext('Missing data for displaying progress bar.'))
+            self.text_log(gettext.gettext('Please run in preview mode and define the output file first.'))
+            return
+
+        if self.options.progress_bar and not self.options.preview:
+            self.tqdm_pbar = tqdm.tqdm(total=int(self.svg_steps_size), leave=False)
 
         if not self.getDocProps():
             # Error: This document appears to have inappropriate (or missing) dimensions.
@@ -854,6 +883,15 @@ class AxiDraw(inkex.Effect):
                     etree.SubElement(self.previewLayer,
                                      inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
+            # close tqdm bar
+            if self.options.progress_bar and not self.options.preview:
+                #current_time = self.print_time_sec
+                #elapsed_time = int(round(current_time - self.last_tqdm_time))
+                #self.last_tqdm_time = current_time
+                #self.tqdm_pbar.update(elapsed_time)
+                self.tqdm_pbar.close()
+
+
             if self.options.report_time and (not self.called_externally):
                 if self.copies_to_plot == 0: # No copies remaining to plot
                     if self.options.preview:
@@ -890,9 +928,11 @@ class AxiDraw(inkex.Effect):
                         self.text_log("Length of path drawn: {0:1.2f} m.".format(down_dist))
                         self.text_log("Total distance moved: {0:1.2f} m.".format(tot_dist))
 
+
         finally:
             # We may have had an exception and lost the serial port...
             pass
+
 
     def traverse_svg(self, a_node_list,
                             mat_current=None,
@@ -1716,6 +1756,7 @@ class AxiDraw(inkex.Effect):
                     continue
 
                 for subpath in subpath_list:
+
                     plot_utils.supersample(subpath, axidraw_conf.segment_supersample_tolerance)
 
                     n_index = 0
@@ -2631,6 +2672,7 @@ class AxiDraw(inkex.Effect):
                     f_new_y = self.f_curr_y + y_delta
 
                     if self.options.preview:
+                        self.update_progress_bar()
                         self.pt_estimate += move_time
                         if self.options.rendering > 0:  # Generate preview paths
                             if self.vel_data_plot:
@@ -2668,6 +2710,8 @@ class AxiDraw(inkex.Effect):
                                         x_new_t, y_new_t))
                     else:
                         ebb_motion.doXYMove(self.serial_port, move_steps2, move_steps1, move_time)
+                        self.update_progress_bar()
+
                         if move_time > 50:
                             if self.options.mode != "manual":
                                 time.sleep(float(move_time - 10) / 1000.0)  # pause before issuing next command
@@ -3096,7 +3140,7 @@ class AxiDraw(inkex.Effect):
         # For interactive-mode use as an imported python module
         inkex.localize()
         self.getoptions([])
-        self.options.units = 0 # inches, by default
+        self.options.units = 1 # inches, by default
         self.options.preview = False
         self.options.mode = "interactive"
         self.Secondary = False

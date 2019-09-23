@@ -47,6 +47,7 @@ pen_delay_down = 0      # Optional delay after pen is lowered (ms)
 
 const_speed = False     # Use constant velocity mode when pen is down.
 report_time = False     # Report time elapsed.
+progress_bar = False    # Show progress bar.
 default_layer = 1       # Layer(s) selected for layers mode (1-1000).
 
 copies = 1              # Copies to plot, or 0 for continuous plotting. Default: 1
