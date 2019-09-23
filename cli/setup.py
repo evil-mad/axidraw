@@ -24,6 +24,7 @@ setup(
     author_email='contact@evilmadscientist.com',
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
     install_requires=[
+        'tqdm',
         'ink_extensions',
         'lxml',
         'pyserial>=2.7.0' # 3.0 recommended
