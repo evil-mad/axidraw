@@ -101,7 +101,6 @@ class AxiDraw(inkex.Effect):
         # which elements have received a warning
         self.warnings = {}
 
-
     def set_defaults(self):
         # Set default values of certain parameters
         # These are set when the class is initialized.
