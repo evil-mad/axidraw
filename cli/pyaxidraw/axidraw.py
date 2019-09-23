@@ -101,6 +101,7 @@ class AxiDraw(inkex.Effect):
         # which elements have received a warning
         self.warnings = {}
 
+
     def set_defaults(self):
         # Set default values of certain parameters
         # These are set when the class is initialized.
@@ -613,20 +614,17 @@ class AxiDraw(inkex.Effect):
         self.vel_data_chart2.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - v2 / scale_factor))
         self.vel_data_chart_t.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - v_total / scale_factor))
 
+
     def update_progress_bar(self):
+
         # Update tqdm progress bar.
         if self.options.progress_bar and not self.options.preview:
-            # The n_steps sets the frequency at which the progress bar
-            # is updated. 
-            n_steps = 1
-            if self.svg_steps_size > 100:
-                n_steps = int(self.svg_steps_size/100)
             self.steps_count += 1
-            if self.steps_count % n_steps == 0:
-                self.tqdm_pbar.update(n_steps)
+            self.tqdm_pbar.update(1)
 
         if self.options.preview:
             self.steps_count += 1
+
 
     def plot_document(self):
         # Plot the actual SVG document, if so selected in the interface
@@ -638,7 +636,12 @@ class AxiDraw(inkex.Effect):
             return
 
         if self.options.progress_bar and not self.options.preview:
-            self.tqdm_pbar = tqdm.tqdm(total=int(self.svg_steps_size), leave=False)
+            self.tqdm_pbar = tqdm.tqdm(
+                                    desc='Printing progress',
+                                    total=int(self.svg_steps_size),
+                                    leave=False, 
+                                    unit='steps'
+                                )
 
         if not self.getDocProps():
             # Error: This document appears to have inappropriate (or missing) dimensions.
