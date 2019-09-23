@@ -101,7 +101,6 @@ class AxiDraw(inkex.Effect):
         # which elements have received a warning
         self.warnings = {}
 
-
     def set_defaults(self):
         # Set default values of certain parameters
         # These are set when the class is initialized.
@@ -614,7 +613,6 @@ class AxiDraw(inkex.Effect):
         self.vel_data_chart2.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - v2 / scale_factor))
         self.vel_data_chart_t.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - v_total / scale_factor))
 
-
     def update_progress_bar(self):
         # Update tqdm progress bar.
         if self.options.progress_bar and not self.options.preview:
@@ -629,7 +627,6 @@ class AxiDraw(inkex.Effect):
 
         if self.options.preview:
             self.steps_count += 1
-
 
     def plot_document(self):
         # Plot the actual SVG document, if so selected in the interface
