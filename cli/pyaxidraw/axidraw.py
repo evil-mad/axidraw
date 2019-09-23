@@ -3140,7 +3140,7 @@ class AxiDraw(inkex.Effect):
         # For interactive-mode use as an imported python module
         inkex.localize()
         self.getoptions([])
-        self.options.units = 1 # inches, by default
+        self.options.units = 0 # inches, by default
         self.options.preview = False
         self.options.mode = "interactive"
         self.Secondary = False
