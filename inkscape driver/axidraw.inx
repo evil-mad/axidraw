@@ -9,7 +9,7 @@
 
 <page name="plot" _gui-text="Plot">
 <_param indent="1" name="splashpage" type="description" appearance="header">AxiDraw Control</_param>
-<_param indent="1" name="splashpage2" type="description">Version 2.5.3    -    2019-06-11</_param>
+<_param indent="1" name="splashpage2" type="description">Version 2.5.6    -    2019-12-13</_param>
 <_param indent="2" name="splashpage3" type="description" xml:space="preserve" >
 Press 'Apply' to begin plotting. Use other tabs to adjust
 settings or access additional AxiDraw functions.
@@ -209,6 +209,7 @@ the Return to Home Corner command.
 <param name="model" type="optiongroup" appearance="minimal" indent="4" _gui-text="AxiDraw model:">
 <_option value="1">AxiDraw V2 or AxiDraw V3</_option>
 <_option value="2">AxiDraw V3/A3 or SE/A3</_option>
+<_option value="4">AxiDraw MiniKit</_option>
 <_option value="3">AxiDraw V3 XLX</_option>
 </param>
 <param name="port_config" type="optiongroup" appearance="minimal" indent="4" _gui-text="Machine selection:">
