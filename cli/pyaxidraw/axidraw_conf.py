@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 2.5.0, dated 2019-05-13.
+# Version 2.5.6, dated 2019-12-13.
 #
 # Copyright 2019 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -125,6 +125,9 @@ y_travel_default = 8.58   # AxiDraw V2 and AxiDraw V3: Y Carriage travel in inch
 
 x_travel_V3A3 = 16.93     # AxiDraw V3/A3: X Carriage travel in inches.                 Default: 430 mm = about 16.93 inches
 y_travel_V3A3 = 11.69     # AxiDraw V3/A3: Y Carriage travel in inches.                 Default: 297 mm = about 11.69 inches
+
+x_travel_MiniKit = 6.30  # AxiDraw MiniKit: X Carriage travel in inches.                Default: 160 mm = about 6.30 inches
+y_travel_MiniKit = 4.00   # AxiDraw MiniKit: Y Carriage travel in inches.               Default: 101.6 mm = 4.00 inches
 
 x_travel_V3XLX = 23.42    # AxiDraw V3 XLX: X Carriage travel in inches.                Default: 595 mm = about 23.42 inches
 y_travel_V3XLX = 8.58     # AxiDraw V3 XLX: Y Carriage travel in inches.                Default: 218 mm = about 8.58 inches
