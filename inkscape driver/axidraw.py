@@ -84,7 +84,7 @@ class AxiDraw(inkex.Effect):
             + "1: Plot to first AxiDraw Found. "\
             + "2: Plot to specified AxiDraw. ")
         
-        self.version_string = "2.5.3" # Dated 2019-06-11
+        self.version_string = "2.5.6" # Dated 2019-12-13
         
         self.spew_debugdata = False
 
@@ -141,6 +141,9 @@ class AxiDraw(inkex.Effect):
         elif self.options.model == 3:
             self.x_bounds_max = axidraw_conf.x_travel_V3XLX
             self.y_bounds_max = axidraw_conf.y_travel_V3XLX
+        elif self.options.model == 4:
+            self.x_bounds_max = axidraw_conf.x_travel_MiniKit
+            self.y_bounds_max = axidraw_conf.y_travel_MiniKit
         else:
             self.x_bounds_max = axidraw_conf.x_travel_default
             self.y_bounds_max = axidraw_conf.y_travel_default
