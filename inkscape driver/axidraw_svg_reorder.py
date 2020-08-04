@@ -1,4 +1,4 @@
-# coding=utf-8
+#!/usr/bin/env python3
 #
 # SVG Path Ordering Extension
 # This extension uses a simple TSP algorithm to order the paths so as
@@ -34,23 +34,12 @@
 # SOFTWARE.
 
 import sys
-sys.path.append('pyaxidraw')
-
-try:
-    from plot_utils_import import from_dependency_import # plotink
-    inkex = from_dependency_import('ink_extensions.inkex')
-    simpletransform = from_dependency_import('ink_extensions.simpletransform')
-    simplestyle = from_dependency_import('ink_extensions.simplestyle')
-except:
-    import inkex
-    import simpletransform
-    import simplestyle
-
-
+import inkex
 import gettext
 import math
 import plot_utils        # https://github.com/evil-mad/plotink  Requires version 0.15
 from lxml import etree
+from inkex import Transform
 
 """
 TODOs:
@@ -92,11 +81,9 @@ class ReorderEffect(inkex.Effect):
     def __init__( self ):
         inkex.Effect.__init__( self )
     
-        self.OptionParser.add_option( "--reordering",\
-        action="store", type="int", dest="reordering",\
-        default=1,help="How groups are handled")
+        self.arg_parser.add_argument("--reordering", type=int, default=1, help="How groups are handled")
         
-        self.auto_rotate = True
+        self.auto_rotate = False
 
     def effect(self):
         # Main entry point of the program
@@ -117,7 +104,7 @@ class ReorderEffect(inkex.Effect):
         self.svg = self.document.getroot()
         
         self.DocUnits = "in" # Default
-        self.DocUnits = self.getDocumentUnit()
+        self.DocUnits = self.svg.unit
         
         self.unit_scaling = 1
 
@@ -142,7 +129,7 @@ class ReorderEffect(inkex.Effect):
             oy = 0.0
         
         # Initial transform of document is based on viewbox, if present:
-        matCurrent = simpletransform.parseTransform('scale({0:.6E},{1:.6E}) translate({2:.6E},{3:.6E})'.format(sx, sy, ox, oy))
+        matCurrent = Transform('scale(' + str(sx) + ',' + str(sy) +') translate(' + str(ox) + ',' + str(oy) +')').matrix
         # Set up x_last, y_last, which keep track of last known pen position
         # The initial position is given by the expected initial pen position 
 
@@ -166,10 +153,10 @@ class ReorderEffect(inkex.Effect):
                         if LayerName == '% Preview':
                             self.svg.remove( node )
 
-            preview_transform = simpletransform.parseTransform(
+            preview_transform = Transform(
                 'translate({2:.6E},{3:.6E}) scale({0:.6E},{1:.6E})'.format(
-                1.0/sx, 1.0/sy, -ox, -oy))
-            path_attrs = { 'transform': simpletransform.formatTransform(preview_transform)}
+                1.0/sx, 1.0/sy, -ox, -oy)).matrix
+            path_attrs = { 'transform': str(Transform(preview_transform))}
             self.preview_layer = etree.Element(inkex.addNS('g', 'svg'),
                 path_attrs, nsmap=inkex.NSS)
                     
@@ -241,8 +228,7 @@ class ReorderEffect(inkex.Effect):
         if mat_current is None:
             mat_current = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
         try:    
-            matNew = simpletransform.composeTransform( mat_current,
-                simpletransform.parseTransform( input_node.get( "transform" )))
+            matNew = Transform(mat_current) * Transform(input_node.get("transform"))
         except AttributeError:
             matNew = mat_current
     
@@ -258,7 +244,7 @@ class ReorderEffect(inkex.Effect):
             skip_object = False
 
             # Check for "display:none" in the node's style attribute:
-            style = simplestyle.parseStyle(node.get('style'))
+            style = dict(inkex.Style.parse_str(node.get('style')))
             if 'display' in style.keys() and style['display'] == 'none':
                 skip_object = True # Plot neither this object nor its children
             
@@ -633,7 +619,7 @@ class ReorderEffect(inkex.Effect):
         """
 
         # first apply the current matrix transform to this node's transform
-        matNew = simpletransform.composeTransform( matCurrent, simpletransform.parseTransform( node.get( "transform" ) ) )
+        matNew =  Transform(matCurrent) * Transform(Transform(node.get("transform")).matrix)
 
         point = [float(-1), float(-1)]
         try:
@@ -642,7 +628,7 @@ class ReorderEffect(inkex.Effect):
                 pathdata = node.get('d')
     
                 point = plot_utils.pathdata_first_point(pathdata)    
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
     
                 return True, point
     
@@ -651,13 +637,13 @@ class ReorderEffect(inkex.Effect):
                 """
                 The x,y coordinates for a rect are included in their specific attributes
                 If there is a transform, we need translate the x & y coordinates to their
-                correct location via applyTransformToPoint.
+                correct location via Transform(matNew).apply_to_point(point).
                 """
     
                 point[0] = float( node.get( 'x' ) )
                 point[1] = float( node.get( 'y' ) )
                 
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
                 
                 return True, point
     
@@ -670,7 +656,7 @@ class ReorderEffect(inkex.Effect):
                 point[0] = float( node.get( 'x1' ) )
                 point[1] = float( node.get( 'y1' ) )
     
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
                 
                 return True, point
     
@@ -696,7 +682,7 @@ class ReorderEffect(inkex.Effect):
                     i += 2
                 
                 point = plot_utils.pathdata_first_point(d)
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
     
                 return True, point
                             
@@ -725,7 +711,7 @@ class ReorderEffect(inkex.Effect):
     
                 point = [float(point[0]),float(point[1])]
                 
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
             
                 return True, point
     
@@ -739,7 +725,7 @@ class ReorderEffect(inkex.Effect):
                 point[0] = cx - rx
                 point[1] = cy
     
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
     
                 return True, point
     
@@ -751,7 +737,7 @@ class ReorderEffect(inkex.Effect):
                 point[0] = cx - r
                 point[1] = cy
     
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
     
                 return True, point
             
@@ -791,7 +777,7 @@ class ReorderEffect(inkex.Effect):
     
                         # Note: the transform has already been applied
                         if x != 0 or y != 0:
-                            mat_new2 = simpletransform.composeTransform(matNew, simpletransform.parseTransform('translate({0:f},{1:f})'.format(x, y)))
+                            mat_new2 = Transform(matNew) * Transform('translate({0:f},{1:f})'.format(x, y))
                         else:
                             mat_new2 = matNew
                         # Note that the referenced object may be a 'symbol`,
@@ -821,7 +807,7 @@ class ReorderEffect(inkex.Effect):
         """
 
         # first apply the current matrix transform to this node's transform
-        matNew = simpletransform.composeTransform( matCurrent, simpletransform.parseTransform( node.get( "transform" ) ) )
+        matNew = Transform(matCurrent) * Transform(node.get("transform"))
 
         # If we return a negative value, we know that this function did not work
         point = [float(-1), float(-1)]
@@ -831,7 +817,7 @@ class ReorderEffect(inkex.Effect):
                 path = node.get('d')
 
                 point = plot_utils.pathdata_last_point(path)
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
 
                 return True, point 
     
@@ -840,13 +826,13 @@ class ReorderEffect(inkex.Effect):
                 """
                 The x,y coordinates for a rect are included in their specific attributes
                 If there is a transform, we need translate the x & y coordinates to their
-                correct location via applyTransformToPoint.
+                correct location via Transform(matNew).apply_to_point(point).
                 """
     
                 point[0] = float( node.get( 'x' ) )
                 point[1] = float( node.get( 'y' ) )
                 
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
                 
                 return True, point    # Same start and end points
     
@@ -860,7 +846,7 @@ class ReorderEffect(inkex.Effect):
                 point[0] = float( node.get( 'x2' ) )
                 point[1] = float( node.get( 'y2' ) )
     
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
                 
                 return True, point
     
@@ -885,7 +871,7 @@ class ReorderEffect(inkex.Effect):
                     i += 2
 
                 endpoint = plot_utils.pathdata_last_point(d)    
-                simpletransform.applyTransformToPoint(matNew, endpoint)
+                Transform(matNew).apply_to_point(point)
             
                 return True, endpoint
                             
@@ -913,7 +899,7 @@ class ReorderEffect(inkex.Effect):
     
                 point = [float(point[0]),float(point[1])]
     
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
                 
                 return True, point
     
@@ -926,7 +912,7 @@ class ReorderEffect(inkex.Effect):
                 point[0] = cx - rx 
                 point[1] = cy
     
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
     
                 return True, point 
     
@@ -937,7 +923,7 @@ class ReorderEffect(inkex.Effect):
                 point[0] = cx - r
                 point[1] = cy
     
-                simpletransform.applyTransformToPoint(matNew, point)
+                Transform(matNew).apply_to_point(point)
     
                 return True, point 
                 
@@ -974,7 +960,7 @@ class ReorderEffect(inkex.Effect):
                         y = float(node.get('y', '0'))
                         # Note: the transform has already been applied
                         if x != 0 or y != 0:
-                            mat_new2 = simpletransform.composeTransform(matNew, simpletransform.parseTransform('translate({0:f},{1:f})'.format(x, y)))
+                            mat_new2 = Transform(matNew)* Transform('translate({0:f},{1:f})'.format(x, y))
                         else:
                             mat_new2 = matNew
                         if len(refnode) > 0:
@@ -1004,7 +990,7 @@ class ReorderEffect(inkex.Effect):
         point = [float(-1), float(-1)]
         
         # first apply the current matrix transform to this node's transform
-        matNew = simpletransform.composeTransform( matCurrent, simpletransform.parseTransform( group.get( "transform" ) ) )
+        matNew = Transform( matCurrent) * Transform(group.get("transform"))
 
         # Step through the group, we examine each element until we find a plottable object
         for subnode in group:
@@ -1053,7 +1039,7 @@ class ReorderEffect(inkex.Effect):
         point = [float(-1),float(-1)]
         
         # first apply the current matrix transform to this node's transform
-        matNew = simpletransform.composeTransform( matCurrent, simpletransform.parseTransform( group.get( "transform" ) ) )
+        matNew = Transform(matCurrent) * Transform(group.get("transform"))
     
         # Step through the group, we examine each element until we find a plottable object
         for subnode in reversed(group):
@@ -1095,7 +1081,7 @@ class ReorderEffect(inkex.Effect):
             mat_current = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
             
         # first apply the current matrix transform to this node's transform
-        matNew = simpletransform.composeTransform( mat_current, simpletransform.parseTransform( group.get( "transform" ) ) )
+        matNew = Transform(mat_current) * Transform(group.get("transform"))
     
         nodes_in_group = []
     
@@ -1112,7 +1098,7 @@ class ReorderEffect(inkex.Effect):
                     # Else function continues search for first plottable object
                     nodes_in_group.extend(self.group2NodeDict(subnode, matNew))
             else:
-                simpletransform.applyTransformToNode(matNew, subnode)
+                Transform(matNew) * Transform(subnode)
                 nodes_in_group.append(subnode)
         return nodes_in_group
 
@@ -1180,7 +1166,7 @@ class ReorderEffect(inkex.Effect):
                         nearest_start_x, nearest_start_y))
                     self.p_style.update({'stroke': self.color_index(self.layer_index)})  
                     path_attrs = {
-                        'style': simplestyle.formatStyle( self.p_style ),
+                        'style': str(inkex.Style(self.p_style)),
                         'd': " ".join(preview_path)}
                         
                     etree.SubElement( self.preview_layer,
@@ -1251,5 +1237,4 @@ class ReorderEffect(inkex.Effect):
 # Create effect instance and apply it.
 
 if __name__ == '__main__':
-    effect = ReorderEffect()
-    effect.affect()
+    ReorderEffect().run()
