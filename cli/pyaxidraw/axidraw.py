@@ -3145,10 +3145,14 @@ class AxiDraw(inkex.Effect):
         Commands directing movement outside of the bounds are clipped
         with pen up.
         """
-        
-        if self.options.units: # If using centimeter units
+
+        if self.options.units == 1:  # If using centimeter units
             x_value = x_value / 2.54
             y_value = y_value / 2.54
+        elif self.options.units == 2:  # If using millimeter units
+            x_value = x_value / 25.4
+            y_value = y_value / 25.4
+
         if relative:
             x_value = self.turtle_x + x_value
             y_value = self.turtle_y + y_value
