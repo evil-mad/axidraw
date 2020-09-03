@@ -1,8 +1,39 @@
-import os
+from importlib import import_module
 import sys
 
-# make sources in "pyaxidraw" directories importable from anywhere (e.g., `import inkex`).
-# this method of handling dependencies can cause subtle bugs,
-# however due to requirements (files in pyaxidraw must be runnable as inkscape extension/script,
-# pyaxidraw must work as a regular module in python 3) this is the best solution
-sys.path.append(os.path.join(os.path.abspath(os.path.dirname(__file__))))
+module_names = {
+    'axidrawinternal':  [
+        'axidraw',
+        'axidraw_conf',
+        'axidraw_control',
+        'axidraw_options',
+        'axidraw_svg_reorder',
+    ],
+    'plotink': [
+        'ebb_motion',
+        'ebb_serial',
+        'plot_utils',
+        'plot_utils_import',
+    ],
+}
+
+def main():
+    for supermodule_name, submodule_names in module_names.items():
+        for name in submodule_names:
+            try:
+                sys.modules[__name__].__dict__[name] = alias_submodule(supermodule_name, name)
+            except ImportError as ie:
+                raise ie
+
+def alias_submodule(supermodule_name, submodule_name):
+    '''
+    Note: according to this discussion (https://stackoverflow.com/questions/24322927/python-how-to-alias-module-name-rename-with-preserving-backward-compatibility) this won't work if the submodules go more than two levels deep (i.e. module.submodule.submodule.submodule).
+    However, I can't reproduce that and given our existing package structure, I think that's unlikely anyway, and this is simpler than the given full solution.
+    '''
+
+    full_name = ".".join([supermodule_name, submodule_name])
+    __import__(full_name)
+    sys.modules[".".join([__name__, submodule_name])] = sys.modules[full_name]
+    return sys.modules[full_name]
+
+main()

@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Copyright 2019 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -20,30 +20,19 @@
 #
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 
-import os
-import sys
+from importlib import import_module
+import logging
+import threading
 import time
 
-import threading
+from axidrawinternal import axidraw   # https://github.com/evil-mad/axidraw
+from axidrawinternal.axidraw_options import common_options
 
-sys.path.append('pyaxidraw')
-
-import gettext
-
-try:
-    from plot_utils_import import from_dependency_import # plotink
-    inkex = from_dependency_import('ink_extensions.inkex')
-except:
-    import inkex
-
-import ebb_serial # Requires v 0.13 in plotink:	 https://github.com/evil-mad/plotink
-import axidraw_conf # Some settings can be changed here.
-from axidraw_options import common_options
-
-try:
-    from . import axidraw
-except:
-    import axidraw   # https://github.com/evil-mad/axidraw
+from axidrawinternal.plot_utils_import import from_dependency_import # plotink
+inkex = from_dependency_import('ink_extensions.inkex')
+exit_status = from_dependency_import('ink_extensions_utils.exit_status')
+message = from_dependency_import('ink_extensions_utils.message')
+ebb_serial = from_dependency_import('plotink.ebb_serial') # Requires v 0.13 in plotink:	 https://github.com/evil-mad/plotink
 
 use_multiprocessing = False
 
@@ -53,16 +42,25 @@ if use_multiprocessing:
 else:
     # Multiprocessing does not work on Windows; use multiple threads.
     import threading
+
+logger = logging.getLogger(__name__)
     
 class AxiDrawWrapperClass( inkex.Effect ):
+
+    default_handler = message.UserMessageHandler()
     
-    def __init__( self ):
+    def __init__( self, default_logging = True, params = None ):
+        if params is None:
+            # use default configuration file
+            params = import_module("axidrawinternal.axidraw_conf") # Some settings can be changed here.
+        self.params = params
+
         inkex.Effect.__init__( self )
 
         self.OptionParser.add_option_group(
-            common_options.core_options(self.OptionParser, axidraw_conf.__dict__))
+            common_options.core_options(self.OptionParser, params.__dict__))
         self.OptionParser.add_option_group(
-            common_options.core_mode_options(self.OptionParser, axidraw_conf.__dict__))
+            common_options.core_mode_options(self.OptionParser, params.__dict__))
 
         self.OptionParser.add_option("--port_config",\
             type="int", action="store", dest="port_config",\
@@ -73,12 +71,18 @@ class AxiDrawWrapperClass( inkex.Effect ):
             + "2: Plot to specified AxiDraw. "\
             + "3: Plot to all AxiDraw units. ")
 
+        self.default_logging = default_logging
+        if default_logging:
+            logger.addHandler(self.default_handler)
+
     def effect( self ):
         '''
         Main entry point
         '''
 
         self.verbose = False
+        if self.verbose:
+            logger.setLevel(logging.INFO) # default is generally logging.WARNING
 
         if self.options.mode == "options":
             return
@@ -124,15 +128,13 @@ class AxiDrawWrapperClass( inkex.Effect ):
                 if self.options.port is not None:
                     primary_port = ebb_serial.find_named_ebb(self.options.port)
                     
-                if self.verbose:
-                    for foundPort in EBBList:
-                        inkex.errormsg ("Found an EBB:")
-                        inkex.errormsg (" Port name:   " + foundPort[0])	# Port name
-                        inkex.errormsg (" Description: " + foundPort[1])	# Description
-                        inkex.errormsg (" Hardware ID: " + foundPort[2])	# Hardware ID
+                for foundPort in EBBList:
+                    logger.info("Found an EBB:")
+                    logger.info(" Port name:   " + foundPort[0])	# Port name
+                    logger.info(" Description: " + foundPort[1])	# Description
+                    logger.info(" Hardware ID: " + foundPort[2])	# Hardware ID
                 if len(EBBList) == 1:
-                    if self.verbose:
-                        inkex.errormsg ("Found a single AxiDraw via USB.")
+                    logger.info("Found a single AxiDraw via USB.")
                     self.plot_to_axidraw(None, True)
                 else:
                     if primary_port is None:
@@ -140,13 +142,11 @@ class AxiDrawWrapperClass( inkex.Effect ):
                 
                     for index, foundPort in enumerate(EBBList):
                         if foundPort[0] == primary_port:
-                            if self.verbose:
-                                inkex.errormsg ("FoundPort is primary: " + primary_port)
+                            logger.info("FoundPort is primary: " + primary_port)
                             continue # We will launch primary after spawning other processes.
 
                         # Launch subprocess(es) here:
-                        if self.verbose:
-                            inkex.errormsg ("Launching subprocess to port: " + foundPort[0])
+                        logger.info("Launching subprocess to port: " + foundPort[0])
                             
                         if use_multiprocessing:  
                             process = multiprocessing.Process(target=self.plot_to_axidraw, args=(foundPort[0],False))
@@ -157,18 +157,16 @@ class AxiDrawWrapperClass( inkex.Effect ):
                         process_list.append(process)
                         process.start()
                         
-                    if self.verbose:
-                        inkex.errormsg ("Plotting to primary: " + primary_port)
+                    logger.info("Plotting to primary: " + primary_port)
                         
                     self.plot_to_axidraw(primary_port, True) # Plot to "primary" AxiDraw
                     for process in process_list:
-                        if self.verbose:
-                            inkex.errormsg ("Joining a process. ") 
+                        logger.info("Joining a process. ") 
                         process.join()
                         
             else: # i.e., if not EBBList
-                inkex.errormsg ("No available axidraw units found on USB.")
-                inkex.errormsg ("Please check your connection(s) and try again.")
+                logger.warning("No available axidraw units found on USB.")
+                logger.warning("Please check your connection(s) and try again.")
                 return
         else:   # All cases except plotting to all available AxiDraw units:
                 # This includes: Preview mode and all cases of plotting to a single AxiDraw.
@@ -187,15 +185,11 @@ class AxiDrawWrapperClass( inkex.Effect ):
 #             inkex.errormsg('Skipping secondary. ' )
 #             return # Skip secondary units, without opening class or serial connection
 
-        ad = axidraw.AxiDraw()
+        ad = axidraw.AxiDraw(params=self.params, default_logging=self.default_logging)
         ad.getoptions([])
 
-        if self.verbose:
-            if primary:
-                prim = " (primary)."
-            else:
-                prim = " (secondary)."
-            inkex.errormsg('plot_to_axidraw started, at port ' + str(port) + prim)
+        prim = "primary" if primary else "secondary"
+        logger.info("plot_to_axidraw started, at port %s (%s)", port, prim)
 
         # Many plotting parameters to pass through:
         ad.options.mode             = self.options.mode
@@ -238,8 +232,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
         ad.original_document = self.document
 
         if not primary:
-            ad.Secondary = True # Supress general message reporting
-            ad.called_externally = True # Supress time reporting.
+            ad.set_secondary() # Suppress general message reporting; suppress time reporting
 
         # Plot the document using axidraw.py
         ad.effect()
@@ -250,19 +243,14 @@ class AxiDrawWrapperClass( inkex.Effect ):
             self.outdoc =  ad.get_output()
         else:
             if ad.error_out:
-                try:
-                    the_name = ad.nameString
-                except:
-                    the_name = port
                 if port is not None:
-                    inkex.errormsg('Error on AxiDraw at port "' + port + '":' + ad.error_out)
+                    logger.error('Error on AxiDraw at port "' + port + '":' + ad.error_out)
                 else:
-                    inkex.errormsg('Error on secondary AxiDraw: ' + ad.error_out)
-                inkex.errormsg(" ")
+                    logger.error('Error on secondary AxiDraw: ' + ad.error_out)
 
     def parseFile(self, input_file):
-        self.parse(input_file) 
+        self.parse(input_file)
 
 if __name__ == '__main__':
     e = AxiDrawWrapperClass()
-    e.affect()
+    exit_status.run(e.affect)

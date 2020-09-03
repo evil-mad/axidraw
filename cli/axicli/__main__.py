@@ -1,4 +1,4 @@
-from .core import axidraw_CLI
+from .axidraw_cli import axidraw_CLI
 
 def main():
     axidraw_CLI()

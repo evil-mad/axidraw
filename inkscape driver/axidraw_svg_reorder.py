@@ -4,16 +4,14 @@
 # This extension uses a simple TSP algorithm to order the paths so as
 # to reduce plotting time by plotting nearby paths consecutively.
 #
-# Copyright 2019, Windell H. Oskay, Evil Mad Science LLC
-# www.evilmadscientist.com
-# 
 # 
 # While written from scratch, this is a derivative in spirit of the work by 
 # Matthew Beckler and Daniel C. Newman for the EggBot project.
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2019 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright (c) 2020 Windell H. Oskay, Evil Mad Science LLC
+# www.evilmadscientist.com
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -33,24 +31,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import sys
-sys.path.append('pyaxidraw')
-
-try:
-    from plot_utils_import import from_dependency_import # plotink
-    inkex = from_dependency_import('ink_extensions.inkex')
-    simpletransform = from_dependency_import('ink_extensions.simpletransform')
-    simplestyle = from_dependency_import('ink_extensions.simplestyle')
-except:
-    import inkex
-    import simpletransform
-    import simplestyle
-
-
-import gettext
 import math
-import plot_utils        # https://github.com/evil-mad/plotink  Requires version 0.15
+import sys
+
 from lxml import etree
+
+from axidrawinternal.plot_utils_import import from_dependency_import # plotink
+inkex = from_dependency_import('ink_extensions.inkex')
+simpletransform = from_dependency_import('ink_extensions.simpletransform')
+simplestyle = from_dependency_import('ink_extensions.simplestyle')
+exit_status = from_dependency_import('ink_extensions_utils.exit_status')
+plot_utils = from_dependency_import('plotink.plot_utils')        # https://github.com/evil-mad/plotink  Requires version 0.15
 
 """
 TODOs:
@@ -249,10 +240,19 @@ class ReorderEffect(inkex.Effect):
         for node in input_node:
             # Step through each object within the top-level input node
             
+            
+            if node.tag is etree.Comment:
+                continue
+
             try:
                 id = node.get( 'id' )
             except AttributeError:
-                id = self.uniqueId(None,True)
+                id = self.uniqueId("1",True)
+                node.set( 'id', id)
+            if id == None:
+                id = self.uniqueId("1",True)
+                node.set( 'id', id)
+
 
             # First check for object visibility:
             skip_object = False
@@ -326,7 +326,11 @@ class ReorderEffect(inkex.Effect):
                         try:
                             id = a_node.get( 'id' )
                         except AttributeError:
-                            id = self.uniqueId(None,True)
+                            id = self.uniqueId("1",True)
+                            a_node.set( 'id', id)
+                        if id == None:
+                            id = self.uniqueId("1",True)
+                            a_node.set( 'id', id)
 
                         # Use getFirstPoint and getLastPoint on each object:
                         start_plottable, first_point = self.getFirstPoint(a_node, matNew)
@@ -620,7 +624,7 @@ class ReorderEffect(inkex.Effect):
                     path_list[counter] = "m "+str(x_val+x)+","+str(y_val+y) + ' ' + current_path[index:]
                 
         for counter, path in enumerate(path_list):
-            path_dictionary['AxiDraw_Path'+ str(counter)] = path 
+            path_dictionary['ad_path'+ str(counter)] = path 
         
         return path_dictionary
 
@@ -1252,4 +1256,4 @@ class ReorderEffect(inkex.Effect):
 
 if __name__ == '__main__':
     effect = ReorderEffect()
-    effect.affect()
+    exit_status.run(effect.affect)
