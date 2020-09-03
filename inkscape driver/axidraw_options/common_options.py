@@ -1,12 +1,10 @@
 import runpy
+import sys
 
 from optparse import OptionGroup
 
 def core_options(parser, config):
     options = OptionGroup(parser, "Core Options")
-
-    options.add_option("-f", "--config", type="string", dest="config",
-                       help="Filename for the custom configuration file.")
 
     options.add_option("--speed_pendown",\
                        type="int", action="store", dest="speed_pendown", \
@@ -133,10 +131,10 @@ def core_mode_options(parser, config):
 
     options.add_option("--manual_cmd",\
                        type="string", action="store", dest="manual_cmd",\
-                       default="ebb_version",\
-                       help="Manual command. One of: [ebb_version, raise_pen, lower_pen, " \
+                       default="fw_version",\
+                       help="Manual command. One of: [fw_version, raise_pen, lower_pen, " \
                        + "walk_x, walk_y, enable_xy, disable_xy, bootload, strip_data, " \
-                       + "read_name, list_names,  write_name]. Default: ebb_version")
+                       + "read_name, list_names,  write_name]. Default: fw_version")
     
     options.add_option("--walk_dist",\
                        type="float", action="store", dest="walk_dist",\
@@ -154,43 +152,3 @@ def core_mode_options(parser, config):
                        help="Copies to plot, or 0 for continuous plotting. Default: 1")
     
     return options
-
-def load_config(config):
-    try:
-        return runpy.run_path(config) if config is not None else {}
-    except FileNotFoundError:
-        print("Could not find any file named {}.".format(config))
-        print("Check the spelling and/or location.")
-        quit()
-    except SyntaxError as e:
-        print("Config file {} contains a syntax error on line {}:".format(e.filename, e.lineno))
-        print("    {}".format(e.text))
-        print("The config file should be a python file (*.py).")
-        quit()
-
-def assign_option_values(options_obj, command_line, configs, option_names):
-    """ `configs` is a list of dicts containing values for the options, in order of priority.
-    See get_configured_value.
-    `command_line` is the return value of argparse.ArgumentParser.parse_args() or similar
-    `options_obj` is the object that will be populated with the final option values.
-    """
-
-    for name in option_names:
-        # argparse.ArgumentParser.parse_args() assigns None to any options that were
-        # not defined by the user, so command line arguments are handled differently from
-        # configured values (which might be correctly assigned None)
-        command_line_value = getattr(command_line, name, None)
-        if command_line_value is not None:
-            setattr(options_obj, name, command_line_value)
-        else:
-            setattr(options_obj, name, get_configured_value(name, configs + [options_obj.__dict__]))
-
-def get_configured_value(attr, configs):
-    """ configs is a list of configuration dicts, in order of priority.
-
-    e.g. if configs is a list [user_config, other_config], then the default for "speed_pendown" will be user_config.speed_pendown if user_config.speed_pendown exists, and if not, the default will be other_config.speed_pendown.
-    """
-    for config in configs:
-        if attr in config:
-            return config[attr]
-    raise ValueError("The given attr ({}) was not found in any of the configurations.".format(attr))

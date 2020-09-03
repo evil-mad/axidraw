@@ -1,91 +1,91 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-  <_name>Hershey Text</_name>
-  <id>org.evilmad.axidraw.hershey</id>
+  <name>Hershey Text</name>
+  <id>org.evilmad.text.hershey-axi</id>
 
   <dependency type="executable" location="extensions">hershey.py</dependency>
   <dependency type="executable" location="extensions">inkex.py</dependency>
 
   <param name="tab" type="notebook">
-    <page name="render" _gui-text="Render">
+    <page name="render" gui-text="Render">
 
-<_param indent="1" name="splashTitle1" type="description" appearance="header" xml:space="preserve">
+<label indent="1" appearance="header" xml:space="preserve">
 Hershey Text
-</_param>
+</label>
 
-<_param indent="2" name="splashTitle1b" type="description" xml:space="preserve">A tool to replace text with stroke fonts
+<label indent="2" xml:space="preserve">A tool to replace text with stroke fonts
 
-Version 3.0, 2019-06-16
+Version 3.0.2, 2019-09-07
 
 
-</_param>
+</label>
 
-	<param indent="1" name="fontface" type="enum" _gui-text="Font face: ">
-		<_item value="HersheySans1">Hershey Sans 1-stroke</_item>
-		<_item value="HersheySansMed">Hershey Sans medium</_item> 
+	<param indent="1" name="fontface" type="optiongroup" appearance="combo" gui-text="Font face: ">
+		<option value="HersheySans1">Hershey Sans 1-stroke</option>
+		<option value="HersheySansMed">Hershey Sans medium</option>
 
-		<_item value="HersheySerifMed">Hershey Serif medium</_item>
-		<_item value="HersheySerifMedItalic">Hershey Serif medium italic</_item>
+		<option value="HersheySerifMed">Hershey Serif medium</option>
+		<option value="HersheySerifMedItalic">Hershey Serif medium italic</option>
 
-		<_item value="HersheySerifBold">Hershey Serif bold</_item>
-		<_item value="HersheySerifBoldItalic">Hershey Serif bold italic</_item>
+		<option value="HersheySerifBold">Hershey Serif bold</option>
+		<option value="HersheySerifBoldItalic">Hershey Serif bold italic</option>
 
-		<_item value="HersheyScript1">Hershey Script 1-stroke</_item>
-		<_item value="HersheyScriptMed">Hershey Script medium</_item>
+		<option value="HersheyScript1">Hershey Script 1-stroke</option>
+		<option value="HersheyScriptMed">Hershey Script medium</option>
 
-		<_item value="HersheyGothEnglish">Hershey Gothic English</_item>   
-		
+		<option value="HersheyGothEnglish">Hershey Gothic English</option>
+
 		<!-- Block below this are derived from fonts licensed under SIL Open Font License -->
-		<_item value="EMSAllure">EMS Allure</_item>
+		<option value="EMSAllure">EMS Allure</option>
 
-		<_item value="EMSElfin">EMS Elfin</_item>
-		<_item value="EMSFelix">EMS Felix</_item>
+		<option value="EMSElfin">EMS Elfin</option>
+		<option value="EMSFelix">EMS Felix</option>
 
-		<_item value="EMSNixish">EMS Nixish</_item>
-		<_item value="EMSNixishItalic">EMS Nixish Italic</_item>
+		<option value="EMSNixish">EMS Nixish</option>
+		<option value="EMSNixishItalic">EMS Nixish Italic</option>
 
-		<_item value="EMSOsmotron">EMS Osmotron</_item>
-		<_item value="EMSReadability">EMS Readability</_item>
-		<_item value="EMSReadabilityItalic">EMS Readability Italic</_item>
-		<_item value="EMSTech">EMS Tech</_item> 
+		<option value="EMSOsmotron">EMS Osmotron</option>
+		<option value="EMSReadability">EMS Readability</option>
+		<option value="EMSReadabilityItalic">EMS Readability Italic</option>
+		<option value="EMSTech">EMS Tech</option>
 		<!-- Block above this are derived from fonts licensed under SIL Open Font License -->
 
-		<_item value="other">Other (given below)</_item> 
+		<option value="other">Other (given below)</option>
       </param>
 
-<_param name="otherFontDesc" type="description" xml:space="preserve">
+<label xml:space="preserve">
 Other SVG font name or path (if "Other" selected above):
-</_param>
-<param name="otherfont" type="string" indent="2" _gui-text="Name/Path:">HersheySans1</param>
+</label>
+<param name="otherfont" type="string" indent="2" gui-text="Name/Path:">HersheySans1</param>
 
-<param name="preserve" indent="4" type="boolean" _gui-text="Preserve original text" >false</param>
+<param name="preserve" indent="4" type="bool" gui-text="Preserve original text" >false</param>
 
 </page>
 
-<page name="utilities" _gui-text="Utilities">
-  <_param name="utilspage" type="description" appearance="header" xml:space="preserve">
+<page name="utilities" gui-text="Utilities">
+  <label appearance="header" xml:space="preserve">
 Hershey Text Utility Functions
-  </_param>
+  </label>
 
-  <param indent="2" name="action" type="enum" _gui-text="Action: ">
-    <_item value="sample"   >Generate font table</_item> 
-    <_item value="table"    >Generate glyph table in selected font</_item> 
+  <param indent="2" name="action" type="optiongroup" appearance="combo" gui-text="Action: ">
+    <option value="sample"   >Generate font table</option>
+    <option value="table"    >Generate glyph table in selected font</option>
   </param>
 
-  <_param name="utilspage" type="description" xml:space="preserve">
+  <label xml:space="preserve">
 
-Sample text to use when generating font table:</_param>
-<param indent="2" name="text" type="string" _gui-text="Text:">
+Sample text to use when generating font table:</label>
+<param indent="2" name="text" type="string" gui-text="Text:">
 The Quick Brown Fox Jumps Over a Lazy Dog</param>
 
 </page>
 
 
-    <page name="help" _gui-text="About">
-      <_param name="aboutpage" type="description" xml:space="preserve">
+    <page name="help" gui-text="About">
+      <label xml:space="preserve">
 This extension renders all text (or all selected text)
 in your document into using specialized "stroke" or
-"engraving" fonts designed for plotters. 
+"engraving" fonts designed for plotters.
 
 Whereas regular "outline" fonts (e.g., TrueType) work
 by filling in the region inside an invisible outline,
@@ -94,19 +94,19 @@ or strokes; much like human handwriting.
 
 Engraving fonts are used for creating text paths that
 computer controlled drawing and cutting machines (from
-pen plotters to CNC routers) can efficiently follow. 
+pen plotters to CNC routers) can efficiently follow.
 
 A complete user guide is available to download at:
   http://wiki.evilmadscientist.com/hershey
-  
+
 For extended help, click "Apply" with this tab selected.
 
-  </_param>
+  </label>
 </page>
 
 
-<page name="info3" _gui-text="Credits">
-<_param name="aboutpage3" type="description" xml:space="preserve">
+<page name="info3" gui-text="Credits">
+<label xml:space="preserve">
 The classic Hershey fonts included are derived from
 work by Dr. A. V. Hershey.
 
@@ -117,7 +117,7 @@ Open Font License.
 For full credits and license information, please read the
 credits embedded within the SVG fonts included with this
 distribution.
-</_param>
+</label>
 
 </page>
 </param>

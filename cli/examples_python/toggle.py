@@ -2,16 +2,18 @@
 # -*- encoding: utf-8 -#-
 
 '''
-python_example_toggle.py
+toggle.py
 
 Demonstrate use of axidraw module in "toggle" mode, to toggle the pen up and down.
 
-Run this demo by calling: python python_example_toggle.py
+Run this demo by calling: python toggle.py
 
 
 This is a minimal example to show how one can import the AxiDraw module
 and use it to call a utility command for the AxiDraw.
 
+
+AxiDraw python API documentation is hosted at: https://axidraw.com/doc/py_api/
 
 '''
 
@@ -36,7 +38,7 @@ https://shop.evilmadscientist.com/contact
 
 
 
-Copyright 2019 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 

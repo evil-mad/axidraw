@@ -5,7 +5,7 @@
 # See versionString below for detailed version number.
 
 '''
-Copyright 2019 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 
 The MIT License (MIT)
@@ -32,9 +32,12 @@ SOFTWARE.
 
 # Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
 
+from lxml import etree
 
-import inkex
-import axidraw	# https://github.com/evil-mad/axidraw
+from axidrawinternal import axidraw	# https://github.com/evil-mad/axidraw
+
+from axidrawinternal.plot_utils_import import from_dependency_import # plotink
+inkex = from_dependency_import('ink_extensions.inkex')
 
 class AxiDrawNamingClass( inkex.Effect ):
 

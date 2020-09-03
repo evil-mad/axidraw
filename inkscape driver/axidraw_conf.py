@@ -2,9 +2,9 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 2.5.6, dated 2019-12-13.
+# Version 2.6.0, dated 2020-07-04.
 #
-# Copyright 2019 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # https://github.com/evil-mad/AxiDraw
 #
@@ -54,15 +54,16 @@ page_delay = 15         # Optional delay between copies (s).
 
 preview = False         # Preview mode; simulate plotting only.
 rendering = 3           # Preview mode rendering option (0-3):
-                            # 0: Do not render layers
+                            # 0: Do not render previews
                             # 1: Render only pen-down movement
                             # 2: Render only pen-up movement
                             # 3: Render all movement (Default)
 
-model = 1               # AxiDraw Model (1-3). 
+model = 1               # AxiDraw Model (1-4). 
                             # 1: AxiDraw V2 or V3 (Default).
                             # 2: AxiDraw V3/A3 or SE/A3.
                             # 3: AxiDraw V3 XLX.
+                            # 4: AxiDraw MiniKit.
                             
 port = None             # Serial port or named AxiDraw to use. 
                             # None (Default) will plot to first unit located.
@@ -88,20 +89,29 @@ resolution = 1          # Resolution: (1-2):
 '''
 Additional user-adjustable control parameters:
 
-These parameters are adjustable only from the command line, and are not
-visible from within the Inkscape GUI.
-
+Values below this point are configured only in this file, not through the user interface(s).
 '''
 
-check_updates = True  # If True, allow AxiDraw Control to check online to see
-                      #    what the current software version is, when you
-                      #    query the version. Set to False to disable. Note that
-                      #    this is the only internet-enabled function in the
-                      #    AxiDraw software.
+servo_timeout = 60000   # Time, ms, for servo motor to power down 
+                        #   after last movement command  (default: 60000)
+                        #   This feature requires EBB v 2.5 hardware (with USB
+                        #   micro not USB mini connector) and firmware version
+                        #   2.6.0 or newer
 
-smoothness = 10.0     # Curve smoothing (default: 10.0)
+check_updates = True    # If True, allow AxiDraw Control to check online to see
+                        #    what the current software version is, when you
+                        #    query the version. Set to False to disable. Note that
+                        #    this is the only internet-enabled function in the
+                        #    AxiDraw software.
 
-cornering = 10.0      # Cornering speed factor (default: 10.0)
+smoothness = 10.0       # Curve smoothing (default: 10.0)
+
+cornering = 10.0        # Cornering speed factor (default: 10.0)
+
+use_b3_out = False      # If True, enable digital output pin B3, which will be high (3.3V)
+                        #   when the pen is down, and low otherwise. Can be used to control
+                        #   external devices like valves, relays, or lasers.
+
 
 
 # Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
@@ -126,11 +136,12 @@ y_travel_default = 8.58   # AxiDraw V2 and AxiDraw V3: Y Carriage travel in inch
 x_travel_V3A3 = 16.93     # AxiDraw V3/A3: X Carriage travel in inches.                 Default: 430 mm = about 16.93 inches
 y_travel_V3A3 = 11.69     # AxiDraw V3/A3: Y Carriage travel in inches.                 Default: 297 mm = about 11.69 inches
 
+x_travel_V3XLX = 23.42    # AxiDraw V3 XLX: X Carriage travel in inches.                Default: 595 mm = about 23.42 inches
+y_travel_V3XLX = 8.58     # AxiDraw V3 XLX: Y Carriage travel in inches.                Default: 218 mm = about 8.58 inches
+
 x_travel_MiniKit = 6.30  # AxiDraw MiniKit: X Carriage travel in inches.                Default: 160 mm = about 6.30 inches
 y_travel_MiniKit = 4.00   # AxiDraw MiniKit: Y Carriage travel in inches.               Default: 101.6 mm = 4.00 inches
 
-x_travel_V3XLX = 23.42    # AxiDraw V3 XLX: X Carriage travel in inches.                Default: 595 mm = about 23.42 inches
-y_travel_V3XLX = 8.58     # AxiDraw V3 XLX: Y Carriage travel in inches.                Default: 218 mm = about 8.58 inches
 
 native_res_factor = 1016.0  # Motor resolution calculation factor, steps per inch, and used in conversions. Default: 1016.0
 # Note that resolution is defined along native (not X or Y) axes.
@@ -180,5 +191,10 @@ skip_voltage_check = False  # Set to True if you would like to disable EBB input
 
 clip_to_page = True  # Clip plotting area to SVG document size. Default: True
 
-bezier_segmentation_tolerance = 0.02 / smoothness # the tolerance for determining when the bezier has been segmented enough to plot
-segment_supersample_tolerance = bezier_segmentation_tolerance / 16 # the tolerance for determining which segments can be merged
+# the tolerance for determining when the bezier has been segmented enough to plot:
+bezier_segmentation_tolerance = 0.02 / smoothness 
+
+# Tolerance for determining which segments can be merged:
+#  Larger values of segment_supersample_tolerance
+#  give smoother plotting along paths that began with too many vertices.
+segment_supersample_tolerance = bezier_segmentation_tolerance / 16 

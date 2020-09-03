@@ -9,7 +9,7 @@
 
 <page name="plot" _gui-text="Plot">
 <_param indent="1" name="splashpage" type="description" appearance="header">AxiDraw Control</_param>
-<_param indent="1" name="splashpage2" type="description">Version 2.5.6    -    2019-12-13</_param>
+<_param indent="1" name="splashpage2" type="description">Version 2.6.3    -    2020-08-09</_param>
 <_param indent="2" name="splashpage3" type="description" xml:space="preserve" >
 Press 'Apply' to begin plotting. Use other tabs to adjust
 settings or access additional AxiDraw functions.
@@ -42,9 +42,11 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <_option value="toggle">Toggle pen between UP, DOWN</_option>
 </param>
 <_param indent="1" name="instructions_setup3" type="description" xml:space="preserve">
-- Raise pen and turn off stepper motors to manually move carriage to the Home Corner (upper left).
+- Raise pen and turn off stepper motors to manually
+  move carriage to the Home Corner (upper left).
 
-- Raise and lower pen to check the vertical positions of the pen for writing and drawing.
+- Raise and lower pen to check the vertical positions
+  of the pen for writing and drawing.
 </_param>
 </page>
 
@@ -120,24 +122,28 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 
 <page name="manual" _gui-text="Manual">
 <_param name="instructions_manual" type="description" appearance="header">Manual Control</_param>
-<_param indent="1" name="instructions_manual" type="description"  >
-Use this tab to execute various "manual" AxiDraw commands. For example, you can walk (move) the carriage, raise or lower the pen, or enable or disable the motors.
+<_param indent="1" name="instructions_manual" type="description" xml:space="preserve">
+Use this tab to execute various "manual" AxiDraw commands. For
+example, you can walk (move) the carriage, raise or lower the
+pen, or enable or disable the motors.
 </_param>
 
 <param name="manual_cmd" type="optiongroup" appearance="minimal"
 _gui-text="               Command: ">
 <_option value="none"           >- Select -</_option>
-<_option value="walk_x"   >Walk Carriage (X)</_option>
-<_option value="walk_y"   >Walk Carriage (Y)</_option>
+<_option value="walk_x"   >Walk Carriage (X, inches)</_option>
+<_option value="walk_y"   >Walk Carriage (Y, inches)</_option>
+<_option value="walk_mmx"   >Walk Carriage (X, mm)</_option>
+<_option value="walk_mmy"   >Walk Carriage (Y, mm)</_option>
 <_option value="raise_pen"      >Raise the Pen</_option>
 <_option value="lower_pen"      >Lower the Pen</_option>
 <_option value="enable_xy"  >Enable XY Motors</_option>
 <_option value="disable_xy" >Disable XY Motors</_option> 
-<_option value="bootload"       >Enter EBB Bootloader mode</_option>
+<_option value="bootload"       >Enter Bootloader mode</_option>
 <_option value="strip_data"     >Strip plotter data from file</_option>
 </param>
 
-<param name="walk_dist" indent="1" type="float" min="-11" max="11" _gui-text="Walk distance in inches (+ or -):">1.00</param>
+<param name="walk_dist" indent="1" type="float" precision="3" min="-300" max="300" _gui-text="Walk distance (+ or -):">1.000</param>
 
 <_param  indent="1" name="instructions_manual2" type="description" xml:space="preserve">
 
@@ -169,7 +175,7 @@ number 5 is selected, but layers named "guide lines", "55",
 or "2-black" will be skipped.
 </_param>
 <param indent="2" name="layer" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
-<_param name="instructions_layer1" type="description" indent="1" >
+<_param name="instructions_layer1" type="description" indent="1" xml:space="preserve">
 Tip: Number of copies to plot and the time delay between them
 are given by parameters in the "Plot" tab.</_param>
 
@@ -196,7 +202,7 @@ You can resume directly where you paused, or after using
 the Return to Home Corner command.
 </_param>
 
-<param name="resume_type" type="optiongroup" appearance=""  indent="2" _gui-text="Action on 'Apply':">
+<param name="resume_type" type="optiongroup" indent="2" _gui-text="Action on 'Apply':">
 <_option indent="1" value="ResumeNow" >Resume (From Home or Where Paused)</_option>
 <_option indent="1" value="home">Return to Home Corner (only)</_option>	
 </param>
@@ -228,7 +234,7 @@ check online for available updates.
 
 
 
-          --- Copyright 2019 Evil Mad Science LLC ---</_param>
+          --- Copyright 2020 Evil Mad Science LLC ---</_param>
 
 </page>
 

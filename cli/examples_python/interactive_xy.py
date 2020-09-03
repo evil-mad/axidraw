@@ -2,16 +2,17 @@
 # -*- encoding: utf-8 -#-
 
 '''
-python_example_xy.py
+interactive_xy.py
 
 Demonstrate use of axidraw module in "interactive" mode.
 
-Run this demo by calling: python python_example_xy.py
+Run this demo by calling: python interactive_xy.py
 
 
 (There is also a separate "plot" mode, which can be used for plotting an
 SVG file, rather than moving to various points upon command.)
 
+AxiDraw python API documentation is hosted at: https://axidraw.com/doc/py_api/
 
 '''
 
@@ -37,7 +38,7 @@ https://shop.evilmadscientist.com/contact
 
 
 
-Copyright 2019 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 

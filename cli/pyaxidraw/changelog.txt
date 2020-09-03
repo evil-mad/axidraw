@@ -7,6 +7,42 @@ Please see https://axidraw.com/doc/cli_api/ for full documentation
 
 =========================================
 
+v 2.6.3 (August 2020)
+
+Add new turtle_pos and current_pos functions.
+
+=========================================
+
+v 2.6.0 (July 2020)
+
+Add usb_command and usb_query functions in interactive context.
+
+Add walk_mmx and walk_mmy parameters, for manual walk in millimeter units.
+
+Renamed ebb_version to fw_version. The deprecated option
+name (ebb_version) is still functional but will be removed
+in a future version.
+
+New parameters are available in the axidraw_conf.py configuration
+file: servo_timeout and use_b3_out
+
+=========================================
+
+v 2.5.x -- 2020-01-02
+
+Deprecated a value for port_config.
+
+v 2.5.6 -- 2019-12-13
+
+Add support for new AxiDraw MiniKit model
+
+v 2.5.x -- 2019-09-04
+
+Corrected an error in this documentation. The four reordering
+parameter values are in the range 0-3, not 1-4.
+
+=========================================
+
 v 2.5.0 (May 2019)
 
 Added option (-f, --config) for local configuration file.

@@ -38,7 +38,7 @@ pip install virtualenv
 Create a virtual python environment:
 
 ```
-virtualenv -p $(where python3) venv
+virtualenv -p $(which python3) venv
 ```
 
 This creates a directory called `venv` which contains the files for the new environment.
@@ -65,20 +65,10 @@ cd /Users/username/Documents/axidraw-api/  (Your location and path will vary)
 
 Then use pip to install it.
 
-To use all the latest versions of the dependencies:
-
 ```
 pip install .
 ```
-
 (On Windows, you may need to use "python -m pip install .")
-
-
-To use a known working set of versions:
-
-```
-pip install -r requirements.txt
-```
 
 
 5.) Test that the software is operational:
@@ -142,7 +132,7 @@ pip uninstall pyaxidraw
 You may also want to uninstall pyaxidraw's dependencies, assuming you aren't using them for anything else:
 
 ```
-pip uninstall ink_extensions lxml pyserial
+pip uninstall -r requirements/requirements.txt
 ```
 
 
@@ -210,4 +200,4 @@ http://lxml.de/installation.html
 
 
 —————————————————————————————————————————
-Copyright 2019 Windell H Oskay, Evil Mad Scientist Laboratories
+Copyright 2020 Windell H Oskay, Evil Mad Scientist Laboratories
