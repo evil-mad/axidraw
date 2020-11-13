@@ -1,10 +1,10 @@
 Stand-alone command line interface and python API
 for the AxiDraw writing and drawing machine.
 
-Supported on python 2.7, python 3.6, Mac, Windows, and Linux.
+Supported on python 3.6+, Mac, Windows, and Linux.
 
 
-Copyright 2019 Evil Mad Scientist Laboratories
+Copyright 2020 Evil Mad Scientist Laboratories
 
 The AxiDraw writing and drawing machine is a product of Evil Mad Scientist
 Laboratories. https://axidraw.com   https://shop.evilmadscientist.com
@@ -28,9 +28,9 @@ pyaxidraw/                        - The AxiDraw python module directory
 
 Installation.txt                  - Installation documentation
 
-python_example_plot.py            - Example files, showing use of this software
-python_example_xy.py	            as a python module, to plot an SVG file,
-python_example_toggle.py            execute XY motion commands, or toggle pen up/down
+examples_python/                  - Example python scripts
+
+examples_config/                  - Example configuration file
 
 test/assets/AxiDraw_trivial.svg   - Sample SVG file that can be plotted
 ----------
@@ -69,26 +69,26 @@ For detailed documentation, please refer to:
     
 Quick Start:
 
-(1) The file "python_example_plot.py" is an example python script, showing how
+(1) The file "examples_python/plot.py" is an example python script, showing how
 one can use a the axidraw python module in "plot" mode to open and plot an SVG
 file. 
 
     To run the example, call:
 
-        python python_example_plot.py
+        python examples_python/plot.py
 
     This is a minimal demonstration script for opening and plotting an SVG file
     (in this case, "AxiDraw_trivial.svg") from within a python script. 
 
 
-(2) The file "python_example_xy.py" is an example python script, showing how one
+(2) The file "examples_python/interactive_xy.py" is an example python script, showing how one
 can use a the axidraw python module in "interactive" mode, to execute absolute
 and relative XY motion control commands like move(x,y), lineto(x,y), penup()
 and pendown(). 
 
     To run the example, call:
 
-        python python_example_xy.py
+        python examples_python/interactive_xy.py
 
 
 
@@ -103,7 +103,7 @@ Some of the underlying libraries that are included with this distribution
 are licensed as GPL. Please see the individual files and directories included with
 this distribution for additional license information. 
 
-API Documentation: Copyright 2019, Windell H. Oskay, Evil Mad Scientist Laboratories.
+API Documentation: Copyright 2020, Windell H. Oskay, Evil Mad Scientist Laboratories.
 
 
 

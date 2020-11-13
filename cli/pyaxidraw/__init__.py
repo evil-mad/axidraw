@@ -6,8 +6,15 @@ module_names = {
         'axidraw',
         'axidraw_conf',
         'axidraw_control',
+        'axidraw_merge',
+        'axidraw_merge_conf',
         'axidraw_options',
         'axidraw_svg_reorder',
+    ],
+    'hta': [
+        'hershey_advanced',
+        'hershey_conf',
+        'hershey_options',
     ],
     'plotink': [
         'ebb_motion',
@@ -23,7 +30,11 @@ def main():
             try:
                 sys.modules[__name__].__dict__[name] = alias_submodule(supermodule_name, name)
             except ImportError as ie:
-                raise ie
+                if "hta" in str(ie) or "axidraw_merge" in str(ie):
+                    # this is probably ok, because it just means hershey advanced is not available on this installation
+                    pass
+                else:
+                    raise ie
 
 def alias_submodule(supermodule_name, submodule_name):
     '''

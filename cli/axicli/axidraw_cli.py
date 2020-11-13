@@ -73,27 +73,28 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface v2.6.3"
+cli_version = "AxiDraw Command Line Interface 2.7.0"
 
 quick_help = '''
+    Basic syntax to plot a file:      axicli svg_in [OPTIONS]
+
+    For a quick list of options, use: axicli --help
+
+    To display current version, use:  axicli version
+
+    For the complete user guide, please see: https://axidraw.com/doc/cli_api/
+
     (c) 2020 Evil Mad Scientist Laboratories
-
-    Basic syntax to plot a file:
-        axicli [options] filename.svg
-
-    For a quick list of options, use:
-        axicli --help
-
-    To read the full manual, please see:
-        https://axidraw.com/doc/cli_api/'''
+        '''
 
 def axidraw_CLI(dev = False):
+    ''' The core of axicli '''
 
     desc = 'AxiDraw Command Line Interface.'
 
     parser = argparse.ArgumentParser(description=desc, usage=quick_help)
 
-    parser.add_argument("inputfile", nargs='?', \
+    parser.add_argument("svg_in", nargs='?', \
             help="The SVG file to be plotted")
 
     parser.add_argument("-f", "--config", type=str, dest="config",
@@ -211,15 +212,10 @@ def axidraw_CLI(dev = False):
             help="Optional SVG output file name")
     args = parser.parse_args()
 
-    if len(sys.argv) < 2:
-        print("axicli requires an input file.")
-        print(quick_help)
-        exit(1)
-
     # Handle trivial cases
     from pyaxidraw import axidraw
     ad = axidraw.AxiDraw()
-    utils.handle_info_cases(sys.argv[1], quick_help, cli_version, ad.version_string)
+    utils.handle_info_cases(args.svg_in, quick_help, cli_version, "AxiDraw", ad.version_string)
 
     if args.mode == "options":
         quit()
@@ -235,11 +231,14 @@ def axidraw_CLI(dev = False):
          or args.mode == "manual":
         use_trivial_file = True
 
-    if use_trivial_file and args.output_file:
-        utils.check_for_input(args.inputfile, 'axicli --help')
+    svg_input = args.svg_in
 
-    if not use_trivial_file:
-        utils.check_for_input(args.inputfile, 'axicli --help')
+    if not use_trivial_file or args.output_file:
+        utils.check_for_input(svg_input,
+            """usage: axicli svg_in [OPTIONS]
+    Input file required but not found.
+    For help, use: axicli --help""")
+
 
     if args.mode == "reorder":
         from pyaxidraw import axidraw_svg_reorder
@@ -247,7 +246,7 @@ def axidraw_CLI(dev = False):
         adc = axidraw_svg_reorder.ReorderEffect()
 
         adc.getoptions([])
-        adc.parse(args.inputfile)
+        utils.effect_parse(adc, svg_input)
 
         if args.reordering is not None:
             adc.options.reordering = args.reordering
@@ -267,7 +266,7 @@ def axidraw_CLI(dev = False):
 
     # For nontrivial cases, import the axidraw module and go from there:
     config_dict = utils.load_configs([args.config, 'axidrawinternal.axidraw_conf'])
-    combined_config = FakeConfigModule(config_dict)
+    combined_config = utils.FakeConfigModule(config_dict)
 
     from pyaxidraw import axidraw_control
 
@@ -294,7 +293,7 @@ def axidraw_CLI(dev = False):
         adc.document = etree.ElementTree(etree.fromstring(svg_string, parser=p))
         adc.original_document = copy.deepcopy(adc.document)
     else:
-        adc.parseFile(args.inputfile)
+        utils.effect_parse(adc, svg_input)
 
     # assign command line options to adc's options.
     # additionally, look inside the config to see if any command line options were set there
@@ -316,11 +315,4 @@ def axidraw_CLI(dev = False):
     if utils.has_output(adc) and not use_trivial_file:
         utils.output_result(args.output_file, adc.outdoc)
 
-    if dev:
-        return adc # useful for tests
-
-class FakeConfigModule():
-    ''' just turns a dict into an object
-    so attributes can be set/retrieved object-style '''
-    def __init__(self, a_dict):
-        self.__dict__ = a_dict
+    return adc if dev else None # returning adc is useful for tests

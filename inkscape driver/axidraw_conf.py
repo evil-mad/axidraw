@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 2.6.0, dated 2020-07-04.
+# Version 2.7.0, dated 2020-11-10.
 #
 # Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
 #

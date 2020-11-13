@@ -8,7 +8,7 @@ import warnings
 
 from lxml import etree
 
-def handle_info_cases(no_flag_arg, quick_help, cli_version, axidraw_version = None):
+def handle_info_cases(no_flag_arg, quick_help, cli_version, software_name = None, version = None):
     ''' handles the simple cases like "version" and "help" '''
 
     if no_flag_arg == "help":
@@ -18,28 +18,48 @@ def handle_info_cases(no_flag_arg, quick_help, cli_version, axidraw_version = No
 
     if no_flag_arg == "version":
         print (cli_version)
-        if axidraw_version is not None:
-            print ("AxiDraw software v"+axidraw_version)
+        sw_string = "Software "
+        if software_name:
+            sw_string = software_name + " " + sw_string
+        if version is not None:
+            print (sw_string + version)
         sys.exit()
 
-def check_for_input(input_file, help_cmd):
-    ''' Check for the required input file, quit if not there. '''
-    if (input_file is None) or (not os.path.isfile(input_file)):
-        print('Input file required but not found. For help, try:')
-        print('    {}'.format(help_cmd))
+def check_for_input(input_file, bad_input_message):
+    ''' Check for the required input file, quit if not there.
+    `None` is an acceptable value because `None` denotes stdin.'''
+    bad_filename = input_file is not None and not os.path.isfile(input_file)
+    interactive = input_file is None and sys.stdin.isatty()
+
+    if bad_filename or interactive:
+        print(bad_input_message)
         sys.exit(1)
 
-def output_result(output_file, result):
-    ''' if an output file is is specified, write to it '''
+def effect_parse(effect, svg_input):
+    ''' `effect` is an `inkex.Effect` object, e.g. `AxiDrawControl`
+    if `svg_input` is None`, it usees stdin '''
+    # hack so inkex handles stdin properly
+    # https://github.com/evil-mad/ink_extensions/blob/6a246a5c530491302e155b4d1965e989381438e6/ink_extensions/inkex.py#L194
+    effect.svg_file = None
+    effect.parse(svg_input)
+
+def output_result(output_file, result, always_output=False):
+    ''' if an output file is specified, write to it.
+    If an output file is not specified and `always_output` is True, print to stdout'''
     if output_file:
         with open(output_file, 'w') as out: # Open output file for writing
             out.write(result)
+    elif always_output:
+        sys.stdout.write(result)
 
 def has_output(effect):
     """ True if the effect successfully ran and produced a different document; False otherwise. Based on the `output` function in ink_extensions.inkex.Effect """
     original = etree.tostring(effect.original_document)
     result = etree.tostring(effect.document)
     return original != result
+
+
+# CONFIGURATION UTILS
 
 def load_configs(config_list):
     ''' config_list is in order of priority, either file names or module names '''
@@ -108,3 +128,9 @@ def get_configured_value(attr, configs):
         if attr in config:
             return config[attr]
     raise ValueError("The given attr ({}) was not found in any of the configurations.".format(attr))
+
+class FakeConfigModule():
+    ''' just turns a dict into an object
+    so attributes can be set/retrieved object-style '''
+    def __init__(self, a_dict):
+        self.__dict__ = a_dict
