@@ -5,11 +5,12 @@ Based on https://github.com/pypa/sampleproject
 
 # Always prefer setuptools over distutils
 import glob
+from io import open
+from os import path
+import re
 import setuptools
 import subprocess
 import sys
-from os import path
-from io import open
 
 here = path.abspath(path.dirname(__file__))
 
@@ -20,8 +21,8 @@ extras_require = {
     'test': [
         'coverage', # coverage run -m unittest discover && coverage html
         'mock',
-        'pyfakefs',
-    ]
+        'pyfakefs>=4.2.1',
+    ],
 }
 
 extras_require['dev'].extend(extras_require['test']) # if you're developing, you're testing
@@ -31,10 +32,18 @@ with open(path.join(here, 'README.txt'), encoding='utf-8') as f:
     long_description = f.read()
 
 def replacement_setup(*args, **kwargs):
-    depdir = "prebuilt_dependencies"
-    if path.isdir(depdir): #installing on a non-privileged machine; todo consider adding a check for the pip -e flag
-        for wheel in glob.glob("/".join([depdir, "*"])):
-            subprocess.check_call([sys.executable, '-m', 'pip', 'install', wheel])
+    try:
+        depdir = "prebuilt_dependencies"
+        if path.isdir(depdir): #installing on a non-privileged machine
+            pkg_pattern = re.compile('(?P<pkg>[a-zA-Z]*)-[0-9]')
+            for wheel_file in glob.glob(path.join(depdir, "*")):
+                pkg_name = pkg_pattern.search(wheel_file).group('pkg')
+                subprocess.check_call(
+                    [sys.executable, '-m', 'pip', 'uninstall', '--yes', pkg_name])
+                subprocess.check_call([sys.executable, '-m', 'pip', 'install', wheel_file])
+    except (AttributeError, subprocess.CalledProcessError) as err:
+        raise RuntimeError("Could not install one or more prebuilt dependencies.") from err
+
     original_setup(*args, **kwargs)
 
 original_setup = setuptools.setup
@@ -42,7 +51,8 @@ setuptools.setup = replacement_setup
 
 replacement_setup(
     name='pyaxidraw',
-    version='2.6.3',
+    version='2.7.0',
+    python_requires='>=3.5.0',
     long_description=long_description,
     long_description_content_type='text/plain',
     url='https://axidraw.com/doc/cli_api/',
@@ -53,9 +63,9 @@ replacement_setup(
         # this only includes publicly available dependencies
         'ink_extensions>=1.1.0',
         'lxml',
-        'pyserial>=2.7.0', # 3.0 recommended
+        'pyserial==3.5b0',
         'requests', # just for the certificates for now
-        'plotink>=1.0.0',
+        'plotink>=1.2.0',
     ],
     extras_require=extras_require,
     entry_points={

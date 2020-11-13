@@ -87,7 +87,7 @@ class AxiDraw(inkex.Effect):
             + "1: Plot to first AxiDraw Found. "\
             + "2: Plot to specified AxiDraw. ")
 
-        self.version_string = "2.6.3" # Dated 2020-08-09
+        self.version_string = "2.7.0" # Dated 2020-11-10
 
         self.spew_debugdata = False
 
@@ -3138,15 +3138,13 @@ class AxiDraw(inkex.Effect):
         if width_string:
             value, units = plot_utils.parseLengthWithUnits(width_string)
             self.doc_units = units
-
-        if self.options.no_rotate:
+        if self.svg_height is None or self.svg_width is None:
+            return False
+        if self.options.no_rotate: # Override regular auto_rotate option
             self.options.auto_rotate = False
         if self.options.auto_rotate and (self.svg_height > self.svg_width):
             self.rotate_page = True
-        if self.svg_height is None or self.svg_width is None:
-            return False
-        else:
-            return True
+        return True
 
     def get_output(self):
         # Return serialized copy of svg document output

@@ -7,6 +7,14 @@ Please see https://axidraw.com/doc/cli_api/ for full documentation
 
 =========================================
 
+v 2.7.0 (November 2020)
+
+Add support for macOS 11 Big Sur.
+
+Drop support for Python 2. Python 3.5-3.9 now supported.
+
+=========================================
+
 v 2.6.3 (August 2020)
 
 Add new turtle_pos and current_pos functions.

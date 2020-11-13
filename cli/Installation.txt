@@ -1,6 +1,6 @@
 AxiDraw CLI and Python API — Installation
 
-Supported on python 2.7, python 3.6, 
+Supported on python 3.6 and newer
 Mac, Windows, and Linux.
 
 
@@ -14,12 +14,11 @@ Macs and linux boxes usually have python pre-installed.
 If you are on Windows, you'll probably not already have this on your computer. 
 Go to: https://www.python.org/download/
 
-If you have a choice, we highly recommend installing python 3.6 or newer. :)
 
 
 2.) Install pip
 
-python versions 2.7.9+ and 3.4+ come with pip pre-installed.
+python versions 3.6 and newer come with pip pre-installed.
 
 If you do not have pip, download and install it, following the instructions at:
 https://pip.pypa.io/en/stable/installing/
@@ -27,7 +26,6 @@ https://pip.pypa.io/en/stable/installing/
 
 3.) [Optional:] Use virtualenv to control versioning
 
-This is a particularly good idea if you are using the python API or want to be able to run this software in both pythons 2 and 3.
 
 Install virtualenv:
 
@@ -42,7 +40,7 @@ virtualenv -p $(which python3) venv
 ```
 
 This creates a directory called `venv` which contains the files for the new environment.
-Replace `python3` with the name of the python on your system you want to use, e.g. `python2`, `python2.7`, `python3.5`, `python3.6`, etc.
+Replace `python3` with the name of the python on your system you want to use, e.g.  `python3.5`, `python3.6`, etc.
 
 Enter the environment:
 
@@ -175,8 +173,6 @@ If you run into difficulties with installing lxml, you may prefer to start with 
 
 Download the appropriate "WHL" file for your version of
 http://www.lfd.uci.edu/~gohlke/pythonlibs/#lxml
-
-* For a typical modern Windows 10 computer running python 2.7, the download might be something similar to: lxml‑3.7.3‑cp27‑cp27m‑win_amd64.whl
 
 * For a typical modern Windows 10 computer running python 3.6, the download might be something similar to: lxml‑3.7.3‑cp36‑cp36m‑win_amd64.whl
 
