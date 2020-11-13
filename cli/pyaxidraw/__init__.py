@@ -6,15 +6,8 @@ module_names = {
         'axidraw',
         'axidraw_conf',
         'axidraw_control',
-        'axidraw_merge',
-        'axidraw_merge_conf',
         'axidraw_options',
         'axidraw_svg_reorder',
-    ],
-    'hta': [
-        'hershey_advanced',
-        'hershey_conf',
-        'hershey_options',
     ],
     'plotink': [
         'ebb_motion',
