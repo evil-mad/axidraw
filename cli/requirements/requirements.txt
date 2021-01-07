@@ -4,7 +4,7 @@ chardet==3.0.4
 future==0.18.2
 idna==2.10
 ink-extensions==1.1.0
-lxml==4.6.1
+lxml==4.6.2
 plotink==1.2.0
 pyserial==3.5b0
 requests==2.24.0
