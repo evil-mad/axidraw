@@ -8,4 +8,4 @@ lxml==4.6.3
 plotink==1.2.0
 pyserial==3.5b0
 requests==2.24.0
-urllib3==1.25.11
+urllib3==1.26.5
