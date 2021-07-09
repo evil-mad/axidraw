@@ -1,11 +1,11 @@
 axidrawinternal @ git+https://${AXIDRAWINTERNAL_DEPLOY_USER}:${AXIDRAWINTERNAL_DEPLOY_PASS}@gitlab.com/evil-mad/AxiDraw-Internal@master
-certifi==2020.6.20
+certifi==2021.5.30
 chardet==3.0.4
 future==0.18.2
 idna==2.10
-ink-extensions==1.1.0
-lxml==4.6.3
-plotink==1.2.0
-pyserial==3.5b0
-requests==2.24.0
-urllib3==1.25.11
+ink-extensions>=1.1.0
+lxml>=4.6.2
+plotink>=1.2.2
+pyserial>=3.5
+requests==2.25.1
+urllib3==1.26.5

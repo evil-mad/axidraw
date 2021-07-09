@@ -5,7 +5,7 @@
 #
 # See version_string below for current version and date.
 #
-# Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,14 +21,13 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
+# Requires Python 3.5 or newer and Pyserial 3.5 or newer.
 
 import copy
 import gettext
 from importlib import import_module
 import logging
 import math
-import sys
 import time
 from array import array
 
@@ -49,18 +48,7 @@ ebb_serial = from_dependency_import('plotink.ebb_serial')  # https://github.com/
 ebb_motion = from_dependency_import('plotink.ebb_motion')
 plot_utils = from_dependency_import('plotink.plot_utils')
 
-try:
-    xrange = xrange  # We have Python 2
-except NameError:
-    xrange = range  # We have Python 3
-try:
-    # noinspection PyCompatibility
-    basestring
-except NameError:
-    basestring = str
-
 logger = logging.getLogger(__name__)
-
 
 class AxiDraw(inkex.Effect):
 
@@ -87,7 +75,7 @@ class AxiDraw(inkex.Effect):
             + "1: Plot to first AxiDraw Found. "\
             + "2: Plot to specified AxiDraw. ")
 
-        self.version_string = "2.7.0" # Dated 2020-11-10
+        self.version_string = "2.7.4" # Dated 2021-06-17
 
         self.spew_debugdata = False
 
@@ -367,7 +355,7 @@ class AxiDraw(inkex.Effect):
         self.svg = self.document.getroot()
         self.ReadWCBdata(self.svg)
 
-        resume_data_needs_updating = False
+        self.resume_data_needs_updating = False
 
         if self.options.page_delay < 0:
             self.options.page_delay = 0
@@ -384,7 +372,7 @@ class AxiDraw(inkex.Effect):
                     # USB/button press!
             while self.copies_to_plot != 0:
                 self.layers_found_to_plot = False
-                resume_data_needs_updating = True
+                self.resume_data_needs_updating = True
                 self.svg_rand_seed = round(time.time() * 100) / 100  # New random seed for new plot
 
                 self.print_in_layers_mode = False
@@ -401,7 +389,8 @@ class AxiDraw(inkex.Effect):
                 time_counter = 10 * self.options.page_delay
                 while time_counter > 0:
                     time_counter -= 1
-                    if self.copies_to_plot != 0 and not self.b_stopped:  # Delay if we're between copies, not after the last or paused.
+                    if self.copies_to_plot != 0 and not self.b_stopped: 
+                        # Delay if we're between copies, not after the last or paused.
                         if self.options.preview:
                             self.pt_estimate += 100
                         else:
@@ -411,12 +400,22 @@ class AxiDraw(inkex.Effect):
                                 self.copies_to_plot = 0
 
         elif self.options.mode == "res_home" or self.options.mode == "res_plot":
-            resume_data_needs_updating = True
+            self.resume_data_needs_updating = True
             self.resumePlotSetup()
             if self.resume_mode:
                 self.plot_document()
             elif self.options.mode == "res_home":
-                if not self.svg_data_read or (self.svg_last_known_pos_x_old == 0 and self.svg_last_known_pos_y_old == 0):
+                if not self.svg_data_read:
+                    logger.error(gettext.gettext("No resume data found; unable to return to home position."))
+                    return
+                if not self.layer_found:
+                    logger.error(gettext.gettext("No in-progress plot data found; unable to return to home position."))
+                    return
+                if (math.fabs(self.svg_last_known_pos_x_old < 0.001) and 
+                            math.fabs(self.svg_last_known_pos_y_old < 0.001)):
+                    logger.error(gettext.gettext("Unable to move to Home. (Is the AxiDraw already at Home?)"))
+                    return
+                if not self.svg_data_read:
                     logger.error(gettext.gettext("No resume data found; unable to return to home position."))
                 else:
                     self.plot_document()
@@ -428,7 +427,7 @@ class AxiDraw(inkex.Effect):
                     self.svg_layer = self.svg_layer_old
                     self.svg_rand_seed = self.svg_rand_seed_old
             else:
-                logger.error(gettext.gettext("No in-progress plot data found in file."))
+                logger.error(gettext.gettext("No in-progress plot data found in file; unable to resume."))
 
         elif self.options.mode == "layers":
             self.copies_to_plot = self.options.copies
@@ -437,7 +436,7 @@ class AxiDraw(inkex.Effect):
                 if self.options.preview:  # Special case: 0 (continuous copies) selected, but running in preview mode.
                     self.copies_to_plot = 1  # In this case, revert back to single copy, since there's no way to terminate.
             while self.copies_to_plot != 0:
-                resume_data_needs_updating = True
+                self.resume_data_needs_updating = True
                 self.svg_rand_seed = time.time()  # New random seed for new plot
                 self.print_in_layers_mode = True
                 self.plot_current_layer = False
@@ -465,7 +464,7 @@ class AxiDraw(inkex.Effect):
         elif self.options.mode == "manual":
             self.manual_command()  # Handle manual commands that use both power and usb.
 
-        if resume_data_needs_updating:
+        if self.resume_data_needs_updating:
             self.UpdateSVGWCBData(self.svg)
         if self.serial_port is not None:
             ebb_motion.doTimedPause(self.serial_port, 10)  # Pause a moment for underway commands to finish.
@@ -474,7 +473,7 @@ class AxiDraw(inkex.Effect):
 
     def resumePlotSetup(self):
         self.layer_found = False
-        if 0 <= self.svg_layer_old < 101:
+        if 0 <= self.svg_layer_old < 1001:
             self.options.layer = self.svg_layer_old
             self.print_in_layers_mode = True
             self.plot_current_layer = False
@@ -485,6 +484,14 @@ class AxiDraw(inkex.Effect):
             self.layer_found = True
         if self.layer_found:
             if self.svg_node_count_old > 0:
+
+                # Preset last path counts, in case the ploto is paused again before
+                #    completing any full paths
+                self.svg_last_path = self.svg_last_path_old
+                self.svg_last_path_nc = self.svg_last_path_nc_old
+                self.svg_last_known_pos_x = self.svg_last_known_pos_x_old
+                self.svg_last_known_pos_y = self.svg_last_known_pos_y_old
+
                 self.node_target = self.svg_node_count_old
                 self.svg_layer = self.svg_layer_old
                 self.ServoSetupWrapper()
@@ -769,11 +776,14 @@ class AxiDraw(inkex.Effect):
                     self.plotSegmentWithVelocity(f_x, f_y, 0, 0)  # pen-up move to starting point
                     self.resume_mode = True
                     self.node_count = 0
-                else:  # i.e., ( self.options.mode == "res_home" ):
+                elif self.options.mode == "res_home":
                     f_x = self.pt_first[0]
                     f_y = self.pt_first[1]
                     self.plotSegmentWithVelocity(f_x, f_y, 0, 0)
                     return
+                else:
+                    self.user_message_fun(gettext.gettext('Resume plot error; plot terminated'))
+                    return # something has gone wrong; possibly an ill-timed button press?
 
             # Call the recursive routine to plot the document:
             self.traverse_svg(self.svg, self.svg_transform)
@@ -822,7 +832,7 @@ class AxiDraw(inkex.Effect):
                 if self.options.mode in ["plot", "layers", "res_home", "res_plot"]:
                     # Clear saved plot data from the SVG file,
                     # IF we have _successfully completed_ a normal plot from the plot, layer, or resume mode.
-                    self.svg_layer = 0
+                    self.svg_layer = -1
                     self.svg_node_count = 0
                     self.svg_last_path = 0
                     self.svg_last_path_nc = 0
@@ -837,8 +847,8 @@ class AxiDraw(inkex.Effect):
                 warning_text += "physical range of motion. If everything else "
                 warning_text += "looks correct, you may have an issue with "
                 warning_text += "your document size, or you may have the "
-                warning_text += "wrong AxiDraw model selected in the Config "
-                warning_text += "tab. Contact technical support for help."
+                warning_text += "wrong AxiDraw model selected. Please contact"
+                warning_text += "technical support if you need assistance."
                 self.user_message_fun(gettext.gettext(warning_text))
 
             if self.options.preview:
@@ -1087,6 +1097,12 @@ class AxiDraw(inkex.Effect):
                 # An 'a' is much like a group, in that it is a generic container element.
                 self.traverse_svg(node, mat_new, parent_visibility=visibility)
 
+            elif node.tag == inkex.addNS('switch', 'svg') or node.tag == 'switch':
+                # A 'switch' is much like a group, in that it is a generic container element.
+                # We are not presently evaluating conditions on switch elements, but parsing
+                # their contents to the extent possible.
+                self.traverse_svg(node, mat_new, parent_visibility=visibility)
+
             elif node.tag == inkex.addNS('use', 'svg') or node.tag == 'use':
 
                 """
@@ -1197,22 +1213,22 @@ class AxiDraw(inkex.Effect):
                                 newpath.set(attr, node.get(attr))
 
                         instr = []
-                    if (rx > 0) or (ry > 0):
-                        instr.append(['M ', [x + rx, y]])
-                        instr.append([' L ', [x + width - rx, y]])
-                        instr.append([' A ', [rx, ry, 0, 0, 1, x + width, y + ry]])
-                        instr.append([' L ', [x + width, y + height - ry]])
-                        instr.append([' A ', [rx, ry, 0, 0, 1, x + width - rx, y + height]])
-                        instr.append([' L ', [x + rx, y + height]])
-                        instr.append([' A ', [rx, ry, 0, 0, 1, x, y + height - ry]])
-                        instr.append([' L ', [x, y + ry]])
-                        instr.append([' A ', [rx, ry, 0, 0, 1, x + rx, y]])
-                    else:
-                        instr.append(['M ', [x, y]])
-                        instr.append([' L ', [x + width, y]])
-                        instr.append([' L ', [x + width, y + height]])
-                        instr.append([' L ', [x , y + height]])
-                        instr.append([' L ', [x, y]])
+                        if (rx > 0) or (ry > 0):
+                            instr.append(['M ', [x + rx, y]])
+                            instr.append([' L ', [x + width - rx, y]])
+                            instr.append([' A ', [rx, ry, 0, 0, 1, x + width, y + ry]])
+                            instr.append([' L ', [x + width, y + height - ry]])
+                            instr.append([' A ', [rx, ry, 0, 0, 1, x + width - rx, y + height]])
+                            instr.append([' L ', [x + rx, y + height]])
+                            instr.append([' A ', [rx, ry, 0, 0, 1, x, y + height - ry]])
+                            instr.append([' L ', [x, y + ry]])
+                            instr.append([' A ', [rx, ry, 0, 0, 1, x + rx, y]])
+                        else:
+                            instr.append(['M ', [x, y]])
+                            instr.append([' L ', [x + width, y]])
+                            instr.append([' L ', [x + width, y + height]])
+                            instr.append([' L ', [x , y + height]])
+                            instr.append([' L ', [x, y]])
 
                         newpath.set('d', simplepath.formatPath(instr))
                         self.plot_path(newpath, mat_new)
@@ -1258,24 +1274,29 @@ class AxiDraw(inkex.Effect):
                         newpath.set('d', simplepath.formatPath(a))
                         self.plot_path(newpath, mat_new)
 
-                elif node.tag == inkex.addNS('polyline', 'svg') or node.tag == 'polyline':
+                elif node.tag in [inkex.addNS('polyline', 'svg'), 'polyline',
+                                  inkex.addNS('polygon', 'svg'), 'polygon']:
 
                     """
                     Convert
                      <polyline points="x1,y1 x2,y2 x3,y3 [...]"/>
                     OR
                      <polyline points="x1 y1 x2 y2 x3 y3 [...]"/>
+                    OR
+                     <polygon points="x1,y1 x2,y2 x3,y3 [...]"/>
+                    OR
+                     <polygon points="x1 y1 x2 y2 x3 y3 [...]"/>
                     to
-                      <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...]"/>
-                    Note: we ignore polylines with no points, or polylines with only a single point.
+                      <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...]"/> (with a closing Z on polygons)
+                    Ignore polylines with no points, or polylines with only a single point.
                     """
 
                     pl = node.get('points', '').strip()
                     if pl == '':
                         continue
 
-                    # if we're in resume mode AND self.pathcount < self.svg_last_path, then skip over this path.
-                    # if we're in resume mode and self.pathcount = self.svg_last_path, then start here, and set
+                    # if we're in resume mode AND self.pathcount < self.svg_last_path, skip over this path.
+                    # if we're in resume mode and self.pathcount = self.svg_last_path, start here, and set
                     # self.node_count equal to self.svg_last_path_nc
 
                     do_we_plot_this_path = False
@@ -1301,54 +1322,10 @@ class AxiDraw(inkex.Effect):
                             d += " L " + pa[i] + " " + pa[i + 1]
                             i += 2
 
-                        # Create (but do not add to SVG) a path to represent the polyline
-                        newpath = etree.Element(inkex.addNS('path', 'svg'))
-                        newpath.set('d', d)
-                        s = node.get('style')
-                        if s:
-                            newpath.set('style', s)
-                        t = node.get('transform')
-                        if t:
-                            newpath.set('transform', t)
-                        self.plot_path(newpath, mat_new)
+                        if node.tag in [inkex.addNS('polygon', 'svg'), 'polygon']:
+                            d += " Z"
 
-                elif node.tag == inkex.addNS('polygon', 'svg') or node.tag == 'polygon':
-
-                    """
-                    Convert
-                     <polygon points="x1,y1 x2,y2 x3,y3 [...]"/>
-                    to
-                      <path d="Mx1,y1 Lx2,y2 Lx3,y3 [...] Z"/>
-                    Note: we ignore polygons with no points
-                    """
-
-                    pl = node.get('points', '').strip()
-                    if pl == '':
-                        continue
-
-                    # if we're in resume mode AND self.pathcount < self.svg_last_path, then skip over this path.
-                    # if we're in resume mode and self.pathcount = self.svg_last_path, then start here, and set
-                    #    self.node_count equal to self.svg_last_path_nc
-
-                    do_we_plot_this_path = False
-                    if self.resume_mode:
-                        if self.pathcount < self.svg_last_path_old:  # Fully plotted; skip.
-                            self.pathcount += 1
-                        elif self.pathcount == self.svg_last_path_old:  # First partially-plotted path
-                            self.node_count = self.svg_last_path_nc_old  # node_count after last completed path
-                            do_we_plot_this_path = True
-                    else:
-                        do_we_plot_this_path = True
-                    if do_we_plot_this_path:
-                        self.pathcount += 1
-                        pa = pl.split()
-                        if not len(pa):
-                            continue  # skip the following statements
-                        d = "M " + pa[0]
-                        for i in xrange(1, len(pa)):
-                            d += " L " + pa[i]
-                        d += " Z"
-                        # Create (but do not add to SVG) a path to represent the polygon
+                        # Create (but do not add to SVG) a path to represent the polyline/polygon
                         newpath = etree.Element(inkex.addNS('path', 'svg'))
                         newpath.set('d', d)
                         s = node.get('style')
@@ -1475,15 +1452,12 @@ class AxiDraw(inkex.Effect):
                     continue
                 elif node.tag == inkex.addNS('font', 'svg') or node.tag == 'font':
                     continue
+                elif node.tag == etree.Comment:	
+                    continue
                 elif node.tag == inkex.addNS('color-profile', 'svg') or node.tag == 'color-profile':
                     # Gamma curves, color temp, etc. are not relevant to single color output
                     continue
-                elif not isinstance(node.tag, basestring):
-                    # This is likely an XML processing instruction such as an XML
-                    # comment.  lxml uses a function reference for such node tags
-                    # and as such the node tag is likely not a printable string.
-                    # Further, converting it to a printable string likely won't
-                    # be very useful.
+                elif node.tag in [inkex.addNS('foreignObject', 'svg'), 'foreignObject']:
                     continue
                 else:
                     if str(node.tag) not in self.warnings and self.plot_current_layer:
@@ -1524,10 +1498,7 @@ class AxiDraw(inkex.Effect):
         string_pos = 1
         layer_name_int = -1
         layer_match = False
-        if sys.version_info < (3,):  # Yes this is ugly. More elegant suggestions welcome. :)
-            current_layer_name = str_layer_name.encode('ascii', 'ignore')  # Drop non-ascii characters
-        else:
-            current_layer_name = str(str_layer_name)
+        current_layer_name = str(str_layer_name)
         current_layer_name.lstrip()  # Remove leading whitespace
         self.plot_current_layer = True  # Temporarily assume that we are plotting the layer
 
@@ -1736,9 +1707,13 @@ class AxiDraw(inkex.Effect):
                 prev_vertex = []
 
                 for vertex in sp: # For each vertex in our subdivided path
-                    if self.rotate_page:
-                        t_x = float(vertex[1][1])  # Flipped X/Y
-                        t_y = self.svg_width - float(vertex[1][0])
+                    if self.rotate_page: # Flipped X/Y
+                        if self.params.auto_rotate_ccw: # Rotate counterclockwise 90 degrees
+                            t_x = float(vertex[1][1])  
+                            t_y = self.svg_width - float(vertex[1][0])
+                        else: # Rotate clockwise 90 degrees
+                            t_x = self.svg_height - float(vertex[1][1])
+                            t_y = float(vertex[1][0])
                     else:
                         t_x = float(vertex[1][0])
                         t_y = float(vertex[1][1])
@@ -1923,7 +1898,7 @@ class AxiDraw(inkex.Effect):
             min_dist = self.params.max_step_dist_lr  # Skip segments likely to be shorter than one step
 
         last_index = 0
-        for i in xrange(1, traj_length):
+        for i in range(1, traj_length):
             # Construct basic arrays of position and distances, skipping zero length (and nearly zero length) segments.
 
             # Distance per segment:
@@ -1965,7 +1940,7 @@ class AxiDraw(inkex.Effect):
         traj_logger.debug('\nAfter removing any zero-length segments, we are left with: ')
         traj_logger.debug('traj_dists[0]: {0:1.3f}'.format(traj_dists[0]))
         if traj_logger.isEnabledFor(logging.DEBUG):
-            for i in xrange(0, len(trimmed_path)):
+            for i in range(0, len(trimmed_path)):
                 traj_logger.debug('i: {0:1.0f}, x: {1:1.3f}, y: {2:1.3f}, distance: {3:1.3f}'.format(i,
                     trimmed_path[i][0], trimmed_path[i][1], traj_dists[i + 1]))
                 traj_logger.debug('  And... traj_dists[i+1]: {0:1.3f}'.format(traj_dists[i + 1]))
@@ -2059,7 +2034,7 @@ class AxiDraw(inkex.Effect):
 
         delta = self.params.cornering / 5000  # Corner rounding/tolerance factor-- not sure how high this should be set.
 
-        for i in xrange(1, traj_length - 1):
+        for i in range(1, traj_length - 1):
             dcurrent = traj_dists[i]  # Length of the segment leading up to this vertex
 
             v_prev_exit = traj_vels[i - 1]  # Velocity when leaving previous vertex
@@ -2139,7 +2114,7 @@ class AxiDraw(inkex.Effect):
         can properly decelerate in the given distances.        
         """
 
-        for j in xrange(1, traj_length):
+        for j in range(1, traj_length):
             i = traj_length - j  # Range: From (traj_length - 1) down to 1.
 
             v_final = traj_vels[i]
@@ -2162,14 +2137,14 @@ class AxiDraw(inkex.Effect):
             traj_logger.debug(' ')
 
         #             traj_logger.debug( 'List results for this input path:')
-        #             for i in xrange(0, traj_length-1):
+        #             for i in range(0, traj_length-1):
         #                 traj_logger.debug( 'i: %1.0f' %(i))
         #                 traj_logger.debug( 'x: %1.3f,  y: %1.3f' %(trimmed_path[i][0],trimmed_path[i][1]))
         #                 traj_logger.debug( 'distance: %1.3f' %(traj_dists[i+1]))
         #                 traj_logger.debug( 'traj_vels[i]: %1.3f' %(traj_vels[i]))
         #                 traj_logger.debug( 'traj_vels[i+1]: %1.3f\n' %(traj_vels[i+1]))
 
-        for i in xrange(0, traj_length - 1):
+        for i in range(0, traj_length - 1):
             self.plotSegmentWithVelocity(trimmed_path[i][0], trimmed_path[i][1], traj_vels[i], traj_vels[i + 1])
 
     def plotSegmentWithVelocity(self, x_dest, y_dest, v_i, v_f):
@@ -2421,7 +2396,7 @@ class AxiDraw(inkex.Effect):
                     # 6th (last) time interval is at 6*max/7
                     # after this interval, we are at full speed.
 
-                    for index in xrange(0, intervals):  # Calculate acceleration phase
+                    for index in range(0, intervals):  # Calculate acceleration phase
                         velocity += velocity_step_size
                         time_elapsed += time_per_interval
                         position += velocity * time_per_interval
@@ -2459,7 +2434,7 @@ class AxiDraw(inkex.Effect):
                     time_per_interval = t_decel_max / intervals
                     velocity_step_size = (speed_max - vf_inches_per_sec) / (intervals + 1.0)
 
-                    for index in xrange(0, intervals):  # Calculate deceleration phase
+                    for index in range(0, intervals):  # Calculate deceleration phase
                         velocity -= velocity_step_size
                         time_elapsed += time_per_interval
                         position += velocity * time_per_interval
@@ -2565,7 +2540,7 @@ class AxiDraw(inkex.Effect):
                         # 6th (last) time interval is at 6*max/7
                         # after this interval, we are at full speed.
 
-                        for index in xrange(0, intervals):  # Calculate acceleration phase
+                        for index in range(0, intervals):  # Calculate acceleration phase
                             velocity += velocity_step_size
                             time_elapsed += time_per_interval
                             position += velocity * time_per_interval
@@ -2583,7 +2558,7 @@ class AxiDraw(inkex.Effect):
                         # 6th (last) time interval is at 6*max/7
                         # after this interval, we are at full speed.
 
-                        for index in xrange(0, d_intervals):  # Calculate acceleration phase
+                        for index in range(0, d_intervals):  # Calculate acceleration phase
                             velocity -= velocity_step_size
                             time_elapsed += time_per_interval
                             position += velocity * time_per_interval
@@ -2633,7 +2608,7 @@ class AxiDraw(inkex.Effect):
                             # 6th (last) time interval is at 6*max/7
                             # after this interval, we are at full speed.
 
-                            for index in xrange(0, intervals):  # Calculate acceleration phase
+                            for index in range(0, intervals):  # Calculate acceleration phase
                                 velocity += velocity_step_size
                                 time_elapsed += time_per_interval
                                 position += velocity * time_per_interval
@@ -2679,7 +2654,7 @@ class AxiDraw(inkex.Effect):
 
         seg_logger.debug('position/segment_length_inches: ' + str(position / segment_length_inches))
 
-        for index in xrange(0, len(dist_array)):
+        for index in range(0, len(dist_array)):
             # Scale our trajectory to the "actual" travel distance that we need:
             fractional_distance = dist_array[index] / position  # Fractional position along the intended path
             dest_array1.append(int(round(fractional_distance * motor_steps1)))
@@ -2695,7 +2670,7 @@ class AxiDraw(inkex.Effect):
         prev_motor2 = 0
         prev_time = 0
 
-        for index in xrange(0, len(dest_array1)):
+        for index in range(0, len(dest_array1)):
             move_steps1 = dest_array1[index] - prev_motor1
             move_steps2 = dest_array2[index] - prev_motor2
             move_time = duration_array[index] - prev_time
@@ -2741,10 +2716,16 @@ class AxiDraw(inkex.Effect):
                                 self.vel_data_time += move_time
                                 self.updateVCharts(velocity_local1, velocity_local2, velocity_local)
                             if self.rotate_page:
-                                x_new_t = self.svg_width - f_new_y
-                                y_new_t = f_new_x
-                                x_old_t = self.svg_width - self.f_curr_y
-                                y_old_t = self.f_curr_x
+                                if self.params.auto_rotate_ccw: # Rotate counterclockwise 90 degrees
+                                    x_new_t = self.svg_width - f_new_y
+                                    y_new_t = f_new_x
+                                    x_old_t = self.svg_width - self.f_curr_y
+                                    y_old_t = self.f_curr_x
+                                else:
+                                    x_new_t = f_new_y
+                                    x_old_t = self.f_curr_y
+                                    y_new_t = self.svg_height - f_new_x
+                                    y_old_t = self.svg_height - self.f_curr_x
                             else:
                                 x_new_t = f_new_x
                                 y_new_t = f_new_y
@@ -2802,13 +2783,13 @@ class AxiDraw(inkex.Effect):
             str_button = ebb_motion.QueryPRGButton(self.serial_port)  # Query if button pressed
 
         #To test corner cases of pause and resume cycles, one may manually force a pause:
-        #if (self.options.mode == "plot") and (self.node_count == 24):
-        #    self.force_pause = True
+        # if self.node_count >= 24:
+        #     if self.options.mode in ["plot", "layers", "res_plot"]:
+        #         self.force_pause = True
 
         if self.force_pause:
-            str_button = 1  # simulate pause button press
-
-        if self.serial_port is not None:
+            pause_state = 1
+        elif self.serial_port is not None:
             try:
                 pause_state = int(str_button[0])
             except:                    
@@ -2818,13 +2799,20 @@ class AxiDraw(inkex.Effect):
 
         if pause_state == 1 and not self.delay_between_copies:
             if self.force_pause:
-                self.user_message_fun('Plot paused by layer name control.')
+                self.user_message_fun('Plot paused programmatically.')
             else:
                 if self.Secondary or self.options.mode == "interactive":
                     logger.warning('Plot halted by button press.')
                     logger.warning('Important: Manually home this AxiDraw before plotting next item.')
                 else:
                     self.user_message_fun('Plot paused by button press.')
+
+            if self.options.mode == "res_plot":
+                if (self.node_count < self.node_target):
+                    # Special case: Paused again before resuming
+                    last_point = [self.svg_last_known_pos_x_old, self.svg_last_known_pos_y_old]
+                    new_point = [self.f_curr_x, self.f_curr_y]
+                    self.node_count = self.node_target
 
             logger.debug('\n (Paused after node number : ' + str(self.node_count) + ')')
             
@@ -2833,8 +2821,7 @@ class AxiDraw(inkex.Effect):
 
         if self.force_pause:
             self.force_pause = False  # Clear the flag
-        
-        
+
         if pause_state == 1 or pause_state == 2:  # Stop plot
             self.svg_node_count = self.node_count
             self.svg_paused_pos_x = self.f_curr_x - self.pt_first[0]
@@ -3351,7 +3338,7 @@ class AxiDraw(inkex.Effect):
         # For interactive-mode use as an imported python module
         if not self.verify_interactive():
             return
-        return ebb_serial.query(self.serial_port, query)
+        return ebb_serial.query(self.serial_port, query).strip()
 
     def usb_command(self, command):
         # For interactive-mode use as an imported python module

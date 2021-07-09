@@ -9,7 +9,7 @@
 
 <page name="plot" _gui-text="Plot">
 <_param indent="1" name="splashpage" type="description" appearance="header">AxiDraw Control</_param>
-<_param indent="1" name="splashpage2" type="description">Version 2.7.0    -    2020-11-10</_param>
+<_param indent="1" name="splashpage2" type="description">Version 2.7.4    -    2021-06-17</_param>
 <_param indent="2" name="splashpage3" type="description" xml:space="preserve" >
 Press 'Apply' to begin plotting. Use other tabs to adjust
 settings or access additional AxiDraw functions.
@@ -103,8 +103,8 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 </param>
 
 <param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
-<_option value="1">~2870 DPI (Slightly Smoother)</_option>
-<_option value="2">~1435 DPI (Slightly Faster)</_option>
+<_option value="1">~2870 DPI (Slightly smoother)</_option>
+<_option value="2">~1435 DPI (Slightly faster)</_option>
 </param>
 
 <_param name="instructions_options7" type="description" appearance="header">Preview mode:</_param>
@@ -203,7 +203,7 @@ the Return to Home Corner command.
 </_param>
 
 <param name="resume_type" type="optiongroup" indent="2" _gui-text="Action on 'Apply':">
-<_option indent="1" value="ResumeNow" >Resume (From Home or Where Paused)</_option>
+<_option indent="1" value="ResumeNow" >Resume (From Home or where paused)</_option>
 <_option indent="1" value="home">Return to Home Corner (only)</_option>	
 </param>
 
@@ -234,7 +234,7 @@ check online for available updates.
 
 
 
-          --- Copyright 2020 Evil Mad Science LLC ---</_param>
+          --- Copyright 2021 Evil Mad Science LLC ---</_param>
 
 </page>
 
