@@ -79,19 +79,21 @@ class AxiDrawWrapperClass( inkex.Effect ):
         '''
         Main entry point
         '''
-
+        self.start_time = time.time()
+        self.options.mode = self.options.mode.strip("\"")
         self.verbose = False
+
         if self.verbose:
             logger.setLevel(logging.INFO) # default is generally logging.WARNING
 
-        if self.options.mode == "options":
+        if self.options.mode in ["options", "timing"]:
+            if self.params.options_message:
+                logger.error("Use the Plot or Layers tab to start a new "+
+                            "plot or plot preview.\n\n" +
+                            "  Configuration changes are applied automatically;\n" +
+                            '  Pressing "Apply" on this tab has no effect other\n' +
+                            "  than displaying this message.")
             return
-        if self.options.mode == "timing":
-            return
-            
-        self.start_time = time.time()
-        self.options.mode = self.options.mode.strip("\"")
-        
         '''
         USB port use option (self.options.port_config)
             
@@ -165,8 +167,8 @@ class AxiDrawWrapperClass( inkex.Effect ):
                         process.join()
                         
             else: # i.e., if not EBBList
-                logger.warning("No available axidraw units found on USB.")
-                logger.warning("Please check your connection(s) and try again.")
+                logger.error("No available axidraw units found on USB.")
+                logger.error("Please check your connection(s) and try again.")
                 return
         else:   # All cases except plotting to all available AxiDraw units:
                 # This includes: Preview mode and all cases of plotting to a single AxiDraw.

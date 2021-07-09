@@ -10,7 +10,7 @@
 #
 # The MIT License (MIT)
 #
-# Copyright (c) 2020 Windell H. Oskay, Evil Mad Science LLC
+# Copyright (c) 2021 Windell H. Oskay, Evil Mad Science LLC
 # www.evilmadscientist.com
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -645,10 +645,12 @@ class ReorderEffect(inkex.Effect):
     
                 pathdata = node.get('d')
     
-                point = plot_utils.pathdata_first_point(pathdata)    
-                simpletransform.applyTransformToPoint(matNew, point)
-    
-                return True, point
+                point = plot_utils.pathdata_first_point(pathdata)
+                if point:
+                    simpletransform.applyTransformToPoint(matNew, point)
+                    return True, point
+                else:
+                    return False, [float(-1), float(-1)]
     
             if node.tag == inkex.addNS( 'rect', 'svg' ) or node.tag == 'rect':
     
@@ -677,9 +679,17 @@ class ReorderEffect(inkex.Effect):
                 simpletransform.applyTransformToPoint(matNew, point)
                 
                 return True, point
-    
-    
-            if node.tag == inkex.addNS( 'polyline', 'svg' ) or node.tag == 'polyline':
+
+            elif node.tag in [inkex.addNS('polyline', 'svg'), 'polyline',
+                              inkex.addNS('polygon', 'svg'), 'polygon']:
+                """
+                Polyline and polygon have the same first point.
+
+                We need to extract x1 and y1 from these:
+                <polygon points="x1,y1 x2,y2 x3,y3 [...]"/>
+                We accomplish this with Python string strip
+                and split methods. Then apply transforms
+                """
                 pl = node.get( 'points', '' ).strip()
                 
                 if pl == '':
@@ -702,35 +712,6 @@ class ReorderEffect(inkex.Effect):
                 point = plot_utils.pathdata_first_point(d)
                 simpletransform.applyTransformToPoint(matNew, point)
     
-                return True, point
-                            
-            if (node.tag == inkex.addNS( 'polygon', 'svg' ) or
-                node.tag == 'polygon'):
-                """
-                We need to extract x1 and y1 from these:
-                <polygon points="x1,y1 x2,y2 x3,y3 [...]"/>
-                We accomplish this with Python string strip
-                and split methods. Then apply transforms
-                """
-                # Strip() removes all whitespace from the start and end of p1
-                pl = node.get( 'points', '' ).strip()
-                if (pl == ''):
-                    # If pl is blank there has been an error, return False and -1,-1 to indicate a problem has occured
-                    return False, point
-                # Split string by whitespace
-                pa = pl.split()
-                if not len( pa ):
-                    # If pa is blank there has been an error, return False and -1,-1 to indicate a problem has occured
-                    return False, point
-                # pa[0] = "x1,y1
-                # split string via comma to get x1 and y1 individually
-                # then point = [x1,x2]
-                point = pa[0].split(",")
-    
-                point = [float(point[0]),float(point[1])]
-                
-                simpletransform.applyTransformToPoint(matNew, point)
-            
                 return True, point
     
             if node.tag == inkex.addNS( 'ellipse', 'svg' ) or \
@@ -835,10 +816,11 @@ class ReorderEffect(inkex.Effect):
                 path = node.get('d')
 
                 point = plot_utils.pathdata_last_point(path)
-                simpletransform.applyTransformToPoint(matNew, point)
-
-                return True, point 
-    
+                if point:
+                    simpletransform.applyTransformToPoint(matNew, point)
+                    return True, point 
+                else:
+                    return False, [float(-1), float(-1)]
             if node.tag == inkex.addNS( 'rect', 'svg' ) or node.tag == 'rect':
             
                 """
@@ -892,35 +874,35 @@ class ReorderEffect(inkex.Effect):
                 simpletransform.applyTransformToPoint(matNew, endpoint)
             
                 return True, endpoint
-                            
-            if node.tag == inkex.addNS( 'polygon', 'svg' ) or node.tag == 'polygon':
+
+            elif node.tag in [inkex.addNS('polygon', 'svg'), 'polygon']:
                 """
-                We need to extract x1 and y1 from these:
-                <polygon points="x1,y1 x2,y2 x3,y3 [...]"/>
-                We accomplish this with Python string strip
-                and split methods. Then apply transforms
-                """
-                # Strip() removes all whitespace from the start and end of p1
-                pl = node.get( 'points', '' ).strip()
-                if (pl == ''):
-                    # If pl is blank there has been an error, return -1,-1 to indicate a problem has occured
-                    return False, point
-                # Split string by whitespace
-                pa = pl.split()
-                if not len( pa ):
-                    # If pl is blank there has been an error, return -1,-1 to indicate a problem has occured
-                    return False, point
-                # pa[0] = "x1,y1
-                # split string via comma to get x1 and y1 individually
-                # then point = [x1,x2]
-                point = pa[0].split(",")
-    
-                point = [float(point[0]),float(point[1])]
-    
-                simpletransform.applyTransformToPoint(matNew, point)
+                Polygon has same first and last point.
                 
-                return True, point
+                Repeat function to get first point of polyline:
+                """
+                pl = node.get( 'points', '' ).strip()
+                
+                if pl == '':
+                    return False, point
     
+                pa = pl.replace(',',' ').split() # replace comma with space before splitting
+    
+                if not pa:
+                    return False, point
+                pathLength = len( pa )
+                if (pathLength < 4): # Minimum of x1,y1 x2,y2 required.
+                    return False, point
+    
+                d = "M " + pa[0] + " " + pa[1]
+                i = 2
+                while (i < (pathLength - 1 )):
+                    d += " L " + pa[i] + " " + pa[i + 1]
+                    i += 2
+                
+                point = plot_utils.pathdata_first_point(d)
+                simpletransform.applyTransformToPoint(matNew, point)
+
             if node.tag == inkex.addNS( 'ellipse', 'svg' ) or node.tag == 'ellipse':
                 
                 cx = float( node.get( 'cx', '0' ) )

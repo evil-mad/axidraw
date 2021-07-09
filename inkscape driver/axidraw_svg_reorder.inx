@@ -21,7 +21,7 @@ document, to reduce pen-up travel distance and time.
 </param>
 
 <_param name="Footer" type="description" indent="3" xml:space="preserve">
-v 2.6. Copyright 2020, Evil Mad Scientist</_param>
+v 2.8. Copyright 2021, Evil Mad Scientist</_param>
 
 
 <effect needs-live-preview="false">

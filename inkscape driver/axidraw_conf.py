@@ -2,9 +2,9 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 2.7.0, dated 2020-11-10.
+# Version 2.7.4, dated 2021-06-17.
 #
-# Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # https://github.com/evil-mad/AxiDraw
 #
@@ -86,6 +86,10 @@ resolution = 1          # Resolution: (1-2):
                             # 1: High resolution (smoother, slightly slower) (Default)
                             # 2: Low resolution (coarser, slightly faster)
 
+# Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
+# Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
+# not along the XY axes of the machine. This parameter chooses 8X or 16X microstepping on the motors.
+
 '''
 Additional user-adjustable control parameters:
 
@@ -112,11 +116,15 @@ use_b3_out = False      # If True, enable digital output pin B3, which will be h
                         #   when the pen is down, and low otherwise. Can be used to control
                         #   external devices like valves, relays, or lasers.
 
+auto_rotate_ccw = True  # If True (default), auto-rotate is counter-clockwise when active.
+                        #   If False, auto-rotate direction is clockwise.
 
-
-# Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
-# Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
-# not along the XY axes of the machine. This parameter chooses 8X or 16X microstepping on the motors.
+options_message = True  # If True (default), display an advisory message if Apply is clicked
+                        #   in the AxiDraw Control GUI, while in the Timing or Options tab.
+                        #   (Clicking Apply on these tabs has no effect other than the message.)
+                        #   This message can prevent the situation where one clicks Apply on the
+                        #   Options tab and then waits a few minutes before realizing that
+                        #   no plot has been initiated.
 
 
 '''

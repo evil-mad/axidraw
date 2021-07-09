@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+      <name>Process Illustrator SVG</name>
+      <id>command.evilmadscientist.process_ai</id>
+      <label appearance="header" indent="2">Process Illustrator SVG v 1.0</label>
+      <label xml:space="preserve" indent="1">
+Apply this extension after opening an SVG file
+    exported from Adobe Illustrator to:
+
+(1) Recognize and import named layers.
+
+(2) Correct document scale, if necessary.
+    (Illustrator may export SVG at 75% of correct size.)
+</label>
+     <spacer/>
+     <separator />
+     <spacer/>
+      <label appearance="header" indent="2">How to export SVG from Illustrator</label>
+      <label xml:space="preserve" indent="1">For best results when exporting from AI:
+ * Use File > Export > Export As...
+ * Check the "Use Artboards" option
+ * Select the SVG format option and click Export
+ * Styling: Presentation attributes
+ * Object IDs: Layer names
+ * Minify, Responsive: Both off
+ 
+Then, open the SVG file in Inkscape and Apply this extension.
+</label>
+      <effect needs-live-preview="false">
+        <object-type>all</object-type>
+        <effects-menu>
+        <submenu _name="AxiDraw Utilities"/>
+        </effects-menu>
+    </effect>
+      <script>
+        <command location="inx" interpreter="python">process_ai.py</command>
+      </script>
+</inkscape-extension>
