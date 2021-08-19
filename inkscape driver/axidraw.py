@@ -67,15 +67,7 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
 
-        self.OptionParser.add_option("--port_config",\
-            type="int", action="store", dest="port_config",\
-            default=params.port_config,\
-            help="Port use code (0-2)."\
-            +" 0: Plot to first unit found, unless port is specified"\
-            + "1: Plot to first AxiDraw Found. "\
-            + "2: Plot to specified AxiDraw. ")
-
-        self.version_string = "2.7.4" # Dated 2021-06-17
+        self.version_string = "2.7.5" # Dated 2021-08-10
 
         self.spew_debugdata = False
 
@@ -162,8 +154,8 @@ class AxiDraw(inkex.Effect):
         self.force_pause = False  # Flag to initiate forced pause
         self.node_count = int(0)  # NOTE: python uses 32-bit ints.
 
-        self.x_bounds_min = 0 # Change: Was self.x_bounds_min = self.params.start_pos_x
-        self.y_bounds_min = 0 # Change: Was self.y_bounds_min = self.params.start_pos_y
+        self.x_bounds_min = 0.0
+        self.y_bounds_min = 0.0
 
         self.svg_transform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
 
@@ -187,8 +179,8 @@ class AxiDraw(inkex.Effect):
             self.x_bounds_max = self.params.x_travel_default
             self.y_bounds_max = self.params.y_travel_default
 
-        self.bounds = [[self.x_bounds_min,self.y_bounds_min],
-                       [self.x_bounds_max,self.y_bounds_max]]
+        self.bounds = [[self.x_bounds_min - 1e-9, self.y_bounds_min - 1e-9],
+                       [self.x_bounds_max + 1e-9, self.y_bounds_max + 1e-9]]
 
         self.x_max_phy = self.x_bounds_max  # Copy for physical limit reference
         self.y_max_phy = self.y_bounds_max
@@ -760,8 +752,8 @@ class AxiDraw(inkex.Effect):
                     self.x_bounds_max = self.svg_width
                 if self.y_bounds_max > self.svg_height:
                     self.y_bounds_max = self.svg_height
-            self.bounds = [[self.x_bounds_min,self.y_bounds_min],
-                           [self.x_bounds_max,self.y_bounds_max]]
+            self.bounds = [[self.x_bounds_min - 1e-9, self.y_bounds_min - 1e-9],
+                           [self.x_bounds_max + 1e-9, self.y_bounds_max + 1e-9]]
 
         try:  # wrap everything in a try so we can be sure to close the serial port
             self.ServoSetupWrapper()
@@ -844,10 +836,10 @@ class AxiDraw(inkex.Effect):
 
             if self.warn_out_of_bounds:
                 warning_text = "Warning: AxiDraw movement was limited by its "
-                warning_text += "physical range of motion. If everything else "
+                warning_text += "physical range of motion.\nIf everything else "
                 warning_text += "looks correct, you may have an issue with "
                 warning_text += "your document size, or you may have the "
-                warning_text += "wrong AxiDraw model selected. Please contact"
+                warning_text += "wrong AxiDraw model selected. Please contact "
                 warning_text += "technical support if you need assistance."
                 self.user_message_fun(gettext.gettext(warning_text))
 
@@ -1004,10 +996,7 @@ class AxiDraw(inkex.Effect):
                             self.user_message_fun("Elapsed time: {0:02d}:{1:02d} (minutes, seconds)".format(m, s))
                         self.user_message_fun("Length of path drawn: {0:1.2f} m.".format(down_dist))
                         self.user_message_fun("Total distance moved: {0:1.2f} m.".format(tot_dist))
-
                     # self.user_message_fun("Pen lift / lower cycles: {} / {} ".format(self.pen_lifts, self.pen_lowers))
-
-
         finally:
             # We may have had an exception and lost the serial port...
             pass
@@ -1722,8 +1711,7 @@ class AxiDraw(inkex.Effect):
                     in_bounds = True
 
                     if not self.ignore_limits:
-                        if (t_x > self.x_bounds_max or t_x < self.x_bounds_min
-                        or  t_y > self.y_bounds_max or t_y < self.y_bounds_min):
+                        if not plot_utils.point_in_bounds(this_vertex, self.bounds, tolerance=0):
                             in_bounds = False
 
                             if clip_warn_x:
@@ -1821,7 +1809,6 @@ class AxiDraw(inkex.Effect):
                                 self.plotSegmentWithVelocity(f_x, f_y, 0, 0) # Pen up straight move, zero velocity at endpoints
                             else:
                                 self.plotSegmentWithVelocity(f_x, f_y, 0, 0) # Short pen down move, in place of pen-up move.
-                            # self.node_count += 1    # Alternative: Increment node counter, at a slight accuracy cost.
                         elif n_index == 1:
                             self.pen_lower()
                         n_index += 1
@@ -2926,19 +2913,63 @@ class AxiDraw(inkex.Effect):
             ebb_motion.PBOutConfig( self.serial_port, 3, 0 )    # Configure I/O Pin B3 as an output, low
 
     def pen_raise(self):
-        self.virtual_pen_up = True  # Virtual pen keeps track of state for resuming plotting.
-        if not self.resume_mode and not self.pen_up:  # skip if pen is already up, or if we're resuming.
-            self.pen_lifts += 1
+        self.virtual_pen_up = True # Virtual pen keeps track of state for resuming plotting.
+        self.path_data_pen_up = -1 # For preview rendering use
+        self.turtle_pen_up = True  # For interactive Python API
+
+        if self.resume_mode or self.pen_up:  # skip if pen is already up, or if we're resuming.
+            return
+
+        self.pen_lifts += 1
+        if self.use_custom_layer_pen_height:
+            pen_down_pos = self.layer_pen_pos_down
+        else:
+            pen_down_pos = self.options.pen_pos_down
+
+        v_distance = float(self.options.pen_pos_up - pen_down_pos)
+        v_time = int((1000.0 * v_distance) / (3 * self.options.pen_rate_raise))
+        if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
+            v_time = -v_time
+        v_time += self.options.pen_delay_up
+        if v_time < 0:  # Do not allow negative delay times
+            v_time = 0
+        if self.options.preview:
+            self.updateVCharts(0, 0, 0)
+            self.vel_data_time += v_time
+            self.updateVCharts(0, 0, 0)
+            self.pt_estimate += v_time
+        else:
+            ebb_motion.sendPenUp(self.serial_port, v_time)
+            if self.params.use_b3_out:
+                ebb_motion.PBOutValue( self.serial_port, 3, 0 )    # I/O Pin B3 output: low
+            if v_time > 50:
+                if self.options.mode != "manual":
+                    time.sleep(float(v_time - 10) / 1000.0)  # pause before issuing next command
+        self.pen_up = True
+        if not self.ebblv_set:
+            ebb_motion.setEBBLV(self.serial_port, self.options.pen_pos_up + 1) 
+            self.ebblv_set = True
+
+    def pen_lower(self):
+        self.virtual_pen_up = False # Virtual pen keeps track of state for resuming plotting.
+        self.path_data_pen_up = -1  # For preview rendering use
+        self.turtle_pen_up = False  # For interactive Python API
+
+        if self.pen_up is not None:
+            if not self.pen_up:
+                return # skip if pen is state is _known_ and is down
+
+        if not self.resume_mode and not self.b_stopped:  # skip if resuming or stopped
+            self.pen_lowers += 1
             if self.use_custom_layer_pen_height:
                 pen_down_pos = self.layer_pen_pos_down
             else:
                 pen_down_pos = self.options.pen_pos_down
-
             v_distance = float(self.options.pen_pos_up - pen_down_pos)
-            v_time = int((1000.0 * v_distance) / (3 * self.options.pen_rate_raise))
+            v_time = int((1000.0 * v_distance) / (3 * self.options.pen_rate_lower))
             if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
                 v_time = -v_time
-            v_time += self.options.pen_delay_up
+            v_time += self.options.pen_delay_down
             if v_time < 0:  # Do not allow negative delay times
                 v_time = 0
             if self.options.preview:
@@ -2947,49 +2978,14 @@ class AxiDraw(inkex.Effect):
                 self.updateVCharts(0, 0, 0)
                 self.pt_estimate += v_time
             else:
-                ebb_motion.sendPenUp(self.serial_port, v_time)
+                ebb_motion.sendPenDown(self.serial_port, v_time)
                 if self.params.use_b3_out:
-                    ebb_motion.PBOutValue( self.serial_port, 3, 0 )    # I/O Pin B3 output: low
+                    ebb_motion.PBOutValue( self.serial_port, 3, 1 )    # I/O Pin B3 output: high
                 if v_time > 50:
                     if self.options.mode != "manual":
-                        time.sleep(float(v_time - 10) / 1000.0)  # pause before issuing next command
-            self.pen_up = True
-            if not self.ebblv_set:
-                ebb_motion.setEBBLV(self.serial_port, self.options.pen_pos_up + 1) 
-                self.ebblv_set = True
-        self.path_data_pen_up = -1
-
-    def pen_lower(self):
-        self.virtual_pen_up = False  # Virtual pen keeps track of state for resuming plotting.
-        if self.pen_up or self.pen_up is None:  # skip if pen is already down
-            if not self.resume_mode and not self.b_stopped:  # skip if resuming or stopped
-                self.pen_lowers += 1
-                if self.use_custom_layer_pen_height:
-                    pen_down_pos = self.layer_pen_pos_down
-                else:
-                    pen_down_pos = self.options.pen_pos_down
-                v_distance = float(self.options.pen_pos_up - pen_down_pos)
-                v_time = int((1000.0 * v_distance) / (3 * self.options.pen_rate_lower))
-                if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
-                    v_time = -v_time
-                v_time += self.options.pen_delay_down
-                if v_time < 0:  # Do not allow negative delay times
-                    v_time = 0
-                if self.options.preview:
-                    self.updateVCharts(0, 0, 0)
-                    self.vel_data_time += v_time
-                    self.updateVCharts(0, 0, 0)
-                    self.pt_estimate += v_time
-                else:
-                    ebb_motion.sendPenDown(self.serial_port, v_time)
-                    if self.params.use_b3_out:
-                        ebb_motion.PBOutValue( self.serial_port, 3, 1 )    # I/O Pin B3 output: high
-                    if v_time > 50:
-                        if self.options.mode != "manual":
-                            # pause before issuing next command
-                            time.sleep(float(v_time - 10) / 1000.0)  
-                self.pen_up = False
-        self.path_data_pen_up = -1
+                        # pause before issuing next command
+                        time.sleep(float(v_time - 10) / 1000.0)  
+            self.pen_up = False
 
     def ServoSetupWrapper(self):
         # Utility wrapper for self.ServoSetup.
@@ -3108,7 +3104,8 @@ class AxiDraw(inkex.Effect):
             voltage_o_k = ebb_motion.queryVoltage(self.serial_port)
             if not voltage_o_k:
                 if 'voltage' not in self.warnings:
-                    self.user_message_fun(gettext.gettext('Warning: Low voltage detected.\nCheck that power supply is plugged in.'))
+                    self.user_message_fun(gettext.gettext(\
+                    'Warning: Low voltage detected.\nCheck that power supply is plugged in.'))
                     self.warnings['voltage'] = 1
 
     def getDocProps(self):
@@ -3134,17 +3131,15 @@ class AxiDraw(inkex.Effect):
         return True
 
     def get_output(self):
-        # Return serialized copy of svg document output
+        '''Return serialized copy of svg document output'''
         result = etree.tostring(self.document)
         return result.decode("utf-8")
     
     def plot_setup(self, svg_input=None, argstrings=None):
-        # For use as an imported python module
-        # Initialize AxiDraw options & parse SVG file
+        '''Python module plot context: Begin plot context & parse SVG file'''
         file_ok = False
         inkex.localize()
         self.getoptions([] if argstrings is None else argstrings)
-        # Parse input file or SVG string
 
         if svg_input is None:
             svg_input = plot_utils.trivial_svg
@@ -3172,8 +3167,7 @@ class AxiDraw(inkex.Effect):
         # self.suppress_standard_output_stream()
 
     def plot_run(self, output=False):
-        # For use as an imported python module
-        # Plot the document, optionally return SVG file output
+        '''Python module plot context: Plot document'''
         if self.document is None:
             logger.error("No SVG input provided.")
             logger.error("Use plot_setup(svg_input) before plot_run().")
@@ -3184,8 +3178,7 @@ class AxiDraw(inkex.Effect):
             return self.get_output()
 
     def interactive(self):
-        # Initialize AxiDraw options
-        # For interactive-mode use as an imported python module
+        '''Interactive context: Initialize options & begin interactive context'''
         inkex.localize()
         self.getoptions([])
         self.options.units = 0 # inches, by default
@@ -3194,6 +3187,7 @@ class AxiDraw(inkex.Effect):
         self.Secondary = False
 
     def verify_interactive(self):
+        '''Check that we are in interactive API context'''
         try:
             if self.options.mode == "interactive":
                 return True
@@ -3202,14 +3196,7 @@ class AxiDraw(inkex.Effect):
         return False
 
     def connect(self):
-        # Begin session
-        # For interactive-mode use as an imported python module
-        #
-        # Parse settings,
-        # Connect to AxiDraw,
-        # Raise pen,
-        # Set position as (0,0).
-        
+        '''Interactive context: Open connection to AxiDraw'''
         if not self.verify_interactive():
             return
 
@@ -3218,10 +3205,9 @@ class AxiDraw(inkex.Effect):
             return False
 
         self.queryEBBVoltage()
-
         self.update_options()                   # Apply general settings
 
-        # Set initial XY Position:
+        # Set initial XY and turtle positions
         if self.start_x is not None:
             self.f_curr_x = self.start_x
         else:
@@ -3232,39 +3218,35 @@ class AxiDraw(inkex.Effect):
             self.f_curr_y = self.params.start_pos_y
 
         self.pt_first = (self.f_curr_x, self.f_curr_y)
-        self.turtle_x = self.f_curr_x           # Set turtle position to (0,0)
+        self.turtle_x = self.f_curr_x
         self.turtle_y = self.f_curr_y
+        self.turtle_pen_up = True
         
         # Query if button pressed, to clear the result:
         ebb_motion.QueryPRGButton(self.serial_port)  
-        self.ServoSetupWrapper()                # Apply servo settings
-        self.pen_raise()                        # Raise pen
-        self.EnableMotors()     # Set plot resolution & speed & enable motors
+        self.ServoSetupWrapper()    # Apply servo settings
+        self.pen_raise()            # Raise pen
+        self.EnableMotors()         # Set plot resolution & speed & enable motors
         return True
-        
-    def update(self):
-        # Process optional parameters
-        # For interactive-mode use as an imported python module
 
+    def update(self):
+        ''' Interactive context: Apply optional parameters'''
         if not self.verify_interactive():
             return
-
         self.update_options()
         if self.serial_port:
             self.ServoSetup()
             self.EnableMotors()  # Set plotting resolution & speed
 
-    def _xy_plot_segment(self,relative,x_value,y_value): # Absolute move
+    def _xy_plot_segment(self, relative, x_value, y_value):
         """
         Perform movements for interactive context XY movement commands.
-        Internal function; uses inch units.
-        Maintains record of "turtle" position, and directs the carriage to
-        move from the last turtle position to the new turtle position,
-        clipping that movement segment to the allowed bounds of movement.
-        Commands directing movement outside of the bounds are clipped
-        with pen up.
+        Internal function; inch units. Maintains record of "turtle"
+        position, and directs the carriage to move between turtle
+        positions, clipping each movement segment to the allowed
+        bounds of movement. Commands directing movement outside of the
+        bounds are clipped with pen up, if auto_clip_lift is true.
         """
-
         if not self.verify_interactive():
             return
 
@@ -3277,79 +3259,102 @@ class AxiDraw(inkex.Effect):
         if relative:
             x_value = self.turtle_x + x_value
             y_value = self.turtle_y + y_value
-        segment =  [[self.turtle_x,self.turtle_y],
-                    [x_value,y_value]] 
-        accept, seg = plot_utils.clip_segment(segment, self.bounds)
-        
-        if accept: # If some part of the segment is within bounds
-            if self.serial_port:
-                self.plotSegmentWithVelocity(seg[1][0], seg[1][1], 0, 0)
 
+        # Snap interactive movement to travel bounds, with modest tolerance:
+        if math.isclose(x_value, self.x_bounds_min, abs_tol=1e-9):
+            x_value = self.x_bounds_min
+        if math.isclose(x_value, self.x_bounds_max, abs_tol=1e-9):
+            x_value = self.x_bounds_max
+        if math.isclose(y_value, self.y_bounds_min, abs_tol=1e-9):
+            y_value = self.y_bounds_min
+        if math.isclose(y_value, self.y_bounds_max, abs_tol=1e-9):
+            y_value = self.y_bounds_max
+
+        turtle = [self.turtle_x, self.turtle_y]
+        target = [x_value, y_value]
+        segment = [turtle, target]
+        accept, seg = plot_utils.clip_segment(segment, self.bounds)
+
+        if accept and self.serial_port: # Segment is at least partially within bounds
+            if self.serial_port:
+                if not plot_utils.points_near(seg[0], turtle, 1e-9): # if intial point clipped
+                    if self.params.auto_clip_lift and not self.turtle_pen_up:
+                        self.pen_raise()           # Pen-up move to initial position
+                        self.turtle_pen_up = False # Keep track of intended state
+                    self.plotSegmentWithVelocity(seg[0][0], seg[0][1], 0, 0) # move to start
+                if not self.turtle_pen_up:
+                        self.pen_lower()
+                self.plotSegmentWithVelocity(seg[1][0], seg[1][1], 0, 0) # Draw clipped segment
+                if not plot_utils.points_near(seg[1], target, 1e-9) and\
+                        self.params.auto_clip_lift and not self.turtle_pen_up:
+                    self.pen_raise() # Segment end was clipped; this end is out of bounds.
+                    self.turtle_pen_up = False # Keep track of intended state
         self.turtle_x = x_value
         self.turtle_y = y_value
 
     def goto(self,x_target,y_target): # Absolute move
-        # absolute position move
-        # For interactive-mode use as an imported python module
+        '''Interactive context: absolute position move'''
         self._xy_plot_segment(False,x_target, y_target)
 
     def moveto(self,x_target,y_target):
-        # pen-up absolute position move
-        # For interactive-mode use as an imported python module
+        '''Interactive context: absolute position move, pen-up'''
+        if not self.verify_interactive():
+            return
         self.pen_raise()
         self._xy_plot_segment(False,x_target, y_target)
 
     def lineto(self,x_target,y_target):
-        # pen-down absolute position move
-        # For interactive-mode use as an imported python module
-        self.pen_lower()
+        '''Interactive context: absolute position move, pen-down'''
+        self.turtle_pen_up = False
         self._xy_plot_segment(False,x_target, y_target)
 
     def go(self,x_delta,y_delta):
-        # relative position move
-        # For interactive-mode use as an imported python module
+        '''Interactive context: relative position move'''
         self._xy_plot_segment(True,x_delta, y_delta)
 
     def move(self,x_delta,y_delta):
-        # pen-up relative position move
-        # For interactive-mode use as an imported python module
+        '''Interactive context: relative position move, pen-up'''
+        if not self.verify_interactive():
+            return
         self.pen_raise()
         self._xy_plot_segment(True,x_delta, y_delta)
 
     def line(self,x_delta,y_delta):
-        # pen-down relative position move
-        # For interactive-mode use as an imported python module
-        self.pen_lower()
+        '''Interactive context: relative position move, pen-down'''
+        self.turtle_pen_up = False
         self._xy_plot_segment(True,x_delta, y_delta)
 
     def penup(self):
-        # For interactive-mode use as an imported python module
+        '''Interactive context: raise pen'''
         if not self.verify_interactive():
             return
         self.pen_raise()
 
     def pendown(self):
-        # For interactive-mode use as an imported python module
+        '''Interactive context: lower pen'''
         if not self.verify_interactive():
             return
-        self.pen_lower()
+        if self.params.auto_clip_lift and not\
+                plot_utils.point_in_bounds([self.turtle_x, self.turtle_y], self.bounds):
+            self.turtle_pen_up = False
+        else:
+            self.pen_lower()
 
     def usb_query(self, query):
-        # For interactive-mode use as an imported python module
+        '''Interactive context: Low-level USB query'''
         if not self.verify_interactive():
             return
         return ebb_serial.query(self.serial_port, query).strip()
 
     def usb_command(self, command):
-        # For interactive-mode use as an imported python module
-        
-        # No safety net; Use with reluctance and extreme care.
+        '''Interactive context: Low-level USB command; use with great care '''
         if not self.verify_interactive():
             return
         ebb_serial.command(self.serial_port, command)
 
     def format_pos(self,x_value,y_value):
-        """ Format position data to be returned to user """
+        '''Format position data to be returned to user '''
+        """ Will be replaced by position_scale() in plot_utils"""
         if self.options.units == 1 : # If using centimeter units
             x_value = x_value * 2.54
             y_value = y_value * 2.54
@@ -3359,36 +3364,29 @@ class AxiDraw(inkex.Effect):
         return x_value, y_value
 
     def turtle_pos(self):
-        """
-        Report last known "turtle" position
-        This may not be equal to the physical position.
-        For interactive-mode use as an imported python module
-        """
-        if not self.verify_interactive():
-            return
+        '''Interactive context: Report last known "turtle" position'''
         return self.format_pos(self.turtle_x, self.turtle_y)
 
+    def turtle_pen(self):
+        '''Interactive context: Report last known "turtle" pen state'''
+        return self.turtle_pen_up
+
     def current_pos(self):
-        """
-        Report last known physical position
-        This may not be equal to the "turtle" position.
-        For interactive-mode use as an imported python module
-        """
-        if not self.verify_interactive():
-            return
+        '''Interactive context: Report last known physical position '''
         return self.format_pos(self.f_curr_x, self.f_curr_y)
 
+    def current_pen(self):
+        '''Interactive context: Report last known physical pen state '''
+        return self.pen_up
+
     def disconnect(self):
-        """
-        End session; disconnect from AxiDraw
-        For interactive-mode use as an imported python module
-        """
+        '''End interactive session; disconnect from AxiDraw '''
         if self.serial_port:
             ebb_serial.closePort(self.serial_port)
         self.serial_port = None
 
 class SecondaryLoggingHandler(logging.Handler):
-    ''' To be used for logging to AxiDraw.text_out and AxiDraw.error_out.'''
+    '''To be used for logging to AxiDraw.text_out and AxiDraw.error_out.'''
     def __init__(self, axidraw, log_name, level = logging.NOTSET):
         super(SecondaryLoggingHandler, self).__init__(level=level)
 

@@ -8,58 +8,71 @@
 <param name="tab" type="notebook">
   <page name="splash" _gui-text="Hatch Fill">
   <_param name="Header" type="description" xml:space="preserve">
-This extension fills each closed figure in your drawing
-with a path consisting of back and forth drawn "hatch" lines.
-If any objects are selected, then only those selected objects
-will be filled. 
+Hatch Fill: An extension to fill all or selected closed figures in your
+drawing with paths consisting of back-and-forth hatch line.
+</_param>
 
-Hatched figures will be grouped with their fills.
-  </_param>
-  <param name="hatchSpacing" type="float" min="0.1" max="1000" _gui-text="   Hatch spacing (px)">3.0</param>
-  <param name="hatchAngle" type="float" min="-360" max="360" _gui-text="   Hatch angle (degrees)">45</param>
-  <param name="crossHatch" type="boolean" _gui-text="   Crosshatch?">false</param>
+<param name="hatchSpacing" type="float" min="0.001" max="1000" indent="2"
+    precision="3" _gui-text="Hatch Spacing">3.0</param>
 
-  <param name="reducePenLifts" type="boolean" _gui-text="   Connect nearby ends?">true</param>
-  <param name="hatchScope" type="float" min="1.1" max="5.0" _gui-text="   Range of end connections (default: 3)">3.0</param>
-  <param name="holdBackHatchFromEdges" type="boolean" _gui-text="   Inset fill from edges?">true</param>
-  <param name="holdBackSteps" type="float" min="0.1" max="10.0" _gui-text="   Inset distance (px) (default: 1)">1.0</param>
-  <param name="tolerance" type="float" min="0.1" max="100" _gui-text="   Tolerance (default: 3.0)">3.0</param>
+<param name="units" type="optiongroup" appearance="minimal"
+    indent="4" _gui-text="Spacing Units :">
+    <_option value="2">px</_option>
+    <_option value="3">mm</_option>
+    <_option value="4">inch</_option>
+</param>
 
-  <param name="footer" type="description" xml:space="preserve">
-            (v2.3.3, March 27, 2020)</param>
+<param name="hatchAngle" type="float" min="-360" max="360" indent="4" _gui-text="Hatch Angle (degrees)">45</param>
+<param name="crossHatch" type="boolean" indent="4" _gui-text="Crosshatch">false</param>
 
-  </page>
-  <page name="info" _gui-text="More info...">
-  <_param name="aboutpage" type="description" xml:space="preserve">
-Hatch spacing is the distance between hatch lines, 
-measured in units of screen pixels (px). Angles are in
-degrees from horizontal; for example 90 is vertical.
+<separator />
 
-The Crosshatch option will apply a second set of
-hatches, perpendicular to the first.
+<param name="connect_bool" type="boolean"  indent="2" _gui-text="Connect Nearby Ends">true</param>
+<param name="hatchScope" type="float" min="1.1" max="5.0"  indent="2" _gui-text="Range of end connections (default: 3)">3.0</param>
 
-The "Connect nearby ends" option will attempt to connect
-nearby line ends with a smoothly flowing curve, to improve
-the smoothness of plotting.
+<separator />
+<param name="inset_bool" type="boolean"  indent="2" _gui-text="Inset Fill from Edges">true</param>
+<param name="inset_dist" type="float"  min="0.001" max="1000" precision="3"  indent="2"
+    _gui-text="Inset Distance, in selected units">0.5</param>
 
-The Range parameter sets the distance (in hatch widths)
-over which that option searches for segments to join. 
-Large values may result in hatches where you don't want
-them. Consider using a value in the range of 2-4. 
+<separator />
+<param name="tolerance" type="float" min="0.1" max="100"  indent="2"
+    _gui-text="Tolerance (default: 2.0)">2.0</param>
 
-The Inset option allows you to hold back the edges of the
-fill somewhat from the edge of your original object.
-This can improve performance, as it allows you to more
-reliably "color inside the lines" when using pens.
+</page>
+<page name="info" _gui-text="More info...">
+<param name="aboutpage" type="description" xml:space="preserve">
+Hatch spacing is the distance between hatch lines, measured in selected
+units. Hatch angle is in degrees from horizontal; e.g., 90 for vertical.
 
-The hatches will be the same color and width
-as the original object.
+The Crosshatch option will add a second set of hatches, perpendicular
+to the first.
 
-The Tolerance parameter affects how precisely
-the hatches try to fill the input paths.</_param>
+The Connect Nearby Ends option will join nearby line ends with a
+smooth curve, giving a differnt appearance and reducing the number of
+pen lifts when using robotic tools like pen plotters. The Range
+parameter sets the distance (in hatch spacing) over which end
+connections may be made. Large values may result in hatches where you
+don't want them.
+
+The Inset Fill from Edges option allows you to hold back the hatches
+away from the edge of your original object. This can allow you to more
+reliably "color inside the lines".
+
+The Tolerance parameter affects how precisely the hatches try
+to fill the input paths.
+
+
+Hatches will have the same stroke color and width as the original
+object. When filling more than one object, the hatches will be grouped
+with their original (filled) objects.
+
+
+v2.4.0, August 8, 2021</_param> 
  
   </page>
   </param>
+
   <effect needs-live-preview="true">
     <object-type>all</object-type>
     <effects-menu>

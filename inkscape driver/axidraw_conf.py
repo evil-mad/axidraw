@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 2.7.4, dated 2021-06-17.
+# Version 2.7.5, dated 2021-08-11.
 #
 # Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -126,6 +126,8 @@ options_message = True  # If True (default), display an advisory message if Appl
                         #   Options tab and then waits a few minutes before realizing that
                         #   no plot has been initiated.
 
+auto_clip_lift = True   # Option applicable to the Interactive Python API only.
+                        #   If True (default), keep pen up when motion is clipped by travel bounds.
 
 '''
 Secondary control parameters:

@@ -88,6 +88,15 @@ def core_options(parser, config):
                        help="AxiDraw Model (1-3). 1: AxiDraw V2 or V3. " \
                        + "2:AxiDraw V3/A3 or SE/A3. 3: AxiDraw V3 XLX.")
 
+    options.add_option("--port_config",\
+                        type="int", action="store", dest="port_config",\
+                       default=config["port_config"],\
+                        help="Port use code (0-3)."\
+                        +" 0: Plot to first unit found, unless port is specified"\
+                        + "1: Plot to first AxiDraw Found. "\
+                        + "2: Plot to specified AxiDraw. "\
+                        + "3: Plot to all AxiDraw units. ")
+
     options.add_option("--port",\
                        type="string", action="store", dest="port",\
                        default=config["port"],\

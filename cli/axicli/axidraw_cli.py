@@ -36,7 +36,7 @@ https://shop.evilmadscientist.com/contact
 
 
 
-Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -73,7 +73,7 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface 2.7.4"
+cli_version = "AxiDraw Command Line Interface 2.7.5"
 
 quick_help = '''
     Basic syntax to plot a file:      axicli svg_in [OPTIONS]
