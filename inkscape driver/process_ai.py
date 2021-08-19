@@ -55,18 +55,22 @@ class ProcessAI(inkex.Effect):
         # 1) Recognize intended dimensions of original document.
         the_svg = self.document.getroot()
 
-        width_num, width_units = plot_utils.parseLengthWithUnits(the_svg.get('width'))
-        height_num, height_units = plot_utils.parseLengthWithUnits(the_svg.get('height'))
+        width_string = the_svg.get('width')
+        height_string = the_svg.get('height')
 
-        # Note that plot_utils.parseLengthWithUnits will return units of 'px'
-        #    for unitless values, not None.
+        if width_string and height_string:
+            width_num, width_units = plot_utils.parseLengthWithUnits(width_string)
+            height_num, height_units = plot_utils.parseLengthWithUnits(height_string)
 
-        if width_num:
-            if width_units == 'px':
-                the_svg.set('width', str(width_num) + 'pt')
-        if height_num:
-            if height_units == 'px':
-                the_svg.set('height', str(height_num) + 'pt')
+            # Note that plot_utils.parseLengthWithUnits will return units of 'px'
+            #    for unitless values, not None.
+
+            if width_num:
+                if width_units == 'px':
+                    the_svg.set('width', str(width_num) + 'pt')
+            if height_num:
+                if height_units == 'px':
+                    the_svg.set('height', str(height_num) + 'pt')
 
         # 2) Recognize Adobe Illustrator layers.
         for node in the_svg.xpath('//svg:g[@data-name]', namespaces=inkex.NSS ):

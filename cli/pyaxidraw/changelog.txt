@@ -5,6 +5,38 @@ not cover all internal changes nor bug fixes.
 
 Please see https://axidraw.com/doc/cli_api/ for full documentation
 
+
+=========================================
+
+v 2.7.5 (August 2021)
+
+Add support for Python 3.10; Python 3.6-3.10 are now supported.
+
+
+Improved handling of Interactive-context movements beyond travel bounds.
+
+By default, whenever the "turtle" (theoretical XY) position is outside
+of the travel limits, (1) the physical XY position is clipped to remain within
+those limits, and (2) the pen is in kept in the pen-up state.
+While both have always been the case in in the Plot context,
+both are now true in the Interactive context as well. 
+
+(Previously, Interactive context motion was clipped, but the pen state was not
+automatically raised when the motion was clipped.)
+
+As part of this change:
+
+* Interactive-context pen-down moves that begin and/or end outside of the bounds
+are now linked by automatic pen-up moves, giving more consistent and predictable
+behavior.
+* The pendown() function, by default, no longer lowers the pen when
+the turtle position is outside of the plotting bounds.
+* New current_pen() and turtle_pen() query functions.
+* New parameter in the axidraw_conf.py configuration file: auto_clip_lift, which
+can disable automatic pen lifts at plotting bounds and the new behavior of pendown.
+
+
+
 =========================================
 
 v 2.7.0 (November 2020)

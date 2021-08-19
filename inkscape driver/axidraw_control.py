@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -61,15 +61,6 @@ class AxiDrawWrapperClass( inkex.Effect ):
             common_options.core_options(self.OptionParser, params.__dict__))
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
-
-        self.OptionParser.add_option("--port_config",\
-            type="int", action="store", dest="port_config",\
-            default=None,\
-            help="Port use code (0-3)."\
-            +" 0: Plot to first unit found, unless port is specified"\
-            + "1: Plot to first AxiDraw Found. "\
-            + "2: Plot to specified AxiDraw. "\
-            + "3: Plot to all AxiDraw units. ")
 
         self.default_logging = default_logging
         if default_logging:
