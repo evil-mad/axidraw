@@ -8,23 +8,22 @@
 <param name="mode" type="notebook">
 
 <page name="plot" _gui-text="Plot">
-<_param indent="1" name="splashpage" type="description" appearance="header">AxiDraw Control</_param>
-<_param indent="1" name="splashpage2" type="description">Version 2.7.5    -    2021-08-10</_param>
-<_param indent="2" name="splashpage3" type="description" xml:space="preserve" >
-Press 'Apply' to begin plotting. Use other tabs to adjust
+<_param indent="0" name="splashpage" type="description" appearance="header">AxiDraw Control</_param>
+<_param indent="2" name="splashpage3" type="description"
+xml:space="preserve" >Press 'Apply' to begin plotting. Use other tabs to adjust
 settings or access additional AxiDraw functions.
 
 AxiDraw documentation is online at: http://axidraw.com/docs
+
 For technical support or other assistance, please write to
-             contact@evilmadscientist.com
-</_param>
-<_param name="instructions_timing4" type="description" appearance="header">Multiple Copies:</_param>
+             contact@evilmadscientist.com </_param>
+<spacer />
+<_param name="splashpage4" type="description" appearance="header">Multiple Copies:</_param>
 
 <param indent="2" name="copies" type="int" min="0" max="9999"  _gui-text="Copies to Plot:">1</param>	
 <param indent="2" name="page_delay" type="int" min="0" max="3600" _gui-text="Seconds of delay between copies:">15</param>	
 
-<_param name="instructions_plot1" type="description" indent="4" > Tip: Select 0 copies to plot continuously until paused.</_param>
-
+<_param name="splashpage5" type="description" indent="6" >Tip: Select 0 copies to plot continuously until paused.</_param>
 </page>
 
 
@@ -41,7 +40,8 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <_option value="align">Raise pen, turn off motors</_option>	
 <_option value="toggle">Toggle pen between UP, DOWN</_option>
 </param>
-<_param indent="1" name="instructions_setup3" type="description" xml:space="preserve">
+<_param indent="4" name="instructions_setup3" type="description" xml:space="preserve">
+
 - Raise pen and turn off stepper motors to manually
   move carriage to the Home Corner (upper left).
 
@@ -51,7 +51,10 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 </page>
 
 
-<page name='timing' _gui-text='Timing'>
+<page name='options' _gui-text='Options'>
+<param name="submode" type="notebook">
+
+<page name='Speed' _gui-text='Speed'>
 <_param name="instructions_timing1" type="description" appearance="header">Movement speeds:</_param>
 <param indent="1" name="speed_pendown" type="int" min="1" max="110" _gui-text="Writing/Drawing speed (%):">25</param>	
 <param indent="1" name="speed_penup" type="int" min="1" max="110" _gui-text="Pen-up movement speed (%):">75</param>
@@ -64,7 +67,13 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <_option value="10">Very slow</_option>
 </param>
 
-<_param name="instructions_timing3" type="description" appearance="header">Pen raising and lowering speeds:</_param>
+<param indent="1" name="const_speed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
+
+</page>
+
+<page name='pen_timing' _gui-text='Pen timing'>
+
+<_param name="instructions_timing3" type="description" appearance="header">Pen raising and lowering rates:</_param>
 
 <param indent="1" name="pen_rate_raise" type="optiongroup" appearance="minimal" _gui-text="Pen raising speed :">
 <_option value="100">Maximum</_option>
@@ -79,27 +88,42 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <_option value="25">Slow</_option>
 <_option value="12">Very slow</_option>
 </param>
-
+<spacer />
 <param indent="1" name="pen_delay_up" type="int" min="-500" max="500" _gui-text="Optional delay after raising pen (ms):">0</param>
 <param indent="1" name="pen_delay_down" type="int" min="-500" max="500" _gui-text="Optional delay after lowering pen (ms):">0</param>
-
 
 </page>
 
 
-<page name='options' _gui-text='Options'>
+<page name='preview' _gui-text='Preview'>
+
+<_param name="instructions_options7" type="description" appearance="header">Preview mode:</_param>
+
+<param indent="1" name="preview" type="boolean" _gui-text="Enable offline preview mode; Simulate plotting only">false</param> 
+<param indent="5" name="rendering" type="optiongroup" appearance="minimal" _gui-text="Preview mode rendering:">
+<_option value="3">All movement</_option>
+<_option value="1">Pen-down movement</_option>
+<_option value="2">Pen-up movement</_option>
+<_option value="0">None</_option>
+</param>
+
+</page>
+
+
+<page name='advanced' _gui-text='Advanced'>
+
 
 <_param name="instructions_options6" type="description" appearance="header">Advanced Options:</_param>
 
 <param indent="1" name="auto_rotate" type="boolean" _gui-text="Auto-rotate page when printing">true</param>	
-<param indent="1" name="const_speed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
-
+<param indent="1" name="random_start" type="boolean" _gui-text="Randomize starts of closed paths">false</param>
 <param indent="1" name="report_time" type="boolean" _gui-text="Report time elapsed">false</param> 
 
+
 <param indent="1" name="reordering" type="optiongroup" appearance="minimal" _gui-text="Plot optimization:">
-<_option value="0">None; preserve file order</_option>
-<_option value="1">Basic; preserve groups</_option>
-<_option value="3">Full; ignore grouping</_option>
+<_option value="0">None: Preserve file order</_option>
+<_option value="1">Basic: Reorder but preserve direction</_option>
+<_option value="2">Full: Reorder and allow path reversal</_option>
 </param>
 
 <param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
@@ -107,25 +131,44 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <_option value="2">~1435 DPI (Slightly faster)</_option>
 </param>
 
-<_param name="instructions_options7" type="description" appearance="header">Preview mode:</_param>
+</page>
 
-<param indent="1" name="preview" type="boolean" _gui-text="Enable offline preview mode; Simulate plotting only">false</param> 
-<param indent="5" name="rendering" type="optiongroup" appearance="minimal" _gui-text="Preview mode rendering:">
-<_option value="0">None</_option>
-<_option value="1">Pen-down movement</_option>
-<_option value="2">Pen-up movement</_option>
-<_option value="3">All movement</_option>
+
+<page name="sysinfo" _gui-text="Config">
+<_param name="instructions_config1" type="description" appearance="header">Hardware configuration</_param>
+<param name="model" type="optiongroup" appearance="minimal" indent="1" _gui-text="AxiDraw model:">
+<_option value="1">AxiDraw V2 or AxiDraw V3</_option>
+<_option value="2">AxiDraw V3/A3 or SE/A3</_option>
+<_option value="4">AxiDraw MiniKit</_option>
+<_option value="3">AxiDraw V3 XLX</_option>
 </param>
+<param name="port_config" type="optiongroup" appearance="minimal" indent="1" _gui-text="Machine selection:">
+<_option value="1">Use First AxiDraw located</_option>
+<_option value="2">Use AxiDraw named below</_option>
+<_option value="3">Plot to all AxiDraw units</_option>
+</param>
+<param indent="3" name="port" type="string" _gui-text="AxiDraw name or port: "></param>
+
+<_param name="instructions_config2" type="description" appearance="header">
+Check for updates</_param>
+
+<_param name="instructions_config3" type="description" indent="2" xml:space="preserve"
+>Press 'Apply' with this tab selected to query the software and
+firmware versions, and check online for available updates.</_param>
 
 </page>
+
+</param>
+</page>
+
 
 
 <page name="manual" _gui-text="Manual">
 <_param name="instructions_manual" type="description" appearance="header">Manual Control</_param>
 <_param indent="1" name="instructions_manual" type="description" xml:space="preserve">
-Use this tab to execute various "manual" AxiDraw commands. For
-example, you can walk (move) the carriage, raise or lower the
-pen, or enable or disable the motors.
+Press 'Apply' with this tab selected to execute various "manual"
+AxiDraw commands. For example, you can walk (move) the carriage,
+raise or lower the pen, or enable or disable the motors.
 </_param>
 
 <param name="manual_cmd" type="optiongroup" appearance="minimal"
@@ -147,38 +190,36 @@ _gui-text="               Command: ">
 
 <_param  indent="1" name="instructions_manual2" type="description" xml:space="preserve">
 
-Note: The manual "walk" commands will move the carriage as
+Caution: The manual "walk" commands will move the carriage as
 requested, without regard to the current position. Moving too
 far or in the wrong direction may cause AxiDraw to try and
 move beyond its physical limits of travel.
-</_param>
-<_param  indent="6" name="instructions_manual3" type="description" xml:space="preserve">
-Press 'Apply' to execute the command.
 </_param>
 </page>
 
 
 <page name="layers" _gui-text="Layers">
 <_param name="instructions_layer" type="description"  appearance="header">Plot Individual Layers </_param>
-<_param  indent="1" name="instructions_layer2" type="description" xml:space="preserve">
+<_param indent="2" name="instructions_layer2" type="description">
 Normally, all paths, from all visible layers will be plotted.
-
+</_param><_param indent="2" name="instructions_layer3" type="description">
 You can also choose to plot a single layer or group of layers,
 for example to plot only a single color of ink.
-
+</_param><spacer /><_param indent="2" name="instructions_layer4" type="description">
 Press 'Apply' with this tab selected to plot only the visible
 layers whose names begin with the selected number, which can
 be in the range 0 to 1000.
-
+</_param><_param indent="2" name="instructions_layer5" type="description">
 For example, a layer named "5-red" will be plotted if the
 number 5 is selected, but layers named "guide lines", "55",
 or "2-black" will be skipped.
 </_param>
-<param indent="2" name="layer" type="int" min="0" max="1000" _gui-text="Plot only layers beginning with: ">1</param>
-<_param name="instructions_layer1" type="description" indent="1" xml:space="preserve">
+<param indent="4" name="layer" type="int" min="0" max="1000"
+_gui-text="Plot only layers beginning with: ">1</param>
+<spacer />
+<_param name="instructions_layer1" type="description" indent="2">
 Tip: Number of copies to plot and the time delay between them
 are given by parameters in the "Plot" tab.</_param>
-
 </page>
 
 
@@ -186,60 +227,36 @@ are given by parameters in the "Plot" tab.</_param>
 
 <_param name="instructions_resume1" type="description"  appearance="header">Pause and Resume</_param>
 
-<_param indent="1" name="instructions_resume2" type="description" xml:space="preserve"> 
+<_param indent="2" name="instructions_resume2" type="description"> 
 To pause a plot in progress, press the pause button on the
 left side of the AxiDraw. After pausing, you can change
 settings or perform any manual adjustments that are needed.
-
+</_param><_param indent="2" name="instructions_resume3" type="description">
 To resume plotting, or to simply cancel and return the
 carriage to the Home Corner, press 'Apply' with this tab
 selected.
-
+</_param><spacer /><_param indent="2" name="instructions_resume4" type="description">
 Plot progress is stored in the SVG file itself. If you plan
 to quit Inkscape and resume later, save the document first.
-
+</_param><_param indent="2" name="instructions_resume5" type="description">
 You can resume directly where you paused, or after using
 the Return to Home Corner command.
 </_param>
 
-<param name="resume_type" type="optiongroup" indent="2" _gui-text="Action on 'Apply':">
-<_option indent="1" value="ResumeNow" >Resume (From Home or where paused)</_option>
-<_option indent="1" value="home">Return to Home Corner (only)</_option>	
+<param name="resume_type" type="optiongroup" indent="4" _gui-text="Action on 'Apply':">
+<_option value="ResumeNow" >Resume (From Home or where paused)</_option>
+<_option value="home">Return to Home Corner (only)</_option>	
 </param>
 
 </page>
 
 
-<page name="sysinfo" _gui-text="Config">
-<_param name="instructions_config1" type="description" appearance="header">Hardware configuration</_param>
-<param name="model" type="optiongroup" appearance="minimal" indent="4" _gui-text="AxiDraw model:">
-<_option value="1">AxiDraw V2 or AxiDraw V3</_option>
-<_option value="2">AxiDraw V3/A3 or SE/A3</_option>
-<_option value="4">AxiDraw MiniKit</_option>
-<_option value="3">AxiDraw V3 XLX</_option>
 </param>
-<param name="port_config" type="optiongroup" appearance="minimal" indent="4" _gui-text="Machine selection:">
-<_option value="1">Use First AxiDraw located</_option>
-<_option value="2">Use AxiDraw named below</_option>
-<_option value="3">Plot to all AxiDraw units</_option>
-</param>
-<param indent="4" name="port" type="string" _gui-text="AxiDraw name or port"></param>
-
-<_param name="instructions_config2" type="description" appearance="header" xml:space="preserve">
-Check for updates</_param>
-
-<_param name="instructions_config3" type="description" indent="1" xml:space="preserve">
-Press 'Apply' to query the software and firmware versions and
-check online for available updates.
+<_param name="copyright" type="description" indent="5" xml:space="preserve"
+>Version 3.0.2      —      Copyright 2021 Evil Mad Scientist</_param>
 
 
 
-          --- Copyright 2021 Evil Mad Science LLC ---</_param>
-
-</page>
-
-
-</param>
 <effect needs-live-preview="false">
 <object-type>all</object-type>
 <effects-menu>

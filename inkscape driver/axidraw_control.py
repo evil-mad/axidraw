@@ -1,6 +1,4 @@
-# axidraw_control.py
-# Part of the AxiDraw driver for Inkscape
-# https://github.com/evil-mad/AxiDraw
+# coding=utf-8
 #
 # Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -17,8 +15,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
-#
-# Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
+
+"""
+axidraw_control.py
+
+Part of the AxiDraw driver for Inkscape
+https://github.com/evil-mad/AxiDraw
+
+Requires Python 3.6 or newer
+"""
 
 from importlib import import_module
 import logging
@@ -77,7 +82,10 @@ class AxiDrawWrapperClass( inkex.Effect ):
         if self.verbose:
             logger.setLevel(logging.INFO) # default is generally logging.WARNING
 
-        if self.options.mode in ["options", "timing"]:
+        if self.options.mode == "options" and self.options.submode=="sysinfo":
+            self.options.mode = "sysinfo"
+
+        if self.options.mode == "options":
             if self.params.options_message:
                 logger.error("Use the Plot or Layers tab to start a new "+
                             "plot or plot preview.\n\n" +
@@ -87,22 +95,21 @@ class AxiDrawWrapperClass( inkex.Effect ):
             return
         '''
         USB port use option (self.options.port_config)
-            
+
             Allowed values:
-            
+
             0: Default behavior:
                 * Use only the specified port ( self.options.port ) if given
                 * If no port is specified, use the first available AxiDraw
-                
+
             1: Use first AxiDraw located via USB, even if a port is given.
-            
+    
             2: Use only specified port, given by self.options.port
-            
+
             3: Plot to all attached AxiDraw units
-        
+
         '''
-        
-        
+
         if self.options.preview:
             self.options.port_config = 1 # Ignore port & multi-machine options in preview
 
@@ -185,33 +192,18 @@ class AxiDrawWrapperClass( inkex.Effect ):
         logger.info("plot_to_axidraw started, at port %s (%s)", port, prim)
 
         # Many plotting parameters to pass through:
-        ad.options.mode             = self.options.mode
-        ad.options.speed_pendown    = self.options.speed_pendown
-        ad.options.speed_penup      = self.options.speed_penup
-        ad.options.accel            = self.options.accel
-        ad.options.pen_pos_up       = self.options.pen_pos_up
-        ad.options.pen_pos_down     = self.options.pen_pos_down
-        ad.options.pen_rate_raise   = self.options.pen_rate_raise
-        ad.options.pen_rate_lower   = self.options.pen_rate_lower
-        ad.options.pen_delay_up     = self.options.pen_delay_up
-        ad.options.pen_delay_down   = self.options.pen_delay_down
-        ad.options.no_rotate        = self.options.no_rotate
-        ad.options.const_speed      = self.options.const_speed
-        ad.options.report_time      = self.options.report_time
-        ad.options.manual_cmd       = self.options.manual_cmd
-        ad.options.walk_dist        = self.options.walk_dist
-        ad.options.layer            = self.options.layer
-        ad.options.copies           = self.options.copies
-        ad.options.page_delay       = self.options.page_delay
-        ad.options.preview          = self.options.preview
-        ad.options.rendering        = self.options.rendering
-        ad.options.model            = self.options.model
-        ad.options.port             = port
-        ad.options.setup_type       = self.options.setup_type
-        ad.options.resume_type      = self.options.resume_type
-        ad.options.auto_rotate      = self.options.auto_rotate
-        ad.options.resolution       = self.options.resolution
-        ad.options.reordering       = self.options.reordering
+
+
+        selected_options = {item: self.options.__dict__[item] for item in ['mode', 
+            'speed_pendown', 'speed_penup',  'accel', 'pen_pos_up', 'pen_pos_down',
+            'pen_rate_raise', 'pen_rate_lower', 'pen_delay_up', 'pen_delay_down',
+            'no_rotate', 'const_speed', 'report_time', 'manual_cmd', 'walk_dist',
+            'layer', 'copies', 'page_delay', 'preview', 'rendering', 'model',
+            'setup_type', 'resume_type', 'auto_rotate', 'resolution',   'reordering',
+            'random_start', ]}
+        ad.options.__dict__.update(selected_options)
+
+        ad.options.port = port
 
         # Special case for this wrapper function:
         # If the port is None, change the port config option
@@ -220,7 +212,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
             ad.options.port_config = 1 # Use first available AxiDraw
         else:
             ad.options.port_config = 2 # Use AxiDraw specified by port
-        
+
         ad.document = self.document 
         ad.original_document = self.document
 
@@ -229,7 +221,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
 
         # Plot the document using axidraw.py
         ad.effect()
-        
+
         if primary:
             # Collect output from axidraw.py 
             self.document = ad.document

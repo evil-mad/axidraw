@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-  <_name>Plot Optimization</_name>
+  <_name>Plot Optimization (Legacy)</_name>
   <id>command.evilmadscientist.axidraw.reorder</id>
   <dependency type="executable" location="extensions">axidraw_svg_reorder.py</dependency>
   <dependency type="executable" location="extensions">inkex.py</dependency>

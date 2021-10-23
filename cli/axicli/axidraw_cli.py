@@ -73,18 +73,18 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface 2.7.5"
+cli_version = "AxiDraw Command Line Interface 3.0.2"
 
 quick_help = '''
     Basic syntax to plot a file:      axicli svg_in [OPTIONS]
 
     For a quick list of options, use: axicli --help
 
-    To display current version, use:  axicli version
+    To display current version, use:  axicli --version
 
-    For the complete user guide, please see: https://axidraw.com/doc/cli_api/
+    For full user guide, please see: https://axidraw.com/doc/cli_api/
 
-    (c) 2020 Evil Mad Scientist Laboratories
+    (c) 2021 Evil Mad Scientist Laboratories
         '''
 
 def axidraw_CLI(dev = False):
@@ -103,7 +103,7 @@ def axidraw_CLI(dev = False):
     parser.add_argument("-m","--mode", \
              metavar='MODENAME', type=str, \
              help="Mode. One of: [plot, layers, align, toggle, manual, " \
-             + "sysinfo, version, res_plot, res_home, reorder]. Default: plot.")
+             + "sysinfo, version, res_plot, res_home, reorder (deprecated)]. Default: plot.")
 
     parser.add_argument("-s","--speed_pendown", \
             metavar='SPEED',  type=int, \
@@ -155,9 +155,9 @@ def axidraw_CLI(dev = False):
 
     parser.add_argument("-M","--manual_cmd", \
             metavar='COMMAND', type=str, \
-            help="Manual command. One of: [ebb_version, lower_pen, raise_pen, "\
+            help="Manual command. One of: [fw_version, lower_pen, raise_pen, "\
             + "walk_x, walk_y, enable_xy, disable_xy, bootload, strip_data, " \
-            + "read_name, list_names,  write_name]. Default: ebb_version")
+            + "read_name, list_names,  write_name]. Default: fw_version")
 
     parser.add_argument("-w","--walk_dist", \
             metavar='DISTANCE', type=float, \
@@ -185,15 +185,20 @@ def axidraw_CLI(dev = False):
             + "1: Pen-down movement. 2: Pen-up movement. 3: All movement.")
 
     parser.add_argument("-G","--reordering", \
-            metavar='GROUP_CODE', type=int, \
-            help="SVG reordering group handling option (0-3)."\
-            + "0: No reordering. 1: Reorder but preserve groups. " \
-            + "2: Reorder within groups. 3: Break apart. Default: 0")
+            metavar='REORDERING', type=int, \
+            help="SVG reordering option (0-2)."\
+            + " 0: None; Preserve order of objects given in SVG file."\
+            + " 1: Reorder objects, preserving path orientation."\
+            + " 2: Reorder objects, allow path reversal.")
+
+    parser.add_argument("-Y","--random_start", \
+            action="store_const", const='True', \
+            help="Randomize start position of closed paths.")
 
     parser.add_argument("-L","--model",\
             metavar='MODELCODE', type=int,\
-            help="AxiDraw Model (1-3). 1: AxiDraw V2 or V3. " \
-            + "2:AxiDraw V3/A3. 3: AxiDraw V3 XLX.")
+            help="AxiDraw Model (1-4). 1: AxiDraw V2 or V3. " \
+            + "2: AxiDraw V3/A3. 3: AxiDraw V3 XLX. 4: AxiDraw MiniKit")
 
     parser.add_argument("-p","--port",\
             metavar='PORTNAME', type=str,\
@@ -202,20 +207,27 @@ def axidraw_CLI(dev = False):
     parser.add_argument("-P","--port_config",\
             metavar='PORTCODE', type=int,\
             help="Port use code (0-3)."\
-            +" 0: Plot to first unit found, unless port is specified"\
-            + "1: Plot to first AxiDraw Found. "\
-            + "2: Plot to specified AxiDraw. "\
-            + "3: Plot to all AxiDraw units. ")
+            + " 0: Plot to first unit found, unless port is specified"\
+            + " 1: Plot to first AxiDraw Found."\
+            + " 2: Plot to specified AxiDraw."\
+            + " 3: Plot to all AxiDraw units.")
 
     parser.add_argument("-o","--output_file",\
             metavar='FILE', \
             help="Optional SVG output file name")
+
+    parser.add_argument("--version",
+            action='store_const', const='True',
+            help="Output the version of axicli")
+
     args = parser.parse_args()
 
     # Handle trivial cases
     from pyaxidraw import axidraw
     ad = axidraw.AxiDraw()
-    utils.handle_info_cases(args.svg_in, quick_help, cli_version, "AxiDraw", ad.version_string)
+
+    info_mode = "version" if args.version else args.svg_in
+    utils.handle_info_cases(info_mode, quick_help, cli_version, "AxiDraw", ad.version_string)
 
     if args.mode == "options":
         quit()
@@ -253,7 +265,8 @@ def axidraw_CLI(dev = False):
 
         print("Re-ordering SVG File.")
         print("This can take a while for large files.")
-        
+        print("(Note: reorder mode is deprecated and will be removed in a future version.)")
+
         exit_status.run(adc.effect)    # Sort the document
 
         if args.output_file:
@@ -298,9 +311,10 @@ def axidraw_CLI(dev = False):
     # assign command line options to adc's options.
     # additionally, look inside the config to see if any command line options were set there
     option_names = ["mode", "speed_pendown", "speed_penup", "accel", "pen_pos_down", "pen_pos_up",
-                    "pen_rate_lower", "pen_rate_raise", "pen_delay_down", "pen_delay_up", "reordering",
-                    "no_rotate", "const_speed", "report_time", "manual_cmd", "walk_dist", "layer",
-                    "copies", "page_delay", "preview", "rendering", "model", "port", "port_config"]
+                    "pen_rate_lower", "pen_rate_raise", "pen_delay_down", "pen_delay_up",
+                    "random_start", "reordering", "no_rotate", "const_speed", "report_time",
+                    "manual_cmd", "walk_dist", "layer", "copies", "page_delay", "preview",
+                    "rendering", "model", "port", "port_config"]
     utils.assign_option_values(adc.options, args, [config_dict], option_names)
 
 #     The following options are deprecated and should not be used.

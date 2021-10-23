@@ -7,9 +7,9 @@
 
 <param name="tab" type="notebook">
   <page name="splash" _gui-text="Hatch Fill">
-  <_param name="Header" type="description" xml:space="preserve">
-Hatch Fill: An extension to fill all or selected closed figures in your
-drawing with paths consisting of back-and-forth hatch line.
+  <_param name="Header" type="description">
+An extension to fill all (or selected) closed figures in your
+drawing with paths consisting of back-and-forth hatch lines.
 </_param>
 
 <param name="hatchSpacing" type="float" min="0.001" max="1000" indent="2"
@@ -22,13 +22,15 @@ drawing with paths consisting of back-and-forth hatch line.
     <_option value="4">inch</_option>
 </param>
 
-<param name="hatchAngle" type="float" min="-360" max="360" indent="4" _gui-text="Hatch Angle (degrees)">45</param>
+<param name="hatchAngle" type="float" min="-360" max="360" indent="4"
+_gui-text="Hatch Angle (degrees)">45</param>
 <param name="crossHatch" type="boolean" indent="4" _gui-text="Crosshatch">false</param>
 
 <separator />
 
 <param name="connect_bool" type="boolean"  indent="2" _gui-text="Connect Nearby Ends">true</param>
-<param name="hatchScope" type="float" min="1.1" max="5.0"  indent="2" _gui-text="Range of end connections (default: 3)">3.0</param>
+<param name="hatchScope" type="float" min="1.1" max="5.0"  indent="2"
+_gui-text="Range of end connections (default: 3)">3.0</param>
 
 <separator />
 <param name="inset_bool" type="boolean"  indent="2" _gui-text="Inset Fill from Edges">true</param>
@@ -40,35 +42,29 @@ drawing with paths consisting of back-and-forth hatch line.
     _gui-text="Tolerance (default: 2.0)">2.0</param>
 
 </page>
-<page name="info" _gui-text="More info...">
-<param name="aboutpage" type="description" xml:space="preserve">
-Hatch spacing is the distance between hatch lines, measured in selected
-units. Hatch angle is in degrees from horizontal; e.g., 90 for vertical.
-
-The Crosshatch option will add a second set of hatches, perpendicular
-to the first.
-
-The Connect Nearby Ends option will join nearby line ends with a
-smooth curve, giving a differnt appearance and reducing the number of
-pen lifts when using robotic tools like pen plotters. The Range
-parameter sets the distance (in hatch spacing) over which end
-connections may be made. Large values may result in hatches where you
-don't want them.
-
-The Inset Fill from Edges option allows you to hold back the hatches
-away from the edge of your original object. This can allow you to more
-reliably "color inside the lines".
-
-The Tolerance parameter affects how precisely the hatches try
-to fill the input paths.
-
-
-Hatches will have the same stroke color and width as the original
-object. When filling more than one object, the hatches will be grouped
-with their original (filled) objects.
-
-
-v2.4.0, August 8, 2021</_param> 
+<page name="info" _gui-text="Help">
+<param name="aboutpage_1" type="description">
+Hatch spacing is the distance between hatch lines, measured in selected units. Hatch angle is in
+degrees from horizontal; e.g., 90 for vertical.
+</param><param name="aboutpage_2" type="description">
+The Crosshatch option will add a second set of hatches, perpendicular to the first.
+</param><param name="aboutpage_3" type="description">
+The Connect Nearby Ends option will join nearby line ends with a smooth curve, giving a different
+appearance and reducing the number of pen lifts when using robotic tools like pen plotters. The
+Range parameter sets the distance (in hatch spacing) over which end connections may be made. Large
+values may result in hatches where you don't want them.
+</param><param name="aboutpage_4" type="description">
+The Inset Fill from Edges option allows you to hold back the hatches away from the edge of your
+original object. This can allow you to more reliably "color inside the lines".
+</param><param name="aboutpage_5" type="description">
+The Tolerance parameter affects how precisely the hatches try to fill the input paths.
+</param><param name="aboutpage_6" type="description">
+Hatches will have the same stroke color and width as the original object. When filling more than one
+object, the hatches will be grouped with their original (filled) objects.
+</param>
+<separator />
+<param name="aboutpage_7" type="description"  indent="2">
+v2.4.1. Copyright 2021, Evil Mad Scientist</_param>
  
   </page>
   </param>

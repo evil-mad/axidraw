@@ -20,7 +20,7 @@
 """
 A utility extension to assist with importing AI SVG files.
 
-Version 1.0
+Version 1.1
 """
 
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink

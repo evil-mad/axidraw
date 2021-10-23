@@ -2,7 +2,7 @@
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
       <name>Process Illustrator SVG</name>
       <id>command.evilmadscientist.process_ai</id>
-      <label appearance="header" indent="2">Process Illustrator SVG v 1.0</label>
+      <label appearance="header" indent="2">Process Illustrator SVG v 1.1</label>
       <label xml:space="preserve" indent="1">
 Apply this extension after opening an SVG file
     exported from Adobe Illustrator to:
@@ -17,6 +17,9 @@ Apply this extension after opening an SVG file
      <spacer/>
       <label appearance="header" indent="2">How to export SVG from Illustrator</label>
       <label xml:space="preserve" indent="1">For best results when exporting from AI:
+ * When naming layers in AI, either:
+      * Use just a number as the layer name, or
+      * Include a space in each name
  * Use File > Export > Export As...
  * Check the "Use Artboards" option
  * Select the SVG format option and click Export

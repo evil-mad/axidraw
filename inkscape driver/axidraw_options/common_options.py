@@ -117,6 +117,11 @@ def core_options(parser, config):
                        default=config["auto_rotate"], \
                        help="Boolean: Auto select portrait vs landscape")
 
+    options.add_option("--random_start",\
+                       type="inkbool", action="store", dest="random_start",\
+                       default=config["random_start"], \
+                       help="Boolean: Randomize start locations of closed paths")
+
     options.add_option("--reordering",\
                        type="int", action="store", dest="reordering",\
                        default=config["reordering"],\
@@ -136,7 +141,12 @@ def core_mode_options(parser, config):
                        action="store", type="string", dest="mode",\
                        default="plot", \
                        help="Mode or GUI tab. One of: [plot, layers, align, toggle, manual"\
-                       + ", sysinfo, version,  res_plot, res_home]. Default: plot.")
+                       + ", sysinfo, version, res_plot, res_home]. Default: plot.")
+
+    options.add_option("--submode",\
+                       action="store", type="string", dest="submode",\
+                       default="none", \
+                       help="Secondary GUI tab.")
 
     options.add_option("--manual_cmd",\
                        type="string", action="store", dest="manual_cmd",\

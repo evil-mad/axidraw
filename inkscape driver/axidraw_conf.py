@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 2.7.5, dated 2021-08-11.
+# Version 3.0.1, dated 2021-10-13.
 #
 # Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -45,9 +45,9 @@ pen_rate_lower = 50     # Rate of lowering pen (1-100)
 pen_delay_up = 0        # Optional delay after pen is raised (ms)
 pen_delay_down = 0      # Optional delay after pen is lowered (ms)
 
-const_speed = False     # Use constant velocity mode when pen is down.
-report_time = False     # Report time elapsed.
-default_layer = 1       # Layer(s) selected for layers mode (1-1000).
+const_speed = False     # Use constant velocity mode when pen is down
+report_time = False     # Report time elapsed
+default_layer = 1       # Layer(s) selected for layers mode (1-1000)
 
 copies = 1              # Copies to plot, or 0 for continuous plotting. Default: 1
 page_delay = 15         # Optional delay between copies (s).
@@ -59,28 +59,29 @@ rendering = 3           # Preview mode rendering option (0-3):
                             # 2: Render only pen-up movement
                             # 3: Render all movement (Default)
 
-model = 1               # AxiDraw Model (1-4). 
-                            # 1: AxiDraw V2 or V3 (Default).
-                            # 2: AxiDraw V3/A3 or SE/A3.
-                            # 3: AxiDraw V3 XLX.
-                            # 4: AxiDraw MiniKit.
+model = 1               # AxiDraw Model (1-4)
+                            # 1: AxiDraw V2 or V3 (Default)
+                            # 2: AxiDraw V3/A3 or SE/A3
+                            # 3: AxiDraw V3 XLX
+                            # 4: AxiDraw MiniKit
                             
-port = None             # Serial port or named AxiDraw to use. 
-                            # None (Default) will plot to first unit located.
+port = None             # Serial port or named AxiDraw to use
+                            # None (Default) will plot to first unit located
 
 port_config = 0         # Serial port behavior option (0-2)
-                            # 0: Plot to first unit found, unless port is specified (Default),
+                            # 0: Plot to first unit found, unless port is specified (Default)
                             # 1: Plot to first AxiDraw unit located
-                            # 2: Plot to a specific AxiDraw only, given by port.
+                            # 2: Plot to a specific AxiDraw only, given by port
 
 auto_rotate = True      # Auto-select portrait vs landscape orientation
                             # Default: True
 
-reordering = 0          # Plot optimization option for how groups are handled
-                            # 0: Preserve order of objects given in SVG file (Default).
-                            # 1: Reorder objects, preserving groups
-                            # 2: Reorder objects, reordering within each group
-                            # 3: Reorder all objects, breaking apart groups
+reordering = 0          # Plot optimization option
+                            # 0: Preserve order of objects given in SVG file (Default)
+                            # 1: Reorder objects, preserving path orientation
+                            # 2: Reorder objects, allow path reversal
+
+random_start = False    # Randomize start locations of closed paths. (Default: False)
 
 resolution = 1          # Resolution: (1-2):
                             # 1: High resolution (smoother, slightly slower) (Default)
@@ -88,7 +89,7 @@ resolution = 1          # Resolution: (1-2):
 
 # Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
 # Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
-# not along the XY axes of the machine. This parameter chooses 8X or 16X microstepping on the motors.
+# not along the XY axes of the machine. This parameter chooses 8X or 16X motor microstepping.
 
 '''
 Additional user-adjustable control parameters:
@@ -120,7 +121,7 @@ auto_rotate_ccw = True  # If True (default), auto-rotate is counter-clockwise wh
                         #   If False, auto-rotate direction is clockwise.
 
 options_message = True  # If True (default), display an advisory message if Apply is clicked
-                        #   in the AxiDraw Control GUI, while in the Timing or Options tab.
+                        #   in the AxiDraw Control GUI, while in tabs that have no effect.
                         #   (Clicking Apply on these tabs has no effect other than the message.)
                         #   This message can prevent the situation where one clicks Apply on the
                         #   Options tab and then waits a few minutes before realizing that
@@ -202,9 +203,9 @@ skip_voltage_check = False  # Set to True if you would like to disable EBB input
 clip_to_page = True  # Clip plotting area to SVG document size. Default: True
 
 # the tolerance for determining when the bezier has been segmented enough to plot:
-bezier_segmentation_tolerance = 0.02 / smoothness 
+bezier_segmentation_tolerance = 0.02 / smoothness
 
-# Tolerance for determining which segments can be merged:
-#  Larger values of segment_supersample_tolerance
-#  give smoother plotting along paths that began with too many vertices.
-segment_supersample_tolerance = bezier_segmentation_tolerance / 16 
+# Tolerance for merging nearby vertices:
+#  Larger values of segment_supersample_tolerance give smoother plotting along paths that
+#  were created with too many vertices. A value of 0 will disable supersampling.
+segment_supersample_tolerance = bezier_segmentation_tolerance / 16

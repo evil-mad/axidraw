@@ -73,7 +73,6 @@ replacement_setup(
     entry_points={
         'console_scripts': [
             'axicli = axicli.__main__:axidraw_CLI',
-            'htacli = axicli.__main__:hta_CLI',
         ]
     },
 )
