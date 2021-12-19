@@ -49,6 +49,8 @@ These functions include:
 
 """
 
+import rtree
+import time
 import random
 import copy
 
@@ -77,6 +79,17 @@ def connect_nearby_ends(digest, reverse, min_gap):
         path_count = len(layer_item.paths)
         if path_count < 2:
             continue # Move on to next layer
+        
+        # Inflate point by min_gap to xmin, ymin, xmax, ymax rectangular bounds
+        point_bounds = lambda x, y: (x - min_gap, y - min_gap, x + min_gap, y + min_gap)
+        
+        print('Creating spatial index...'); start = time.time()
+        spatial_index = rtree.index.Index()
+        for (i, path) in enumerate(layer_item.paths):
+            (x1, y1), (x2, y2) = path.first_point(), path.last_point()
+            spatial_index.insert(i, point_bounds(x1, y1))
+            spatial_index.insert(path_count+i, point_bounds(x2, y2))
+        print(f'Spatial index done for {path_count} paths in {time.time() - start:.2f}sec')
 
         paths_done = []
 
