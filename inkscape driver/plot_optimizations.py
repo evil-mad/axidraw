@@ -101,10 +101,19 @@ def connect_nearby_ends(digest, reverse, min_gap):
                 i_start = path_i.first_point()
             i_end = path_i.last_point()
 
+            matches = list(spatial_index.intersection(point_bounds(*i_end)))
+            if reverse:
+                matches += list(spatial_index.intersection(point_bounds(*i_start)))
+            
             index_j = index_i + 1
-
-            while index_j < path_count:
+            
+            for maybe in matches:
                 match_found = False
+                index_j = maybe % path_count
+                
+                if index_j <= index_i:
+                    continue
+
                 j_start = layer_item.paths[index_j].first_point()
                 if reverse:
                     j_end = layer_item.paths[index_j].last_point()
