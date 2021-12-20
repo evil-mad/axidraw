@@ -59,16 +59,16 @@ class Index:
     def intersection(self, bbox):
         ''' Get a set of IDs for a given bounding box
         '''
-        ids = set()
+        ids, (x1, y1, x2, y2) = set(), bbox
         
         for (i, (xmin, ymin, xmax, ymax)) in self.bboxes:
-            is_disjoint = bbox[0] > xmax or bbox[1] > ymax or bbox[2] < xmin or bbox[3] < ymin
+            is_disjoint = x1 > xmax or y1 > ymax or x2 < xmin or y2 < ymin
             if not is_disjoint:
                 ids.add(i)
         
-        for subtree in self.subtrees:
-            is_disjoint = bbox[0] > subtree.xmax or bbox[1] > subtree.ymax or bbox[2] < subtree.xmin or bbox[3] < subtree.ymin
+        for t in self.subtrees:
+            is_disjoint = x1 > t.xmax or y1 > t.ymax or x2 < t.xmin or y2 < t.ymin
             if not is_disjoint:
-                ids |= subtree.intersection(bbox)
+                ids |= t.intersection(bbox)
         
         return ids
