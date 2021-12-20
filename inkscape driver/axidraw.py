@@ -748,9 +748,9 @@ class AxiDraw(inkex.Effect):
         """
         allow_reverse = self.options.reordering > 1
 
-        print('plot_optimizations.connect_nearby_ends()...'); start = time.time()
+        logging.debug('plot_optimizations.connect_nearby_ends()...'); start = time.time()
         plot_optimizations.connect_nearby_ends(digest, allow_reverse, self.params.min_gap)
-        print(f'plot_optimizations.connect_nearby_ends done in {time.time() - start:.2f}sec')
+        logging.debug(f'plot_optimizations.connect_nearby_ends done in {time.time() - start:.2f}sec')
 
         if self.options.random_start:
             plot_optimizations.randomize_start(digest, self.svg_rand_seed)

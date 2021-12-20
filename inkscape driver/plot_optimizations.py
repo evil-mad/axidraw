@@ -52,6 +52,7 @@ These functions include:
 import time
 import random
 import copy
+import logging
 
 from . import rtree
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
@@ -83,7 +84,7 @@ def connect_nearby_ends(digest, reverse, min_gap):
         # Inflate point by min_gap to xmin, ymin, xmax, ymax rectangular bounds
         point_bounds = lambda x, y: (x - min_gap, y - min_gap, x + min_gap, y + min_gap)
         
-        print('Creating spatial index...'); start = time.time()
+        logging.debug('Creating spatial index...'); start = time.time()
         spatial_index = rtree.Index(
             [
                 (index_i, point_bounds(*path.first_point()))
@@ -93,7 +94,7 @@ def connect_nearby_ends(digest, reverse, min_gap):
                 for (index_i, path) in enumerate(layer_item.paths)
             ]
         )
-        print(f'Spatial index done for {path_count} paths in {time.time() - start:.2f}sec')
+        logging.debug(f'Spatial index done for {path_count} paths in {time.time() - start:.2f}sec')
 
         paths_done = []
 
@@ -149,6 +150,7 @@ def connect_nearby_ends(digest, reverse, min_gap):
                         path_j.subpaths[0] = path_i.subpaths[0] + path_j.subpaths[0]
 
                     match_found = True
+                    logging.debug(f'Join {index_j} to {index_i}')
                     break # End loop over index_j
 
                 index_j += 1 # No paths to join
