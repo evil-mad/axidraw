@@ -85,10 +85,9 @@ def connect_nearby_ends(digest, reverse, min_gap):
         
         print('Creating spatial index...'); start = time.time()
         spatial_index = rtree.index.Index()
-        for (i, path) in enumerate(layer_item.paths):
-            (x1, y1), (x2, y2) = path.first_point(), path.last_point()
-            spatial_index.insert(i, point_bounds(x1, y1))
-            spatial_index.insert(path_count+i, point_bounds(x2, y2))
+        for (index_i, path) in enumerate(layer_item.paths):
+            spatial_index.insert(index_i, point_bounds(*path.first_point()))
+            spatial_index.insert(index_i + path_count, point_bounds(*path.last_point()))
         print(f'Spatial index done for {path_count} paths in {time.time() - start:.2f}sec')
 
         paths_done = []
@@ -97,19 +96,15 @@ def connect_nearby_ends(digest, reverse, min_gap):
         while index_i < (path_count - 1):
 
             path_i = layer_item.paths[index_i]
+            i_end = path_i.last_point()
+            i_matches = list(spatial_index.intersection(point_bounds(*i_end)))
             if reverse:
                 i_start = path_i.first_point()
-            i_end = path_i.last_point()
-
-            matches = list(spatial_index.intersection(point_bounds(*i_end)))
-            if reverse:
-                matches += list(spatial_index.intersection(point_bounds(*i_start)))
+                i_matches += list(spatial_index.intersection(point_bounds(*i_start)))
             
-            index_j = index_i + 1
-            
-            for maybe in matches:
+            for index_maybe in i_matches:
                 match_found = False
-                index_j = maybe % path_count
+                index_j = index_maybe % path_count
                 
                 if index_j <= index_i:
                     continue
