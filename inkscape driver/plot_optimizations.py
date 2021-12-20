@@ -49,11 +49,11 @@ These functions include:
 
 """
 
-import rtree
 import time
 import random
 import copy
 
+from . import rtree
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
 path_objects = from_dependency_import('axidrawinternal.path_objects')
 plot_utils = from_dependency_import('plotink.plot_utils')
@@ -84,10 +84,15 @@ def connect_nearby_ends(digest, reverse, min_gap):
         point_bounds = lambda x, y: (x - min_gap, y - min_gap, x + min_gap, y + min_gap)
         
         print('Creating spatial index...'); start = time.time()
-        spatial_index = rtree.index.Index()
-        for (index_i, path) in enumerate(layer_item.paths):
-            spatial_index.insert(index_i, point_bounds(*path.first_point()))
-            spatial_index.insert(index_i + path_count, point_bounds(*path.last_point()))
+        spatial_index = rtree.Index(
+            [
+                (index_i, point_bounds(*path.first_point()))
+                for (index_i, path) in enumerate(layer_item.paths)
+            ] + [
+                (index_i + path_count, point_bounds(*path.last_point()))
+                for (index_i, path) in enumerate(layer_item.paths)
+            ]
+        )
         print(f'Spatial index done for {path_count} paths in {time.time() - start:.2f}sec')
 
         paths_done = []
