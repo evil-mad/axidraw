@@ -30,6 +30,13 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+"""
+rtree.py
+
+Minimal R-tree spatial index class for calculating intersecting regions
+"""
+
+
 import math
 
 class Index:
@@ -59,20 +66,20 @@ class Index:
         # An original bbox may be present in more than one list
         sub_bboxes = [
             [
-                (i, (x1, y1, x2, y2)) for (i, (x1, y1, x2, y2)) in bboxes
-                if x1 < center_x and y1 < center_y
+                (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
+                if x_1 < center_x and y_1 < center_y
             ],
             [
-                (i, (x1, y1, x2, y2)) for (i, (x1, y1, x2, y2)) in bboxes
-                if x2 > center_x and y1 < center_y
+                (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
+                if x_2 > center_x and y_1 < center_y
             ],
             [
-                (i, (x1, y1, x2, y2)) for (i, (x1, y1, x2, y2)) in bboxes
-                if x1 < center_x and y2 > center_y
+                (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
+                if x_1 < center_x and y_2 > center_y
             ],
             [
-                (i, (x1, y1, x2, y2)) for (i, (x1, y1, x2, y2)) in bboxes
-                if x2 > center_x and y2 > center_y
+                (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
+                if x_2 > center_x and y_2 > center_y
             ],
         ]
 
@@ -87,16 +94,16 @@ class Index:
     def intersection(self, bbox):
         ''' Get a set of IDs for a given bounding box
         '''
-        ids, (x1, y1, x2, y2) = set(), bbox
+        ids, (x_1, y_1, x_2, y_2) = set(), bbox
 
         for (i, (xmin, ymin, xmax, ymax)) in self.bboxes:
-            is_disjoint = x1 > xmax or y1 > ymax or x2 < xmin or y2 < ymin
+            is_disjoint = x_1 > xmax or y_1 > ymax or x_2 < xmin or y_2 < ymin
             if not is_disjoint:
                 ids.add(i)
 
-        for t in self.subtrees:
-            is_disjoint = x1 > t.xmax or y1 > t.ymax or x2 < t.xmin or y2 < t.ymin
+        for subt in self.subtrees:
+            is_disjoint = x_1 > subt.xmax or y_1 > subt.ymax or x_2 < subt.xmin or y_2 < subt.ymin
             if not is_disjoint:
-                ids |= t.intersection(bbox)
+                ids |= subt.intersection(bbox)
 
         return ids
