@@ -19,7 +19,7 @@
 """
 plot_optimizations.py
 
-Version 1.0.0   -   2021-10-19
+Version 1.1.0   -   2021-12-21
 
 This module provides some plot optimization tools.
 
@@ -52,6 +52,7 @@ These functions include:
 import random
 import copy
 
+from . import rtree
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
 path_objects = from_dependency_import('axidrawinternal.path_objects')
 plot_utils = from_dependency_import('plotink.plot_utils')
@@ -77,6 +78,19 @@ def connect_nearby_ends(digest, reverse, min_gap):
         path_count = len(layer_item.paths)
         if path_count < 2:
             continue # Move on to next layer
+        
+        # Inflate point by min_gap to xmin, ymin, xmax, ymax rectangular bounds
+        point_bounds = lambda x, y: (x - min_gap, y - min_gap, x + min_gap, y + min_gap)
+
+        spatial_index = rtree.Index(
+            [
+                (index_i, point_bounds(*path.first_point()))
+                for (index_i, path) in enumerate(layer_item.paths)
+            ] + [
+                (index_i + path_count, point_bounds(*path.last_point()))
+                for (index_i, path) in enumerate(layer_item.paths)
+            ]
+        )
 
         paths_done = []
 
@@ -84,14 +98,19 @@ def connect_nearby_ends(digest, reverse, min_gap):
         while index_i < (path_count - 1):
 
             path_i = layer_item.paths[index_i]
+            i_end = path_i.last_point()
+            i_matches = list(spatial_index.intersection(point_bounds(*i_end)))
             if reverse:
                 i_start = path_i.first_point()
-            i_end = path_i.last_point()
-
-            index_j = index_i + 1
-
-            while index_j < path_count:
+                i_matches += list(spatial_index.intersection(point_bounds(*i_start)))
+            
+            for index_maybe in i_matches:
                 match_found = False
+                index_j = index_maybe % path_count
+
+                if index_j <= index_i:
+                    continue
+
                 j_start = layer_item.paths[index_j].first_point()
                 if reverse:
                     j_end = layer_item.paths[index_j].last_point()
