@@ -39,21 +39,23 @@ class Digest:
         self.layers = [layer]
     
 layer1 = Layer([
-    Path((0, 2), (0, 3)),
     Path((0, 0), (0, 1)),
+    Path((0, 2), (0, 3)),
 ])
-start = time.time()
+start, raw_distance1 = time.time(), layer1.penup_distance()
 plot_optimizations.reorder(Digest(layer1), False)
 print(f'1. Done in {time.time() - start:.3f}sec')
+assert layer1.penup_distance() <= raw_distance1
 assert layer1.penup_distance() == 1.0
     
 layer2 = Layer([
-    Path((0, 0), (0, 1)),
     Path((0, 2), (0, 3)),
+    Path((0, 0), (0, 1)),
 ])
-start = time.time()
+start, raw_distance2 = time.time(), layer2.penup_distance()
 plot_optimizations.reorder(Digest(layer2), False)
 print(f'2. Done in {time.time() - start:.3f}sec')
+assert layer2.penup_distance() <= raw_distance2
 assert layer2.penup_distance() == 1.0
     
 layer3 = Layer([
@@ -61,12 +63,14 @@ layer3 = Layer([
     Path((0, 3), (0, 2)),
 ])
 
-start = time.time()
+start, raw_distance3 = time.time(), layer3.penup_distance()
 plot_optimizations.reorder(Digest(layer3), False)
 print(f'3a. Done in {time.time() - start:.3f}sec')
+assert layer3.penup_distance() <= raw_distance3
 assert layer3.penup_distance() == 2.0
 
 start = time.time()
 plot_optimizations.reorder(Digest(layer3), True)
 print(f'3b. Done in {time.time() - start:.3f}sec')
+assert layer3.penup_distance() <= raw_distance3
 assert layer3.penup_distance() == 1.0

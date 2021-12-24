@@ -50,10 +50,12 @@ These functions include:
 """
 
 import random
+import time
 import copy
 
 from . import rtree
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
+from hilbertcurve import hilbertcurve
 path_objects = from_dependency_import('axidrawinternal.path_objects')
 plot_utils = from_dependency_import('plotink.plot_utils')
 
@@ -218,6 +220,24 @@ def reorder(digest, reverse):
 
         if available_count < 1:
             continue # No paths to sort; move on to next layer
+        
+        start = time.time()
+        curve = hilbertcurve.HilbertCurve(3, 2)
+        distance_points = []
+        for (index, path) in enumerate(available_paths):
+            distance_points.append((
+                curve.distance_from_point(path.first_point()),
+                index,
+            ))
+            if reverse:
+                # We can start at the ends of paths so note those too
+                distance_points.append((
+                    curve.distance_from_point(path.last_point()),
+                    index + available_count,
+                ))
+        spatial_index = [point_index for (_, point_index) in sorted(distance_points)]
+        logging.debug(f'Built spatial index in {time.time() - start:.3f}sec')
+        print('spatial_index:', spatial_index)
 
         rev_path = False    # Flag: Should the current poly be reversed, if it is the best?
         rev_best = False    # Flag for if the "best" poly should be reversed
