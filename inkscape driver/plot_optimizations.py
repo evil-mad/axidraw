@@ -256,22 +256,28 @@ def reorder(digest, reverse):
             
             if len(spatial_index) == 0:
                 break
-
-            candidate_i1 = spatial_index[current_pos-1]
-            candidate_i2 = spatial_index[current_pos]
-            #print('--> candidate indexes:', candidate_i1, candidate_i2)
             
-            if candidate_i1 >= available_count:
-                dist1 = plot_utils.square_dist(current_path.last_point(), available_paths[candidate_i1 % available_count].last_point())
-            else:
-                dist1 = plot_utils.square_dist(current_path.last_point(), available_paths[candidate_i1].first_point())
+            candidate_indexes = spatial_index[current_pos:current_pos+5]
+            candidate_indexes += spatial_index[max(0, current_pos-1):current_pos-5:-1]
             
-            if candidate_i2 >= available_count:
-                dist2 = plot_utils.square_dist(current_path.last_point(), available_paths[candidate_i2 % available_count].last_point())
-            else:
-                dist2 = plot_utils.square_dist(current_path.last_point(), available_paths[candidate_i2].first_point())
+            #print('--> candidate indexes:', candidate_indexes)
+            
+            candidate_distances = sorted([
+                (
+                    plot_utils.square_dist(
+                        current_path.last_point(),
+                        available_paths[i % available_count].last_point()
+                        if i >= available_count
+                        else available_paths[i % available_count].first_point(),
+                    ),
+                    i
+                )
+                for i in set(candidate_indexes)
+            ])
 
-            current_index = candidate_i1 if (dist1 <= dist2) else candidate_i2
+            #print('--> candidate distances:', candidate_distances)
+            
+            current_index = candidate_distances[0][1]
             #print('--> chosen index:', current_index)
             spatial_index.remove(current_index)
             if reverse and current_index < available_count:
@@ -279,57 +285,4 @@ def reorder(digest, reverse):
             elif reverse and current_index >= available_count:
                 spatial_index.remove(current_index - available_count)
         
-        layer_item.paths = copy.copy(sorted_paths)
-
-        return
-
-        rev_path = False    # Flag: Should the current poly be reversed, if it is the best?
-        rev_best = False    # Flag for if the "best" poly should be reversed
-        prev_best = None    # Previous best path. Start with None on each layer
-
-        while available_count > 0:
-            min_dist = 1E100   # Initialize with a large number
-            new_best = None    # Best path thus far within the inner loop
-            new_best_i = None  # Index of best path so far
-
-            for (i, path) in enumerate(available_paths): # INNER LOOP
-                if path is None:
-                    # When path is None it is no longer available
-                    continue
-
-                best_so_far = False
-                start = path.first_point()
-                dist = plot_utils.square_dist(last_point, start)
-                if dist < min_dist:
-                    best_so_far = True
-                    min_dist = dist
-                    rev_path = False
-                if reverse:
-                    end = path.last_point()
-                    dist_rev = plot_utils.square_dist(last_point, end)
-                    if dist_rev < min_dist:
-                        best_so_far = True
-                        min_dist = dist_rev
-                        rev_path = True
-                if best_so_far:
-                    new_best_i = i
-                    new_best = path
-                    rev_best = rev_path
-            # END OF INNER LOOP
-
-            if rev_best: # We have selected the next path; reverse it if flagged to do so.
-                new_best.reverse()
-
-            if prev_best is None:
-                prev_best = new_best # Store
-            else:
-                sorted_paths.append(prev_best) # Reserve prior best for future use
-                prev_best = new_best
-
-            last_point = new_best.last_point()
-
-            available_paths[new_best_i] = None
-            available_count -= 1
-
-        sorted_paths.append(prev_best) # Add final path to our list
         layer_item.paths = copy.copy(sorted_paths)
