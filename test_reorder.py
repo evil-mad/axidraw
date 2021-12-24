@@ -95,7 +95,7 @@ def get_svg_layer(path):
     '''
     path_pattern = re.compile(r'''
         ^M\ (?P<x1>-?\d+(\.\d+)?)\ (?P<y1>-?\d+(\.\d+)?)
-        \ .+\ 
+        \ (.+\ )?
         L\ (?P<x2>-?\d+(\.\d+)?)\ (?P<y2>-?\d+(\.\d+)?)
         \ *$
     ''', re.VERBOSE)
@@ -117,33 +117,39 @@ layer5 = get_svg_layer('stroke-10-slateblue.svg')
 start, raw_distance5 = time.time(), layer5.penup_distance()
 plot_optimizations.reorder(Digest(layer5), False)
 print(f'5. Done in {time.time() - start:.3f}sec, from {raw_distance5:.1f} to {layer5.penup_distance():.1f}')
+assert len(layer5.paths) == 1
 assert layer5.penup_distance() <= raw_distance5
 assert layer5.penup_distance() == 0., 'Should see zero distance for single path'
 
 layer6 = get_svg_layer('stroke-11-navy.svg')
+assert len(layer6.paths) == 3424, len(layer6.paths)
 
 start, raw_distance6 = time.time(), layer6.penup_distance()
 plot_optimizations.reorder(Digest(layer6), False)
 print(f'6a. Done in {time.time() - start:.3f}sec, from {raw_distance6:.1f} to {layer6.penup_distance():.1f}')
+assert len(layer6.paths) == 3424, len(layer6.paths)
 assert layer6.penup_distance() <= raw_distance6
-assert 1008 < layer6.penup_distance() < 1397
+assert 26133 < layer6.penup_distance() < 31146
 
 start = time.time()
 plot_optimizations.reorder(Digest(layer6), True)
 print(f'6b. Done in {time.time() - start:.3f}sec, from {raw_distance6:.1f} to {layer6.penup_distance():.1f}')
+assert len(layer6.paths) == 3424
 assert layer6.penup_distance() <= raw_distance6
-assert 1017 < layer6.penup_distance() < 1280
+assert 10650 < layer6.penup_distance() < 22900
 
 layer7 = get_svg_layer('stroke-8-mediumblue.svg')
 
 start, raw_distance7 = time.time(), layer7.penup_distance()
 plot_optimizations.reorder(Digest(layer7), False)
 print(f'7a. Done in {time.time() - start:.3f}sec, from {raw_distance7:.1f} to {layer7.penup_distance():.1f}')
+assert len(layer7.paths) == 2118
 assert layer7.penup_distance() <= raw_distance7
 assert 28586 < layer7.penup_distance() < 163402
 
 start = time.time()
 plot_optimizations.reorder(Digest(layer7), True)
 print(f'7b. Done in {time.time() - start:.3f}sec, from {raw_distance7:.1f} to {layer7.penup_distance():.1f}')
+assert len(layer7.paths) == 2118
 assert layer7.penup_distance() <= raw_distance7
 assert 12436 < layer7.penup_distance() < 166320
