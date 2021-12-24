@@ -50,6 +50,7 @@ These functions include:
 """
 
 import random
+import math
 import time
 import copy
 
@@ -58,6 +59,8 @@ from axidrawinternal.plot_utils_import import from_dependency_import # plotink
 from hilbertcurve import hilbertcurve
 path_objects = from_dependency_import('axidrawinternal.path_objects')
 plot_utils = from_dependency_import('plotink.plot_utils')
+
+CURVE_DISTANCE = 100
 
 def connect_nearby_ends(digest, reverse, min_gap):
     """
@@ -257,8 +260,8 @@ def reorder(digest, reverse):
             if len(spatial_index) == 0:
                 break
             
-            candidate_indexes = spatial_index[current_pos:current_pos+5]
-            candidate_indexes += spatial_index[max(0, current_pos-1):current_pos-5:-1]
+            candidate_indexes = spatial_index[current_pos:current_pos+CURVE_DISTANCE]
+            candidate_indexes += spatial_index[max(0, current_pos-1):current_pos-CURVE_DISTANCE:-1]
             
             #print('--> candidate indexes:', candidate_indexes)
             

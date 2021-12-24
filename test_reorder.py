@@ -126,13 +126,13 @@ start, raw_distance6 = time.time(), layer6.penup_distance()
 plot_optimizations.reorder(Digest(layer6), False)
 print(f'6a. Done in {time.time() - start:.3f}sec, from {raw_distance6:.1f} to {layer6.penup_distance():.1f}')
 assert layer6.penup_distance() <= raw_distance6
-assert 1062 < layer6.penup_distance() < 1397
+assert 1008 < layer6.penup_distance() < 1397
 
 start = time.time()
 plot_optimizations.reorder(Digest(layer6), True)
 print(f'6b. Done in {time.time() - start:.3f}sec, from {raw_distance6:.1f} to {layer6.penup_distance():.1f}')
 assert layer6.penup_distance() <= raw_distance6
-assert 1037 < layer6.penup_distance() < 1280
+assert 1017 < layer6.penup_distance() < 1280
 
 layer7 = get_svg_layer('stroke-8-mediumblue.svg')
 
