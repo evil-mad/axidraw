@@ -60,6 +60,8 @@ from hilbertcurve import hilbertcurve
 path_objects = from_dependency_import('axidrawinternal.path_objects')
 plot_utils = from_dependency_import('plotink.plot_utils')
 
+# Number of entries along curve to compare in reorder().
+# Bigger numbers go slower but yield better pen-up distance savings.
 CURVE_DISTANCE = 100
 
 def connect_nearby_ends(digest, reverse, min_gap):
@@ -212,8 +214,6 @@ def reorder(digest, reverse):
             reverse (boolean) - True if paths can be reversed
     """
 
-    last_point = (0, 0) # Represent starting position for a plot.
-
     for layer_item in digest.layers:
 
         sorted_paths = []
@@ -227,6 +227,7 @@ def reorder(digest, reverse):
         curve = hilbertcurve.HilbertCurve(math.ceil(math.log(available_count)), 2)
         distance_points = []
         for (index, path) in enumerate(available_paths):
+            # Note the beginning of each path along the curve
             distance_points.append((
                 curve.distance_from_point(path.first_point()),
                 index,
@@ -239,32 +240,31 @@ def reorder(digest, reverse):
                 ))
         spatial_index = [point_index for (_, point_index) in sorted(distance_points)]
         logging.debug(f'Built spatial index in {time.time() - start:.3f}sec')
-        #print('spatial_index:', spatial_index[:10])
         
-        current_pos = 0
-        current_index = spatial_index.pop(current_pos)
+        # Start with the first item in the index which will also be closest to (0, 0)
+        curve_index = 0
+        path_index = spatial_index.pop(curve_index)
         if reverse:
-            spatial_index.remove(current_index + available_count)
-        
-        #print('==> current_pos, current_index:', current_pos, current_index)
+            spatial_index.remove(path_index + available_count)
         
         while True:
-            if current_index >= available_count:
-                current_path = available_paths[current_index % available_count]
+            if reverse and path_index >= available_count:
+                current_path = available_paths[path_index % available_count]
                 current_path.reverse()
             else:
-                current_path = available_paths[current_index]
-            #print('--> sorted_paths append:', current_index)
+                current_path = available_paths[path_index]
+
             sorted_paths.append(current_path)
             
+            # No more paths in the index, stop right here
             if len(spatial_index) == 0:
                 break
             
-            candidate_indexes = spatial_index[current_pos:current_pos+CURVE_DISTANCE]
-            candidate_indexes += spatial_index[max(0, current_pos-1):current_pos-CURVE_DISTANCE:-1]
+            # Look forward and backward in the index for nearby path candidates
+            candidate_indexes = spatial_index[curve_index:curve_index+CURVE_DISTANCE]
+            candidate_indexes += spatial_index[max(0, curve_index-1):curve_index-CURVE_DISTANCE:-1]
             
-            #print('--> candidate indexes:', candidate_indexes)
-            
+            # Sort candidates by distance from current_path.last_point()
             candidate_distances = sorted([
                 (
                     plot_utils.square_dist(
@@ -278,14 +278,11 @@ def reorder(digest, reverse):
                 for i in set(candidate_indexes)
             ])
 
-            #print('--> candidate distances:', candidate_distances)
-            
-            current_index = candidate_distances[0][1]
-            #print('--> chosen index:', current_index)
-            spatial_index.remove(current_index)
-            if reverse and current_index < available_count:
-                spatial_index.remove(current_index + available_count)
-            elif reverse and current_index >= available_count:
-                spatial_index.remove(current_index - available_count)
+            path_index = candidate_distances[0][1]
+            spatial_index.remove(path_index)
+            if reverse and path_index < available_count:
+                spatial_index.remove(path_index + available_count)
+            elif reverse and path_index >= available_count:
+                spatial_index.remove(path_index - available_count)
         
-        layer_item.paths = copy.copy(sorted_paths)
+        layer_item.paths = sorted_paths
