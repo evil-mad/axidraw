@@ -214,7 +214,6 @@ def reorder(digest, reverse):
     for layer_item in digest.layers:
 
         sorted_paths = []
-        reserved_paths = []
         available_paths = layer_item.paths
         available_count = len(available_paths)
 
@@ -246,8 +245,13 @@ def reorder(digest, reverse):
         while available_count > 0:
             min_dist = 1E100   # Initialize with a large number
             new_best = None    # Best path thus far within the inner loop
+            new_best_i = None  # Index of best path so far
 
-            for path in available_paths: # INNER LOOP
+            for (i, path) in enumerate(available_paths): # INNER LOOP
+                if path is None:
+                    # When path is None it is no longer available
+                    continue
+
                 best_so_far = False
                 start = path.first_point()
                 dist = plot_utils.square_dist(last_point, start)
@@ -263,12 +267,9 @@ def reorder(digest, reverse):
                         min_dist = dist_rev
                         rev_path = True
                 if best_so_far:
-                    if new_best is not None:
-                        reserved_paths.append(new_best) # Set aside "old" best path
+                    new_best_i = i
                     new_best = path
                     rev_best = rev_path
-                else:
-                    reserved_paths.append(path) # Reserve prior best for future use
             # END OF INNER LOOP
 
             if rev_best: # We have selected the next path; reverse it if flagged to do so.
@@ -282,9 +283,8 @@ def reorder(digest, reverse):
 
             last_point = new_best.last_point()
 
-            available_paths = copy.copy(reserved_paths)
-            available_count = len(available_paths)
-            reserved_paths = []
+            available_paths[new_best_i] = None
+            available_count -= 1
 
         sorted_paths.append(prev_best) # Add final path to our list
         layer_item.paths = copy.copy(sorted_paths)

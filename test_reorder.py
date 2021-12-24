@@ -140,10 +140,10 @@ start, raw_distance7 = time.time(), layer7.penup_distance()
 plot_optimizations.reorder(Digest(layer7), False)
 print(f'7a. Done in {time.time() - start:.3f}sec, from {raw_distance7:.1f} to {layer7.penup_distance():.1f}')
 assert layer7.penup_distance() <= raw_distance7
-assert 28586 < layer7.penup_distance() < 28587
+assert 28586 < layer7.penup_distance() < 28614
 
 start = time.time()
 plot_optimizations.reorder(Digest(layer7), True)
 print(f'7b. Done in {time.time() - start:.3f}sec, from {raw_distance7:.1f} to {layer7.penup_distance():.1f}')
 assert layer7.penup_distance() <= raw_distance7
-assert 12602 < layer7.penup_distance() < 12603
+assert 12436 < layer7.penup_distance() < 12603
