@@ -217,11 +217,11 @@ def reorder(digest, reverse):
         available_paths = layer_item.paths
         available_count = len(available_paths)
 
-        if available_count < 1:
-            continue # No paths to sort; move on to next layer
+        if available_count <= 1:
+            continue # No sortable paths; move on to next layer
         
         start = time.time()
-        curve = hilbertcurve.HilbertCurve(3, 2)
+        curve = hilbertcurve.HilbertCurve(math.ceil(math.log(available_count)), 2)
         distance_points = []
         for (index, path) in enumerate(available_paths):
             distance_points.append((
@@ -236,7 +236,52 @@ def reorder(digest, reverse):
                 ))
         spatial_index = [point_index for (_, point_index) in sorted(distance_points)]
         logging.debug(f'Built spatial index in {time.time() - start:.3f}sec')
-        print('spatial_index:', spatial_index)
+        #print('spatial_index:', spatial_index[:10])
+        
+        current_pos = 0
+        current_index = spatial_index.pop(current_pos)
+        if reverse:
+            spatial_index.remove(current_index + available_count)
+        
+        #print('==> current_pos, current_index:', current_pos, current_index)
+        
+        while True:
+            if current_index >= available_count:
+                current_path = available_paths[current_index % available_count]
+                current_path.reverse()
+            else:
+                current_path = available_paths[current_index]
+            #print('--> sorted_paths append:', current_index)
+            sorted_paths.append(current_path)
+            
+            if len(spatial_index) == 0:
+                break
+
+            candidate_i1 = spatial_index[current_pos-1]
+            candidate_i2 = spatial_index[current_pos]
+            #print('--> candidate indexes:', candidate_i1, candidate_i2)
+            
+            if candidate_i1 >= available_count:
+                dist1 = plot_utils.square_dist(current_path.last_point(), available_paths[candidate_i1 % available_count].last_point())
+            else:
+                dist1 = plot_utils.square_dist(current_path.last_point(), available_paths[candidate_i1].first_point())
+            
+            if candidate_i2 >= available_count:
+                dist2 = plot_utils.square_dist(current_path.last_point(), available_paths[candidate_i2 % available_count].last_point())
+            else:
+                dist2 = plot_utils.square_dist(current_path.last_point(), available_paths[candidate_i2].first_point())
+
+            current_index = candidate_i1 if (dist1 <= dist2) else candidate_i2
+            #print('--> chosen index:', current_index)
+            spatial_index.remove(current_index)
+            if reverse and current_index < available_count:
+                spatial_index.remove(current_index + available_count)
+            elif reverse and current_index >= available_count:
+                spatial_index.remove(current_index - available_count)
+        
+        layer_item.paths = copy.copy(sorted_paths)
+
+        return
 
         rev_path = False    # Flag: Should the current poly be reversed, if it is the best?
         rev_best = False    # Flag for if the "best" poly should be reversed
