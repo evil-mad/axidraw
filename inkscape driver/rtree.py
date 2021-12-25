@@ -63,7 +63,7 @@ class Index:
             self.ymax = max(self.ymax, ymax)
 
         # Make four lists of bboxes, one for each quadrant around the center point
-        # An original bbox may be present in more than one list
+        # An original bbox may be present in more than one list, unless zero-area
         sub_bboxes = [
             [
                 (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
@@ -109,7 +109,9 @@ class Index:
         return ids
     
     def ordered_ids(self):
-        '''
+        ''' Get a list of all IDs in this tree.
+        
+            Repetitions are possible for non-zero-area bounding boxes.
         '''
         ids = list()
         
