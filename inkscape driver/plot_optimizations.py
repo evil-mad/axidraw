@@ -56,7 +56,6 @@ import copy
 
 from . import rtree
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
-from hilbertcurve import hilbertcurve
 path_objects = from_dependency_import('axidrawinternal.path_objects')
 plot_utils = from_dependency_import('plotink.plot_utils')
 
@@ -224,27 +223,33 @@ def reorder(digest, reverse):
             continue # No sortable paths; move on to next layer
         
         start = time.time()
-        curve = hilbertcurve.HilbertCurve(math.ceil(math.log(available_count)), 2)
-        distance_points = []
-        for (index, path) in enumerate(available_paths):
-            # Note the beginning of each path along the curve
-            distance_points.append((
-                curve.distance_from_point(path.first_point()),
-                index,
-            ))
-            if reverse:
-                # We can start at the ends of paths so note those too
-                distance_points.append((
-                    curve.distance_from_point(path.last_point()),
-                    index + available_count,
-                ))
-        spatial_index = [point_index for (_, point_index) in sorted(distance_points)]
+        
+        # Use zero-area bounds for each point
+        point_bounds = lambda x, y: (x, y, x, y)
+
+        rtree_index = rtree.Index(
+            [
+                (index_i, point_bounds(*path.first_point()))
+                for (index_i, path) in enumerate(available_paths)
+            ] + (
+                [
+                    (index_i + available_count, point_bounds(*path.last_point()))
+                    for (index_i, path) in enumerate(available_paths)
+                ]
+                if reverse
+                else []
+            )
+        )
+        
+        spatial_index = rtree_index.ordered_ids()
         logging.debug(f'Built spatial index in {time.time() - start:.3f}sec')
         
         # Start with the first item in the index which will also be closest to (0, 0)
         curve_index = 0
         path_index = spatial_index.pop(curve_index)
-        if reverse:
+        if reverse and path_index >= available_count:
+            spatial_index.remove(path_index - available_count)
+        elif reverse:
             spatial_index.remove(path_index + available_count)
         
         while True:

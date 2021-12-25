@@ -71,15 +71,15 @@ class Index:
             ],
             [
                 (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
-                if x_2 > center_x and y_1 < center_y
+                if x_2 >= center_x and y_1 < center_y
             ],
             [
                 (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
-                if x_1 < center_x and y_2 > center_y
+                if x_1 < center_x and y_2 >= center_y
             ],
             [
                 (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
-                if x_2 > center_x and y_2 > center_y
+                if x_2 >= center_x and y_2 >= center_y
             ],
         ]
 
@@ -106,4 +106,17 @@ class Index:
             if not is_disjoint:
                 ids |= subt.intersection(bbox)
 
+        return ids
+    
+    def ordered_ids(self):
+        '''
+        '''
+        ids = list()
+        
+        for (i, _) in self.bboxes:
+            ids.append(i)
+        
+        for subt in self.subtrees:
+            ids.extend(subt.ordered_ids())
+        
         return ids
