@@ -38,6 +38,15 @@ Minimal R-tree spatial index class for calculating intersecting regions
 
 
 import math
+import enum
+
+
+class D (enum.Enum):
+    NORTH = 1
+    EAST = 2
+    SOUTH = 3
+    WEST = 4
+
 
 class Index:
     ''' One-shot R-Tree index (no rebalancing, insertions, etc.)
@@ -49,7 +58,7 @@ class Index:
     xmax = None
     ymax = None
 
-    def __init__(self, bboxes):
+    def __init__(self, bboxes, direction=D.SOUTH):
         center_x, center_y = 0, 0
         self.xmin, self.ymin = math.inf, math.inf
         self.xmax, self.ymax = -math.inf, -math.inf
@@ -64,32 +73,42 @@ class Index:
 
         # Make four lists of bboxes, one for each quadrant around the center point
         # An original bbox may be present in more than one list, unless zero-area
-        sub_bboxes = [
+        nw, ne, sw, se = (
             [
                 (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
-                if x_1 < center_x and y_1 < center_y
+                if x_1 <= center_x and y_1 <= center_y
             ],
             [
                 (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
-                if x_2 >= center_x and y_1 < center_y
+                if x_2 > center_x and y_1 <= center_y
             ],
             [
                 (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
-                if x_1 < center_x and y_2 >= center_y
+                if x_1 <= center_x and y_2 > center_y
             ],
             [
                 (i, (x_1, y_1, x_2, y_2)) for (i, (x_1, y_1, x_2, y_2)) in bboxes
-                if x_2 >= center_x and y_2 >= center_y
+                if x_2 > center_x and y_2 > center_y
             ],
-        ]
+        )
 
         # Store bboxes or subtrees but not both
-        if max(map(len, sub_bboxes)) == len(bboxes):
+        if max(map(len, (nw, ne, sw, se))) == len(bboxes):
             # One of the subtrees is identical to the whole tree so just keep all the bboxes
             self.bboxes = bboxes
         else:
+            if direction == D.SOUTH:
+                order = (nw, D.EAST), (sw, D.SOUTH), (se, D.SOUTH), (ne, D.WEST)
+            elif direction == D.EAST:
+                order = (nw, D.SOUTH), (ne, D.EAST), (se, D.EAST), (sw, D.NORTH)
+            elif direction == D.WEST:
+                order = (se, D.NORTH), (sw, D.WEST), (nw, D.WEST), (ne, D.SOUTH)
+            elif direction == D.NORTH:
+                order = (se, D.NORTH), (ne, D.NORTH), (nw, D.NORTH), (sw, D.EAST)
+            else:
+                raise ValueError(direction)
             # Make four subtrees, one for each quadrant
-            self.subtrees = [Index(sub) for sub in sub_bboxes]
+            self.subtrees = [Index(sub, d) for (sub, d) in order]
 
     def intersection(self, bbox):
         ''' Get a set of IDs for a given bounding box
