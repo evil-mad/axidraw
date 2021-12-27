@@ -42,6 +42,8 @@ import enum
 
 
 class D (enum.Enum):
+    ''' Hilbert curve orientations: cardinal direction of the closed "U"
+    '''
     NORTH = 1
     EAST = 2
     SOUTH = 3
@@ -97,18 +99,19 @@ class Index:
             # One of the subtrees is identical to the whole tree so just keep all the bboxes
             self.bboxes = bboxes
         else:
+            # Imitate a Hilbert curve by choosing one of four orders for subtrees
             if direction == D.SOUTH:
-                order = (nw, D.EAST), (sw, D.SOUTH), (se, D.SOUTH), (ne, D.WEST)
+                subtrees = (nw, D.EAST), (sw, D.SOUTH), (se, D.SOUTH), (ne, D.WEST)
             elif direction == D.EAST:
-                order = (nw, D.SOUTH), (ne, D.EAST), (se, D.EAST), (sw, D.NORTH)
+                subtrees = (nw, D.SOUTH), (ne, D.EAST), (se, D.EAST), (sw, D.NORTH)
             elif direction == D.WEST:
-                order = (se, D.NORTH), (sw, D.WEST), (nw, D.WEST), (ne, D.SOUTH)
+                subtrees = (se, D.NORTH), (sw, D.WEST), (nw, D.WEST), (ne, D.SOUTH)
             elif direction == D.NORTH:
-                order = (se, D.NORTH), (ne, D.NORTH), (nw, D.NORTH), (sw, D.EAST)
+                subtrees = (se, D.NORTH), (ne, D.NORTH), (nw, D.NORTH), (sw, D.EAST)
             else:
                 raise ValueError(direction)
             # Make four subtrees, one for each quadrant
-            self.subtrees = [Index(sub, d) for (sub, d) in order]
+            self.subtrees = [Index(sub, d) for (sub, d) in subtrees]
 
     def intersection(self, bbox):
         ''' Get a set of IDs for a given bounding box
