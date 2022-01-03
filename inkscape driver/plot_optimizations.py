@@ -222,9 +222,9 @@ def reorder(digest, reverse):
             endpoints.append([path_reference.first_point(), path_reference.last_point()])
 
         if reverse:
-            grid_bins = 4 + math.floor(available_count / 1200)
+            grid_bins = 4 + math.floor(math.sqrt(available_count / 25))
         else:
-            grid_bins = 4 + math.floor(available_count / 2500)
+            grid_bins = 4 + math.floor(math.sqrt(available_count / 50))
         grid_index = spatial_grid.Index(endpoints, grid_bins, reverse)
 
         vertex = [0, 0] # Starting position of plot: (0,0)
