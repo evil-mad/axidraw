@@ -29,7 +29,7 @@
 """
 spatial_grid.py
 
-Specialized grid spatial index class for calculating nearest neighbors
+Specialized flat grid spatial index class for calculating nearest neighbors
 """
 
 
@@ -41,7 +41,7 @@ plot_utils = from_dependency_import('plotink.plot_utils')
 
 class Index:
     ''' Grid index class '''
-    grid = []           # The grid; list of path ends in each cell
+    grid = []           # The grid: List of cells, each of which will contain a list of path ends
     adjacents = []      # Adjacency list; list of neighboring cells for each cell
     lookup = []         # List of which grid cell each path end can be found inside.
     path_count = 0      # Initial number of paths
@@ -135,7 +135,7 @@ class Index:
 
     def find_adjacents(self):
         '''
-        Also populate an adjacency list, where each cell contains a list of
+        Populate an adjacency list, where each cell contains a list of
         which cells are that cell or its neighbors; up to 9 possible. 
         '''
         max_bin = self.bins_per_side - 1
@@ -187,9 +187,10 @@ class Index:
 
         max_bin = self.bins_per_side - 1
 
-        x_bin = min(math.floor((vertex_in[0] - self.xmin) / self.bin_size_x), max_bin)
-        y_bin = min(math.floor((vertex_in[1] - self.ymin) / self.bin_size_y), max_bin)
-        last_cell = max(x_bin + self.bins_per_side * y_bin, 0)
+        # Use max/min to constrain the initial row and column of our first cell to check
+        x_bin = max(min(math.floor((vertex_in[0] - self.xmin) / self.bin_size_x), max_bin), 0)
+        y_bin = max(min(math.floor((vertex_in[1] - self.ymin) / self.bin_size_y), max_bin), 0)
+        last_cell = x_bin + self.bins_per_side * y_bin
 
         neighborhood_cells = self.adjacents[last_cell].copy()
 
@@ -229,7 +230,7 @@ class Index:
     def remove_path(self, path_index):
         '''
         Remove the vertex with the given path_index from the spatial index.
-        path_index should be less than self.path_count.
+        Input path_index must be < self.path_count.
 
         If reversing is enabled, also remove the vertex with index
         path_index + self.path_count
@@ -238,9 +239,7 @@ class Index:
         cell_number = self.lookup[path_index]
         self.grid[cell_number].remove(path_index)
 
-        if not self.reverse:
-            return
-
-        other_index = path_index + self.path_count
-        cell_number = self.lookup[other_index]
-        self.grid[cell_number].remove(other_index)
+        if self.reverse:
+            other_index = path_index + self.path_count
+            cell_number = self.lookup[other_index]
+            self.grid[cell_number].remove(other_index)
