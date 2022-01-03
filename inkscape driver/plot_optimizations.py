@@ -221,7 +221,10 @@ def reorder(digest, reverse):
         for path_reference in layer_item.paths:
             endpoints.append([path_reference.first_point(), path_reference.last_point()])
 
-        grid_bins = 4 + math.floor(available_count / 2500) # Scale grid size with vertices
+        if reverse:
+            grid_bins = 4 + math.floor(available_count / 1200)
+        else:
+            grid_bins = 4 + math.floor(available_count / 2500)
         grid_index = spatial_grid.Index(endpoints, grid_bins, reverse)
 
         vertex = [0, 0] # Starting position of plot: (0,0)
