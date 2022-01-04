@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 """
 plot_optimizations.py
 
-Version 1.1.0   -   2021-12-21
+Version 1.1.0   -   2022-01-03
 
 This module provides some plot optimization tools.
 
@@ -48,14 +48,17 @@ These functions include:
     - If path reversal is enabled, allow paths to be reversed when sorting
 
 """
-
 import random
 import copy
+import math
+from axidrawinternal.plot_utils_import import from_dependency_import # plotink
 
 from . import rtree
-from axidrawinternal.plot_utils_import import from_dependency_import # plotink
+from . import spatial_grid
+
 path_objects = from_dependency_import('axidrawinternal.path_objects')
 plot_utils = from_dependency_import('plotink.plot_utils')
+
 
 def connect_nearby_ends(digest, reverse, min_gap):
     """
@@ -78,7 +81,7 @@ def connect_nearby_ends(digest, reverse, min_gap):
         path_count = len(layer_item.paths)
         if path_count < 2:
             continue # Move on to next layer
-        
+
         # Inflate point by min_gap to xmin, ymin, xmax, ymax rectangular bounds
         point_bounds = lambda x, y: (x - min_gap, y - min_gap, x + min_gap, y + min_gap)
 
@@ -103,14 +106,13 @@ def connect_nearby_ends(digest, reverse, min_gap):
             if reverse:
                 i_start = path_i.first_point()
                 i_matches += list(spatial_index.intersection(point_bounds(*i_start)))
-            
+
             for index_maybe in i_matches:
                 match_found = False
                 index_j = index_maybe % path_count
 
                 if index_j <= index_i:
                     continue
-
                 j_start = layer_item.paths[index_j].first_point()
                 if reverse:
                     j_end = layer_item.paths[index_j].last_point()
@@ -207,64 +209,49 @@ def reorder(digest, reverse):
             reverse (boolean) - True if paths can be reversed
     """
 
-    last_point = (0, 0) # Represent starting position for a plot.
-
     for layer_item in digest.layers:
+        available_count = len(layer_item.paths)
 
-        sorted_paths = []
-        reserved_paths = []
-        available_paths = layer_item.paths
-        available_count = len(available_paths)
+        if available_count <= 1:
+            continue # No sortable paths; move on to next layer
 
-        if available_count < 1:
-            continue # No paths to sort; move on to next layer
+        tour_path = []
 
-        rev_path = False    # Flag: Should the current poly be reversed, if it is the best?
-        rev_best = False    # Flag for if the "best" poly should be reversed
-        prev_best = None    # Previous best path. Start with None on each layer
+        endpoints = []
+        for path_reference in layer_item.paths:
+            endpoints.append([path_reference.first_point(), path_reference.last_point()])
 
-        while available_count > 0:
-            min_dist = 1E100   # Initialize with a large number
-            new_best = None    # Best path thus far within the inner loop
+        if reverse:
+            grid_bins = 4 + math.floor(math.sqrt(available_count / 25))
+        else:
+            grid_bins = 4 + math.floor(math.sqrt(available_count / 50))
+        grid_index = spatial_grid.Index(endpoints, grid_bins, reverse)
 
-            for path in available_paths: # INNER LOOP
-                best_so_far = False
-                start = path.first_point()
-                dist = plot_utils.square_dist(last_point, start)
-                if dist < min_dist:
-                    best_so_far = True
-                    min_dist = dist
-                    rev_path = False
-                if reverse:
-                    end = path.last_point()
-                    dist_rev = plot_utils.square_dist(last_point, end)
-                    if dist_rev < min_dist:
-                        best_so_far = True
-                        min_dist = dist_rev
-                        rev_path = True
-                if best_so_far:
-                    if new_best is not None:
-                        reserved_paths.append(new_best) # Set aside "old" best path
-                    new_best = path
-                    rev_best = rev_path
-                else:
-                    reserved_paths.append(path) # Reserve prior best for future use
-            # END OF INNER LOOP
+        vertex = [0, 0] # Starting position of plot: (0,0)
 
-            if rev_best: # We have selected the next path; reverse it if flagged to do so.
-                new_best.reverse()
+        while True:
+            nearest_index = grid_index.nearest(vertex)
 
-            if prev_best is None:
-                prev_best = new_best # Store
+            if nearest_index is None:
+                break # Exhausted paths in the index; tour is complete
+
+            if nearest_index >= available_count:
+                nearest_index -= available_count
+                rev_path = True
+                vertex = endpoints[nearest_index][0] # First vertex of selected path
             else:
-                sorted_paths.append(prev_best) # Reserve prior best for future use
-                prev_best = new_best
+                rev_path = False
+                vertex = endpoints[nearest_index][1] # Last vertex of selected path
 
-            last_point = new_best.last_point()
+            tour_path.append([nearest_index, rev_path])
 
-            available_paths = copy.copy(reserved_paths)
-            available_count = len(available_paths)
-            reserved_paths = []
+            grid_index.remove_path(nearest_index) # Exclude this path's ends from the search
 
-        sorted_paths.append(prev_best) # Add final path to our list
-        layer_item.paths = copy.copy(sorted_paths)
+        # Re-ordering is done; Update the list of paths in the layer.
+        output_path_temp = []
+        for path_number, rev_path in tour_path:
+            next_path = layer_item.paths[path_number]
+            if rev_path:
+                next_path.reverse()
+            output_path_temp.append(next_path)
+        layer_item.paths = copy.copy(output_path_temp)
