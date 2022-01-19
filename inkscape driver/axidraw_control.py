@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -49,11 +49,11 @@ else:
     import threading
 
 logger = logging.getLogger(__name__)
-    
+
 class AxiDrawWrapperClass( inkex.Effect ):
 
     default_handler = message.UserMessageHandler()
-    
+
     def __init__( self, default_logging = True, params = None ):
         if params is None:
             # use default configuration file
@@ -107,27 +107,25 @@ class AxiDrawWrapperClass( inkex.Effect ):
             2: Use only specified port, given by self.options.port
 
             3: Plot to all attached AxiDraw units
-
         '''
 
-        if self.options.preview:
-            self.options.port_config = 1 # Ignore port & multi-machine options in preview
-
+        if self.options.preview or self.options.digest > 1:
+            self.options.port_config = 1 # Offline modes; Ignore port & multi-machine options
 
         if self.options.mode in ( "resume", "res_plot", "res_home"):
             if self.options.port_config == 3: # If requested to use all machines,
                 self.options.port_config = 1  # Instead, only resume for first machine.
-                
+
         if self.options.port_config == 3: # Use all available AxiDraw units.
             process_list = []
             EBBList = []
             EBBList = ebb_serial.listEBBports()
-            
+
             if EBBList:
                 primary_port = None
                 if self.options.port is not None:
                     primary_port = ebb_serial.find_named_ebb(self.options.port)
-                    
+
                 for foundPort in EBBList:
                     logger.info("Found an EBB:")
                     logger.info(" Port name:   " + foundPort[0])	# Port name
@@ -139,7 +137,6 @@ class AxiDrawWrapperClass( inkex.Effect ):
                 else:
                     if primary_port is None:
                         primary_port = EBBList[0][0]
-                
                     for index, foundPort in enumerate(EBBList):
                         if foundPort[0] == primary_port:
                             logger.info("FoundPort is primary: " + primary_port)
@@ -153,24 +150,22 @@ class AxiDrawWrapperClass( inkex.Effect ):
                         else: # Use multithreading:
                             tname = "thread-" + str(index)
                             process = threading.Thread(group=None, target=self.plot_to_axidraw, name=tname, args=(foundPort[0],False))
-                            
                         process_list.append(process)
                         process.start()
-                        
+
                     logger.info("Plotting to primary: " + primary_port)
-                        
+
                     self.plot_to_axidraw(primary_port, True) # Plot to "primary" AxiDraw
                     for process in process_list:
                         logger.info("Joining a process. ") 
                         process.join()
-                        
             else: # i.e., if not EBBList
                 logger.error("No available axidraw units found on USB.")
                 logger.error("Please check your connection(s) and try again.")
                 return
         else:   # All cases except plotting to all available AxiDraw units:
                 # This includes: Preview mode and all cases of plotting to a single AxiDraw.
-                
+
             # If we are to use first available unit, blank the "port" variable.
             if self.options.port_config == 1: # Use first available AxiDraw
                 self.options.port = None
@@ -193,14 +188,13 @@ class AxiDrawWrapperClass( inkex.Effect ):
 
         # Many plotting parameters to pass through:
 
-
         selected_options = {item: self.options.__dict__[item] for item in ['mode', 
             'speed_pendown', 'speed_penup',  'accel', 'pen_pos_up', 'pen_pos_down',
             'pen_rate_raise', 'pen_rate_lower', 'pen_delay_up', 'pen_delay_down',
             'no_rotate', 'const_speed', 'report_time', 'manual_cmd', 'walk_dist',
             'layer', 'copies', 'page_delay', 'preview', 'rendering', 'model',
-            'setup_type', 'resume_type', 'auto_rotate', 'resolution',   'reordering',
-            'random_start', ]}
+            'setup_type', 'resume_type', 'auto_rotate', 'resolution', 'reordering',
+            'random_start', 'digest', 'webhook', 'webhook_url',]}
         ad.options.__dict__.update(selected_options)
 
         ad.options.port = port
@@ -219,8 +213,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
         if not primary:
             ad.set_secondary() # Suppress general message reporting; suppress time reporting
 
-        # Plot the document using axidraw.py
-        ad.effect()
+        ad.effect() # Plot the document using axidraw.py
 
         if primary:
             # Collect output from axidraw.py 

@@ -24,6 +24,7 @@ For technical support or other assistance, please write to
 <param indent="2" name="page_delay" type="int" min="0" max="3600" _gui-text="Seconds of delay between copies:">15</param>	
 
 <_param name="splashpage5" type="description" indent="6" >Tip: Select 0 copies to plot continuously until paused.</_param>
+
 </page>
 
 
@@ -95,9 +96,9 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 </page>
 
 
-<page name='preview' _gui-text='Preview'>
+<page name='preview' _gui-text='Preview &amp; Alerts'>
 
-<_param name="instructions_options7" type="description" appearance="header">Preview mode:</_param>
+<_param name="instructions_preview" type="description" appearance="header">Preview mode:</_param>
 
 <param indent="1" name="preview" type="boolean" _gui-text="Enable offline preview mode; Simulate plotting only">false</param> 
 <param indent="5" name="rendering" type="optiongroup" appearance="minimal" _gui-text="Preview mode rendering:">
@@ -107,12 +108,14 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <_option value="0">None</_option>
 </param>
 
+<_param name="instructions_preview" type="description" appearance="header">Webhook notifications:</_param>
+<param indent="1" name="webhook" type="boolean" _gui-text="Post to webhook when a plot finishes">false</param> 
+<param indent="3" name="webhook_url" type="string" _gui-text="Webhook URL: "></param>
+
 </page>
 
 
 <page name='advanced' _gui-text='Advanced'>
-
-
 <_param name="instructions_options6" type="description" appearance="header">Advanced Options:</_param>
 
 <param indent="1" name="auto_rotate" type="boolean" _gui-text="Auto-rotate page when printing">true</param>	
@@ -253,7 +256,7 @@ the Return to Home Corner command.
 
 </param>
 <_param name="copyright" type="description" indent="5" xml:space="preserve"
->Version 3.0.2      —      Copyright 2021 Evil Mad Scientist</_param>
+>Version 3.1.0      —      Copyright 2021 Evil Mad Scientist</_param>
 
 
 

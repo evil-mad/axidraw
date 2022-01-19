@@ -29,6 +29,7 @@ Requires Python 3.6 or newer and Pyserial 3.5 or newer.
 """
 
 import logging
+from math import sqrt
 
 from lxml import etree
 
@@ -84,6 +85,10 @@ class DigestSVG:
         self.supersample_tolerance = 0
         self.layer_selection = 0
 
+        self.doc_width_100 = 0
+        self.doc_height_100 = 0
+        self.diagonal_100 = 0
+
 
     def process_svg(self, node_list, digest_params,  mat_current=None):
         """
@@ -107,13 +112,17 @@ class DigestSVG:
             or styles.
         """
 
-        [self.doc_digest.width, self.doc_digest.height, self.layer_selection,\
+        [self.doc_digest.width, self.doc_digest.height, scale_x, scale_y, self.layer_selection,\
             self.bezier_tolerance, self.supersample_tolerance, _]\
             = digest_params
 
         # Store document information in doc_digest
         self.doc_digest.viewbox = "0 0 {:f} {:f}".format(\
             self.doc_digest.width, self.doc_digest.height)
+
+        self.doc_width_100 = self.doc_digest.width / scale_x    # Width of a "100% width" object
+        self.doc_height_100 = self.doc_digest.height / scale_y  # height of a "100% height" object
+        self.diagonal_100 = sqrt((self.doc_width_100)**2 + (self.doc_height_100)**2)/sqrt(2)
 
         docname = node_list.get(inkex.addNS('docname', 'sodipodi'), )
         if docname:
@@ -190,12 +199,12 @@ class DigestSVG:
                     # Ensure that sublayers are treated like regular groups only
 
                     str_layer_name = node.get(inkex.addNS('label', 'inkscape'))
-                    str_layer_name.lstrip()  # Remove leading whitespace
 
                     if not str_layer_name:
                         str_layer_name = "Auto-Layer " + str(self.next_id)
                         self.next_id += 1
                     else:
+                        str_layer_name.lstrip()  # Remove leading whitespace
                         if len(str(str_layer_name)) > 0:
                             if str(str_layer_name)[0] == '%':
                                 continue # Skip Documentation layer and its contents
@@ -239,6 +248,7 @@ class DigestSVG:
                     new_layer.name = '__digest-root__' # Label this as a "root" layer
                     new_layer.item_id = str(self.next_id)
                     self.next_id += 1
+                    self.doc_digest.layers.append(new_layer)
                     self.current_layer = new_layer
                     self.current_layer_name = new_layer.name
                 else: # Regular group or sublayer that we treat as a group.
@@ -261,11 +271,10 @@ class DigestSVG:
                 # A 'switch' is much like a group, in that it is a generic container element.
                 # We are not presently evaluating conditions on switch elements, but parsing
                 # their contents to the extent possible.
-                self.traverse_svg(node, mat_new, parent_visibility=visibility)
+                self.traverse(node, mat_new, parent_visibility=visibility)
                 continue
 
             if node.tag == inkex.addNS('use', 'svg') or node.tag == 'use':
-
                 """
                 A <use> element refers to another SVG element via an xlink:href="#blah"
                 attribute.  We will handle the element by doing an XPath search through
@@ -338,16 +347,18 @@ class DigestSVG:
                 self.digest_path(path_d, mat_new)
                 continue
             if node.tag == inkex.addNS('rect', 'svg') or node.tag == 'rect':
-                # Manually transform
-                #    <rect x="X" y="Y" width="W" height="H"/>
-                # into
-                #    <path d="MX,Y lW,0 l0,H l-W,0 z"/>
-                # I.e., explicitly draw three sides of the rectangle and the
-                # fourth side implicitly
-                # Create a path with the outline of the rectangle
-                # https://www.w3.org/TR/SVG11/shapes.html#RectElement
-                x, y, rx, ry, width, height = [plot_utils.unitsToUserUnits(node.get(attr, '0')) \
-                    for attr in ['x', 'y', 'rx', 'ry', 'width', 'height']]
+                """
+                Create a path with the outline of the rectangle
+                Manually transform  <rect x="X" y="Y" width="W" height="H"/>
+                    into            <path d="MX,Y lW,0 l0,H l-W,0 z"/>
+                Draw three sides of the rectangle explicitly and the fourth implicitly
+                https://www.w3.org/TR/SVG11/shapes.html#RectElement
+                """
+
+                x, r_x, width = [plot_utils.unitsToUserUnits(node.get(attr),
+                    self.doc_width_100) for attr in ['x', 'rx', 'width']]
+                y, r_y, height = [plot_utils.unitsToUserUnits(node.get(attr),
+                    self.doc_height_100) for attr in ['y', 'ry', 'height']]
 
                 def calc_r_attr(attr, other_attr, twice_maximum):
                     value = (attr if attr is not None else
@@ -355,20 +366,20 @@ class DigestSVG:
                              0)
                     return min(value, twice_maximum * .5)
 
-                rx = calc_r_attr(rx, ry, width)
-                ry = calc_r_attr(ry, rx, height)
+                r_x = calc_r_attr(r_x, r_y, width)
+                r_y = calc_r_attr(r_y, r_x, height)
 
                 instr = []
-                if (rx > 0) or (ry > 0):
-                    instr.append(['M ', [x + rx, y]])
-                    instr.append([' L ', [x + width - rx, y]])
-                    instr.append([' A ', [rx, ry, 0, 0, 1, x + width, y + ry]])
-                    instr.append([' L ', [x + width, y + height - ry]])
-                    instr.append([' A ', [rx, ry, 0, 0, 1, x + width - rx, y + height]])
-                    instr.append([' L ', [x + rx, y + height]])
-                    instr.append([' A ', [rx, ry, 0, 0, 1, x, y + height - ry]])
-                    instr.append([' L ', [x, y + ry]])
-                    instr.append([' A ', [rx, ry, 0, 0, 1, x + rx, y]])
+                if (r_x > 0) or (r_y > 0):
+                    instr.append(['M ', [x + r_x, y]])
+                    instr.append([' L ', [x + width - r_x, y]])
+                    instr.append([' A ', [r_x, r_y, 0, 0, 1, x + width, y + r_y]])
+                    instr.append([' L ', [x + width, y + height - r_y]])
+                    instr.append([' A ', [r_x, r_y, 0, 0, 1, x + width - r_x, y + height]])
+                    instr.append([' L ', [x + r_x, y + height]])
+                    instr.append([' A ', [r_x, r_y, 0, 0, 1, x, y + height - r_y]])
+                    instr.append([' L ', [x, y + r_y]])
+                    instr.append([' A ', [r_x, r_y, 0, 0, 1, x + r_x, y]])
                 else:
                     instr.append(['M ', [x, y]])
                     instr.append([' L ', [x + width, y]])
@@ -379,16 +390,14 @@ class DigestSVG:
                 self.digest_path(simplepath.formatPath(instr), mat_new)
                 continue
             if node.tag == inkex.addNS('line', 'svg') or node.tag == 'line':
-
-                # Convert
-                #   <line x1="X1" y1="Y1" x2="X2" y2="Y2/>
-                # to
-                #   <path d="MX1,Y1 LX2,Y2"/>
-                # Create a path to contain the line
-                x_1 = plot_utils.unitsToUserUnits(node.get('x1'))
-                y_1 = plot_utils.unitsToUserUnits(node.get('y1'))
-                x_2 = plot_utils.unitsToUserUnits(node.get('x2'))
-                y_2 = plot_utils.unitsToUserUnits(node.get('y2'))
+                """
+                Convert an SVG line object  <line x1="X1" y1="Y1" x2="X2" y2="Y2/>
+                to an SVG path object:      <path d="MX1,Y1 LX2,Y2"/>
+                """
+                x_1, x_2 = [plot_utils.unitsToUserUnits(node.get(attr, '0'),
+                    self.doc_width_100) for attr in ['x1', 'x2']]
+                y_1, y_2 = [plot_utils.unitsToUserUnits(node.get(attr, '0'),
+                    self.doc_height_100) for attr in ['y1', 'y2']]
 
                 path_a = []
                 path_a.append(['M ', [x_1, y_1]])
@@ -429,32 +438,34 @@ class DigestSVG:
                 if node.tag in [inkex.addNS('polygon', 'svg'), 'polygon']:
                     path_d += " Z"
 
-                self.digest_path(path_d, mat_new)
+                self.digest_path(path_d, mat_new) # Vertices are already in user coordinate system
                 continue
             if node.tag in [inkex.addNS('ellipse', 'svg'), 'ellipse',
                               inkex.addNS('circle', 'svg'), 'circle']:
+                """
+                Convert circles and ellipses to paths as two 180 degree arcs.
+                In general (an ellipse), we convert
+                  <ellipse rx="RX" ry="RY" cx="X" cy="Y"/>
+                to
+                  <path d="MX1,CY A RX,RY 0 1 0 X2,CY A RX,RY 0 1 0 X1,CY"/>
+                where
+                  X1 = CX - RX
+                  X2 = CX + RX
+                Ellipses or circles with a radius attribute of 0 are ignored
+                """
 
-                # Convert circles and ellipses to paths as two 180 degree arcs.
-                # In general (an ellipse), we convert
-                #   <ellipse rx="RX" ry="RY" cx="X" cy="Y"/>
-                # to
-                #   <path d="MX1,CY A RX,RY 0 1 0 X2,CY A RX,RY 0 1 0 X1,CY"/>
-                # where
-                #   X1 = CX - RX
-                #   X2 = CX + RX
-                # Ellipses or circles with a radius attribute of 0 are ignored
-
-                if node.tag == inkex.addNS('ellipse', 'svg') or node.tag == 'ellipse':
-                    r_x = plot_utils.unitsToUserUnits(node.get('rx', '0'))
-                    r_y = plot_utils.unitsToUserUnits(node.get('ry', '0'))
-                else:
-                    r_x = plot_utils.unitsToUserUnits(node.get('r', '0'))
+                if node.tag in [inkex.addNS('circle', 'svg'), 'circle']:
+                    r_x = plot_utils.unitsToUserUnits(node.get('r', '0'), self.diagonal_100)
                     r_y = r_x
+                else:
+                    r_x, r_y = [plot_utils.unitsToUserUnits(node.get(attr, '0'),
+                        self.diagonal_100) for attr in ['rx', 'ry']]
                 if r_x == 0 or r_y == 0:
                     continue
 
-                c_x = plot_utils.unitsToUserUnits(node.get('cx', '0'))
-                c_y = plot_utils.unitsToUserUnits(node.get('cy', '0'))
+                c_x = plot_utils.unitsToUserUnits(node.get('cx', '0'), self.doc_width_100)
+                c_y = plot_utils.unitsToUserUnits(node.get('cy', '0'), self.doc_height_100)
+
                 x_1 = c_x - r_x
                 x_2 = c_x + r_x
                 path_d = 'M {0:f},{1:f} '.format(x_1, c_y) + \
@@ -609,3 +620,64 @@ class DigestSVG:
         self.current_layer.paths.append(new_path)
 
         logger.debug('End of digest_path()\n')
+
+
+def verify_plob(svg, model):
+    """
+    Check to see if the provided SVG is a valid plob that can be automatically converted
+    to a plot digest object. Also check that the plob version and hardware model match.
+
+    Returns True or False.
+
+    We may wish to also check for an application name match in the
+    future. At present, that check is not yet necessary.
+    """
+
+    data_node = None
+    nodes = svg.xpath("//*[self::svg:plotdata|self::plotdata]", namespaces=inkex.NSS)
+    if nodes:
+        data_node = nodes[0]
+    if data_node is not None:
+        try:
+            svg_model = data_node.get('model')
+            svg_plob_version = data_node.get('plob_version')
+        except TypeError:
+            return False
+    else:
+        return False # No plot data; Plob cannot be verified.
+    if svg_model:
+        if int(svg_model) != model:
+            return False
+    else:
+        return False
+    if svg_plob_version:
+        if svg_plob_version != path_objects.PLOB_VERSION:
+            return False
+    else:
+        return False
+
+    # inkex.errormsg( "Passed plotdata checks") # Optional halfwaypoint check
+    tag_list = [inkex.addNS('defs', 'svg'), 'defs', 'metadata', inkex.addNS('metadata', 'svg'),
+        inkex.addNS('namedview', 'sodipodi'), 'plotdata', inkex.addNS('plotdata', 'svg'), ]
+
+    for node in svg:
+        if node.tag in ['g', inkex.addNS('g', 'svg')]:
+            name_temp = node.get(inkex.addNS('label', 'inkscape'))
+            if not name_temp:
+                return False # All groups must be named
+            if len(str(name_temp)) > 0:
+                if str(name_temp)[0] == '%':
+                    continue # Skip Documentation layer and its contents
+            if node.get("transform"): # No transforms are allowed on plottable layers
+                return False
+            for subnode in node:
+                if subnode.get("transform"): # No transforms are allowed on objects
+                    return False
+                if subnode.tag in ['polyline', inkex.addNS('polyline', 'svg')]:
+                    continue
+                return False
+        elif node.tag in tag_list:
+            continue
+        else:
+            return False
+    return True
