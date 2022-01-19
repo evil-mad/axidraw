@@ -75,31 +75,37 @@ def load_configs(config_list):
 
 
 def load_config(config):
-    try:
-        if config is None:
-            config_dict = {}
-        elif len(config) > 3 and config[-3:] == ".py":
-            config_dict = runpy.run_path(config)
+    if config is None:
+        return {}
+
+    config_dict = None
+    try: # try assuming config is a filename
+        config_dict = runpy.run_path(config)
+    except SyntaxError as se:
+        print('Config file {} contains a syntax error on line {}:'.format(se.filename, se.lineno))
+        print('    {}'.format(se.text))
+        print('The config file should be a python file (e.g., a file that ends in ".py").')
+        sys.exit(1)
+    except IOError as ose:
+        if len(config) > 3 and config[-3:] == ".py" and ose.errno == errno.ENOENT:
+            # if config is a filename ending in ".py" but it doesn't appear to exist
+            print("Could not find any file named {}.".format(config))
+            print("Check the spelling and/or location.")
+            sys.exit(1)
         else:
+            # Either config is a config file that doesn't have a .py AND it doesn't exist
+            # or config is a module
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 # since technically this is importing "axidrawinternal.axidraw_conf" twice, it would generate a warning, but we can ignore it
-                config_dict = runpy.run_module(config)
+                try: # assume config is a module
+                    config_dict = runpy.run_module(config)
+                except ImportError as ie: # oops, no module named that
+                    # config may be a config file that doesn't have a .py AND doesn't exist
+                    print("Could not find any file or module named {}.".format(config))
+                    sys.exit(1)
 
-        return { key: value for key, value in config_dict.items() if key[0] != "_" }
-
-    except IOError as ose:
-        if ose.errno == errno.ENOENT: # no such file or directory
-            print('Could not find any file named {}.'.format(config))
-            print('Check the spelling and/or location.')
-            sys.exit(1)
-        else:
-            raise
-    except SyntaxError as e:
-        print('Config file {} contains a syntax error on line {}:'.format(e.filename, e.lineno))
-        print('    {}'.format(e.text))
-        print('The config file should be a python file (*.py).')
-        sys.exit(1)
+    return { key: value for key, value in config_dict.items() if key[0] != "_" }
 
 def assign_option_values(options_obj, command_line, configs, option_names):
     """ `configs` is a list of dicts containing values for the options, in order of priority.

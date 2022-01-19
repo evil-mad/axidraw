@@ -5,6 +5,7 @@ from distutils.version import LooseVersion
 
 from axidrawinternal.plot_utils_import import from_dependency_import
 ebb_serial = from_dependency_import('plotink.ebb_serial')  # Requires v 0.13 in plotink    https://github.com/evil-mad/plotink
+requests = from_dependency_import('requests')
 
 Versions = namedtuple("Versions", "axidraw_control ebb_firmware dev_axidraw_control")
 
@@ -15,13 +16,11 @@ def get_versions_online():
     returns namedtuple with the versions
     raises RuntimeError if online check fails.
     '''
-    requests = from_dependency_import('requests')
-
     url = "https://evilmadscience.s3.amazonaws.com/sites/axidraw/versions.txt"
     text = None
     try:
         text = requests.get(url).text
-    except RuntimeError as e:
+    except (RuntimeError, requests.exceptions.ConnectionError) as e:
         raise RuntimeError("Could not contact server to check for updates. " +
                            "Are you connected to the internet? (Error: {})".format(e))
     
@@ -33,7 +32,8 @@ def get_versions_online():
                                        dev_axidraw_control=dictionary['AxiDraw Control (unstable)'])
         except RuntimeError as e:
             raise RuntimeError("Could not parse server response. " +
-                               "This is probably the server's fault. (Error: {})".format(e))
+                               "This is probably the server's fault. (Error: {})".format(e)
+                              ).with_traceback(sys.exc_info()[2])
 
     return online_versions
 
@@ -104,7 +104,7 @@ def log_version_info(serial_port, check_updates, current_version_string, preview
         try:
             online_versions = get_versions_online()
         except RuntimeError as e:
-            msg = 'Unable to check online for latest version numbers. (Error: {})'.format(e)
+            msg = '{}'.format(e)
             message_fun(msg)
             logger.error(msg)
     else:

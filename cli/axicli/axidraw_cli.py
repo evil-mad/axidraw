@@ -36,7 +36,7 @@ https://shop.evilmadscientist.com/contact
 
 
 
-Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -73,7 +73,7 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface 3.0.2"
+cli_version = "AxiDraw Command Line Interface 3.1.0"
 
 quick_help = '''
     Basic syntax to plot a file:      axicli svg_in [OPTIONS]
@@ -84,7 +84,7 @@ quick_help = '''
 
     For full user guide, please see: https://axidraw.com/doc/cli_api/
 
-    (c) 2021 Evil Mad Scientist Laboratories
+    (c) 2022 Evil Mad Scientist Laboratories
         '''
 
 def axidraw_CLI(dev = False):
@@ -185,7 +185,7 @@ def axidraw_CLI(dev = False):
             + "1: Pen-down movement. 2: Pen-up movement. 3: All movement.")
 
     parser.add_argument("-G","--reordering", \
-            metavar='REORDERING', type=int, \
+            metavar='VALUE', type=int, \
             help="SVG reordering option (0-2)."\
             + " 0: None; Preserve order of objects given in SVG file."\
             + " 1: Reorder objects, preserving path orientation."\
@@ -215,6 +215,21 @@ def axidraw_CLI(dev = False):
     parser.add_argument("-o","--output_file",\
             metavar='FILE', \
             help="Optional SVG output file name")
+
+    parser.add_argument("-O","--digest",\
+            metavar='VALUE', type=int,\
+            help="Plot digest output option (0-2)."\
+            + " 0: No change to behavior or output (Default)."\
+            + " 1: Output 'plob' digest, not full SVG, when saving file."\
+            + " 2: Disable plots and previews; generate digest only.")
+
+    parser.add_argument("-W","--webhook", \
+            action="store_const",  const='True', \
+            help='Enable webhook alerts')
+
+    parser.add_argument("-U","--webhook_url",\
+            metavar='URL', type=str,\
+            help="URL for webhook alerts")
 
     parser.add_argument("--version",
             action='store_const', const='True',
@@ -314,16 +329,8 @@ def axidraw_CLI(dev = False):
                     "pen_rate_lower", "pen_rate_raise", "pen_delay_down", "pen_delay_up",
                     "random_start", "reordering", "no_rotate", "const_speed", "report_time",
                     "manual_cmd", "walk_dist", "layer", "copies", "page_delay", "preview",
-                    "rendering", "model", "port", "port_config"]
+                    "rendering", "model", "port", "port_config", 'digest', 'webhook', 'webhook_url',]
     utils.assign_option_values(adc.options, args, [config_dict], option_names)
-
-#     The following options are deprecated and should not be used.
-#     adc.options.setup_type          = args.setup_type  # Legacy input; not needed
-#     adc.options.smoothness          = args.smoothness  # Legacy input; not needed
-#     adc.options.cornering           = args.cornering   # Legacy input; not needed
-#     adc.options.resolution          = args.resolution  # Legacy input; not needed
-#     adc.options.resume_type         = args.resume_type # Legacy input; not needed
-#     adc.options.auto_rotate         = args.auto_rotate # Legacy input; not needed
 
     exit_status.run(adc.effect)    # Plot the document
     if utils.has_output(adc) and not use_trivial_file:

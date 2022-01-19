@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -51,6 +51,7 @@ ebb_serial = from_dependency_import('plotink.ebb_serial')  # https://github.com/
 ebb_motion = from_dependency_import('plotink.ebb_motion')
 plot_utils = from_dependency_import('plotink.plot_utils')
 text_utils = from_dependency_import('plotink.text_utils')
+requests = from_dependency_import('requests')
 
 from axidrawinternal import path_objects
 from axidrawinternal import digest_svg
@@ -76,7 +77,7 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
 
-        self.version_string = "3.0.2" # Dated 2021-10-19
+        self.version_string = "3.1.0" # Dated 2022-01-05
 
         self.spew_debugdata = False
 
@@ -90,9 +91,8 @@ class AxiDraw(inkex.Effect):
         self.Secondary = False
         self.user_message_fun = user_message_fun
 
-        # So that we only generate a warning once for each
-        # unsupported SVG element, we use a dictionary to track
-        # which elements have received a warning
+        # So that we only generate a warning once for each unsupported SVG element,
+        #   we use a dictionary to track which elements have received a warning
         self.warnings = {}
 
         self.start_x = None
@@ -120,7 +120,8 @@ class AxiDraw(inkex.Effect):
 
     def suppress_standard_output_stream(self):
         """ Save values we will need later in unsuppress_standard_output_stream """
-        self.logging_attrs["additional_handlers"] = [SecondaryErrorHandler(self), SecondaryNonErrorHandler(self)]
+        self.logging_attrs["additional_handlers"] = [SecondaryErrorHandler(self),\
+            SecondaryNonErrorHandler(self)]
         self.logging_attrs["emit_fun"] = self.user_message_fun
         logger.removeHandler(self.logging_attrs["default_handler"])
         for handler in self.logging_attrs["additional_handlers"]:
@@ -151,7 +152,8 @@ class AxiDraw(inkex.Effect):
         self.svg_paused_y_old = float(0.0)
         self.svg_rand_seed_old = int(1)
         self.svg_row_old = int(0)
-        self.svg_application_old = ""
+        self.svg_application_old = None
+        self.svg_plob_version = None
         self.use_layer_speed = False
         self.use_layer_pen_height = False
         self.resume_mode = False
@@ -207,7 +209,6 @@ class AxiDraw(inkex.Effect):
 
     def effect(self):
         """Main entry point: check to see which mode/tab is selected, and act accordingly."""
-
         self.start_time = time.time()
 
         try:
@@ -219,6 +220,7 @@ class AxiDraw(inkex.Effect):
         self.error_out = '' # Text log for significant errors
 
         self.pt_estimate = 0.0  # plot time estimate, milliseconds
+        self.time_estimate = 0.0 # plot time estimate, s. Available to Python API
 
         self.doc_units = "in"
 
@@ -330,6 +332,9 @@ class AxiDraw(inkex.Effect):
             else:
                 self.options.mode = "toggle"
 
+        if self.options.digest > 1: # Generate digest only; do not run plot or preview
+            self.options.preview = True # Disable serial communication; restrict certain functions
+
         if not self.options.preview:
             self.serial_connect()
 
@@ -348,6 +353,7 @@ class AxiDraw(inkex.Effect):
         if self.options.page_delay < 0:
             self.options.page_delay = 0
 
+        self.read_plotdata(self.svg)
         if self.options.mode == "plot":
             self.copies_to_plot = self.options.copies
             if self.copies_to_plot == 0:
@@ -386,7 +392,6 @@ class AxiDraw(inkex.Effect):
                                 self.copies_to_plot = 0
 
         elif self.options.mode == "res_home" or self.options.mode == "res_plot":
-            self.read_plotdata(self.svg)
             self.resume_data_needs_updating = True
             self.resume_plot_setup()
             if self.resume_mode:
@@ -488,12 +493,11 @@ class AxiDraw(inkex.Effect):
         """ Read plot progress data, stored in a custom "plotdata" XML element """
         self.svg_data_read = False
         data_node = None
-        nodes = svg_to_check.xpath('//svg:plotdata', namespaces=inkex.NSS)
+        nodes = svg_to_check.xpath("//*[self::svg:plotdata|self::plotdata]", namespaces=inkex.NSS)
         if nodes:
             data_node = nodes[0]
-
         if data_node is not None:
-            try:
+            try: # Core data required for resuming plots
                 self.svg_layer_old = int(data_node.get('layer'))
                 self.svg_node_count_old = int(data_node.get('node'))
                 self.svg_last_path_old = int(data_node.get('last_path'))
@@ -502,24 +506,34 @@ class AxiDraw(inkex.Effect):
                 self.svg_last_known_y_old = float(data_node.get('last_known_y'))
                 self.svg_paused_x_old = float(data_node.get('paused_x'))
                 self.svg_paused_y_old = float(data_node.get('paused_y'))
-                self.svg_application_old = str(data_node.get('application'))
                 self.svg_data_read = True
-                self.svg_rand_seed_old = int(float(data_node.get('randseed')))
-            except TypeError:
-                self.svg.remove(data_node) # An error leaves svg_data_read as False.
-                # Remove the node, to prevent adding a duplicate plotdata node later.
+                self.svg_application_old = data_node.get('application')
+                self.svg_plob_version = data_node.get('plob_version')
+            except TypeError: # An error leaves svg_data_read as False.
+                self.svg.remove(data_node) # Remove data node
             try: # Optional attributes:
                 self.svg_row_old = int(data_node.get('row'))
+            except TypeError:
+                pass  # Leave as default if not found
+            try: # Optional attributes:
+                self.svg_rand_seed_old = int(float(data_node.get('randseed')))
             except TypeError:
                 pass  # Leave as default if not found
 
     def update_plotdata(self):
         """ Write plot progress data, stored in a custom "plotdata" XML element """
         if not self.svg_data_written:
-            for node in self.svg.xpath('//svg:plotdata', namespaces=inkex.NSS):
+            for node in self.svg.xpath("//*[self::svg:plotdata|self::plotdata]",\
+                namespaces=inkex.NSS):
                 node_parent = node.getparent()
                 node_parent.remove(node)
             data_node = etree.SubElement(self.svg, 'plotdata')
+            data_node.set('application', "axidraw")  # Name of this program
+            data_node.set('model', str(self.options.model))
+            if self.options.digest: # i.e., if self.options.digest > 0
+                data_node.set('plob_version', str(path_objects.PLOB_VERSION))
+            elif self.svg_plob_version:
+                data_node.set('plob_version', str(self.svg_plob_version))
             data_node.set('layer', str(self.svg_layer))
             data_node.set('node', str(self.svg_node_count))
             data_node.set('last_path', str(self.svg_last_path))
@@ -531,7 +545,6 @@ class AxiDraw(inkex.Effect):
             data_node.set('randseed', str(self.svg_rand_seed))
             data_node.set('row', str(self.svg_row_old))
             data_node.set('id', str(int(time.time())))
-            data_node.set('application', "axidraw")  # Name of this program
             self.svg_data_written = True
 
     def setup_command(self):
@@ -677,7 +690,7 @@ class AxiDraw(inkex.Effect):
             return
 
         if not self.options.preview:
-            self.options.rendering = 0  # Only render previews if we are in preview mode.
+            self.options.rendering = 0 # Only render previews if we are in preview mode.
             self.vel_data_plot = False
             if self.serial_port is None:
                 return
@@ -690,74 +703,87 @@ class AxiDraw(inkex.Effect):
         # Modifications to SVG -- including re-ordering and text substitution
         #   may be made at this point, and will not be preserved.
 
-        vb = self.svg.get('viewBox')
-        if vb:
+        v_b = self.svg.get('viewBox')
+        if v_b:
             p_a_r = self.svg.get('preserveAspectRatio')
-            sx, sy, ox, oy = plot_utils.vb_scale(vb, p_a_r, self.svg_width, self.svg_height)
+            s_x, s_y, o_x, o_y = plot_utils.vb_scale(v_b, p_a_r, self.svg_width, self.svg_height)
         else:
-            sx = 1.0 / float(plot_utils.PX_PER_INCH) # Handle case of no viewbox
-            sy = sx
-            ox = 0.0
-            oy = 0.0
+            s_x = 1.0 / float(plot_utils.PX_PER_INCH) # Handle case of no viewbox
+            s_y = s_x
+            o_x = 0.0
+            o_y = 0.0
 
         # Initial transform of document is based on viewbox, if present:
         self.svg_transform = simpletransform.parseTransform(\
-                'scale({0:.6E},{1:.6E}) translate({2:.6E},{3:.6E})'.format(sx, sy, ox, oy))
+                'scale({0:.6E},{1:.6E}) translate({2:.6E},{3:.6E})'.format(s_x, s_y, o_x, o_y))
 
-        # Process the input SVG into a simplified, restricted-format DocDigest object:
-        digester = digest_svg.DigestSVG() # Initialize class
+        valid_plob = False
+        if self.svg_plob_version:
+            logger.debug('Checking Plob')
+            valid_plob = digest_svg.verify_plob(self.svg, self.options.model)
+        if valid_plob:
+            logger.debug('Valid plob found; skipping standard pre-processing.')
+            digest = path_objects.DocDigest()
+            digest.from_plob(self.svg)
+        else: # Process the input SVG into a simplified, restricted-format DocDigest object:
+            digester = digest_svg.DigestSVG() # Initialize class
+            digest_params = [self.svg_width, self.svg_height, s_x, s_y, self.svg_layer,\
+                self.params.bezier_segmentation_tolerance,\
+                self.params.segment_supersample_tolerance, self.warnings]
 
-        digest_params = [self.svg_width, self.svg_height, self.svg_layer,\
-            self.params.bezier_segmentation_tolerance,\
-            self.params.segment_supersample_tolerance, self.warnings]
+            digest = digester.process_svg(self.svg, digest_params, self.svg_transform)
+            self.warnings = digester.warnings
+            if digester.warning_text.strip():
+                self.user_message_fun(digester.warning_text)
 
-        digest = digester.process_svg(self.svg, digest_params, self.svg_transform)
-        self.warnings = digester.warnings
-        if digester.warning_text.strip():
-            self.user_message_fun(digester.warning_text)
+            """
+            Possible future work: Perform hidden-line clipping at this point, based on object
+                fills, clipping masks, and document and plotting bounds, via self.bounds
+            """
+            """
+            Possible future work: Perform automatic hatch filling at this point, based on object
+                fill colors and possibly other factors.
+            """
 
-        """
-        Possible future work: Perform hidden-line clipping at this point, based on object
-            fills, clipping masks, and document and plotting bounds, via self.bounds
-        """
-        """
-        Possible future work: Perform automatic hatch filling at this point, based on object
-            fill colors and possibly other factors.
-        """
+            digest.flatten() # Flatten digest, readying it for optimizations and plotting
 
-        digest.flatten() # Flatten digest, readying it for optimizations and plotting
+            if self.rotate_page: # Rotate digest
+                digest.rotate(self.params.auto_rotate_ccw)
 
-        if self.rotate_page: # Rotate digest
-            digest.rotate(self.params.auto_rotate_ccw)
+            """
+            Clip digest at plot bounds
+            """
+            if not self.ignore_limits:
+                if self.rotate_page:
+                    doc_bounds = [self.svg_height + 1e-9, self.svg_width + 1e-9]
+                else:
+                    doc_bounds = [self.svg_width + 1e-9, self.svg_height + 1e-9]
+                out_of_bounds_flag = boundsclip.clip_at_bounds(digest, self.bounds, doc_bounds,\
+                    self.params.bounds_tolerance, self.params.clip_to_page)
+                if out_of_bounds_flag:
+                    self.warn_out_of_bounds = True
 
-        """
-        Clip digest at plot bounds
-        """
-        if not self.ignore_limits:
-            if self.rotate_page:
-                doc_bounds = [self.svg_height + 1e-9, self.svg_width + 1e-9]
-            else:
-                doc_bounds = [self.svg_width + 1e-9, self.svg_height + 1e-9]
-            out_of_bounds_flag = boundsclip.clip_at_bounds(digest, self.bounds, doc_bounds,\
-                self.params.bounds_tolerance, self.params.clip_to_page)
-            if out_of_bounds_flag:
-                self.warn_out_of_bounds = True
+            """
+            Optimize digest
+            """
+            allow_reverse = self.options.reordering > 1
 
-        """
-        Optimize digest
-        """
-        allow_reverse = self.options.reordering > 1
+            plot_optimizations.connect_nearby_ends(digest, allow_reverse, self.params.min_gap)
 
-        plot_optimizations.connect_nearby_ends(digest, allow_reverse, self.params.min_gap)
+            if self.options.random_start:
+                plot_optimizations.randomize_start(digest, self.svg_rand_seed)
 
-        if self.options.random_start:
-            plot_optimizations.randomize_start(digest, self.svg_rand_seed)
-        if self.options.reordering > 0:
-            plot_optimizations.reorder(digest, allow_reverse)
+            if self.options.reordering > 0:
+                plot_optimizations.reorder(digest, allow_reverse)
 
         # If it is necessary to save as a Plob, that conversion can be made like so:
         # plob = digest.to_plob() # Unnecessary re-conversion for testing only
         # digest.from_plob(plob)  # Unnecessary re-conversion for testing only
+
+        if self.options.digest > 1: # No plotting; generate digest only.
+            self.document = copy.deepcopy(digest.to_plob())
+            self.svg = self.document
+            return
 
         try:  # wrap everything in a try so we can be sure to close the serial port
             self.servo_setup_wrapper()
@@ -781,23 +807,17 @@ class AxiDraw(inkex.Effect):
                     self.user_message_fun(gettext.gettext('Resume plot error; plot terminated'))
                     return # something has gone wrong; possibly an ill-timed button press?
 
-            # Step through and plot contents of document digest:
-            self.plot_doc_digest(digest)
+            self.plot_doc_digest(digest) # Step through and plot contents of document digest
 
             self.pen_raise()  # Always end with pen-up
 
-            # Return to home after end of normal plot:
-            if not self.b_stopped and self.pt_first:
-
+            if not self.b_stopped and self.pt_first: # Return to home after end of normal plot:
                 self.x_bounds_min = 0
                 self.y_bounds_min = 0
-
-               # Option for different final XY position:
-                if self.end_x is not None:
+                if self.end_x is not None:  # Option for different final XY position:
                     f_x = self.end_x
                 else:
                     f_x = self.pt_first[0]
-
                 if self.end_y is not None:
                     f_y = self.end_y
                 else:
@@ -811,16 +831,17 @@ class AxiDraw(inkex.Effect):
              and prior to saving updated "plotdata" progress data in the file.
              No changes to the SVG document prior to this point will be saved.
 
-             Doing so allows us to use routines that alter the SVG
-             prior to this point -- e.g., plot re-ordering for speed
-             or font substitutions.
+            Doing so allows us to use routines that alter the SVG prior to this point,
+             e.g., plot re-ordering for speed or font substitutions.
             """
-
             try:
-                # If we have a good "backup_original",
-                # revert to _that_, rather than the true original
-                self.document = copy.deepcopy(self.backup_original)
-                self.svg = self.document.getroot()
+                if self.options.digest:
+                    self.document = copy.deepcopy(digest.to_plob())
+                    self.svg = self.document
+                    self.options.rendering = 0 # Turn off rendering
+                else:
+                    self.document = copy.deepcopy(self.backup_original)
+                    self.svg = self.document.getroot()
             except AttributeError:
                 self.document = copy.deepcopy(self.original_document)
                 self.svg = self.document.getroot()
@@ -860,7 +881,7 @@ class AxiDraw(inkex.Effect):
             if self.options.rendering > 0:  # Render preview. Only possible when in preview mode.
                 preview_transform = simpletransform.parseTransform(
                     'translate({2:.6E},{3:.6E}) scale({0:.6E},{1:.6E})'.format(
-                    1.0/sx, 1.0/sy, -ox, -oy))
+                    1.0/s_x, 1.0/s_y, -o_x, -o_y))
                 path_attrs = { 'transform': simpletransform.formatTransform(preview_transform)}
                 preview_layer = etree.Element(inkex.addNS('g', 'svg'),
                     path_attrs, nsmap=inkex.NSS)
@@ -871,9 +892,9 @@ class AxiDraw(inkex.Effect):
                 preview_layer.set(inkex.addNS('groupmode', 'inkscape'), 'layer')
                 preview_layer.set(inkex.addNS('label', 'inkscape'), '% Preview')
                 preview_sl_d.set(inkex.addNS('groupmode', 'inkscape'), 'layer')
-                preview_sl_d.set(inkex.addNS('label', 'inkscape'), '% Pen-down drawing')
+                preview_sl_d.set(inkex.addNS('label', 'inkscape'), 'Pen-down movement')
                 preview_sl_u.set(inkex.addNS('groupmode', 'inkscape'), 'layer')
-                preview_sl_u.set(inkex.addNS('label', 'inkscape'), '% Pen-up transit')
+                preview_sl_u.set(inkex.addNS('label', 'inkscape'), 'Pen-up movement')
 
                 self.svg.append(preview_layer)
 
@@ -951,43 +972,53 @@ class AxiDraw(inkex.Effect):
                     etree.SubElement(preview_layer,
                                      inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
-            if self.options.report_time and (self.copies_to_plot == 0):
-                # Only calculate these after plotting last copy,
-                #   and only if report_time is enabled.
+        finally: # In case of an exception and loss of the serial port...
+            pass
 
-                elapsed_time = time.time() - self.start_time
-                self.time_elapsed = elapsed_time # Available for use by python API
-
+        if self.copies_to_plot == 0:  # Only calculate after plotting last copy
+            elapsed_time = time.time() - self.start_time
+            self.time_elapsed = elapsed_time # Available for use by python API
+            if self.options.report_time:
                 if self.options.preview:
-                    self.time_estimate = self.pt_estimate / 1000.0 # Available for use by python API
+                    self.time_estimate = self.pt_estimate / 1000.0 # Available to python API
                 else:
                     self.time_estimate = elapsed_time # Available for use by python API
-
                 d_dist = 0.0254 * self.pen_down_travel_inches
                 u_dist = 0.0254 * self.pen_up_travel_inches
                 t_dist = d_dist + u_dist # Total distance
                 self.distance_pendown = d_dist # Available for use by python API
                 self.distance_total = t_dist # Available for use by python API
 
-                if (not self.called_externally): # Verbose mode; report data to user
+                if not self.called_externally: # Verbose mode; report data to user
                     if self.options.preview:
                         self.user_message_fun("Estimated print time: " +\
                             text_utils.format_hms(self.pt_estimate, True))
+
+
                     elapsed_text = text_utils.format_hms(elapsed_time)
                     if self.options.preview:
-                        self.user_message_fun("Length of path to draw: {0:1.2f} m.".format(d_dist))
-                        self.user_message_fun("Pen-up travel distance: {0:1.2f} m.".format(u_dist))
-                        self.user_message_fun("Total movement distance: {0:1.2f} m.".format(t_dist))
+                        self.user_message_fun("Length of path to draw: {0:1.2f} m".format(d_dist))
+                        self.user_message_fun("Pen-up travel distance: {0:1.2f} m".format(u_dist))
+                        self.user_message_fun("Total movement distance: {0:1.2f} m".format(t_dist))
                         self.user_message_fun("This estimate took " + elapsed_text)
                     else:
                         self.user_message_fun("Elapsed time: " + elapsed_text)
-                        self.user_message_fun("Length of path drawn: {0:1.2f} m.".format(d_dist))
-                        self.user_message_fun("Total distance moved: {0:1.2f} m.".format(t_dist))
-                        # self.user_message_fun("Pen lifts: {}".format(self.pen_lifts))
-        finally: # In case of an exception and loss of the serial port...
-            pass
-
-
+                        self.user_message_fun("Length of path drawn: {0:1.2f} m".format(d_dist))
+                        self.user_message_fun("Total distance moved: {0:1.2f} m".format(t_dist))
+                    if self.params.report_lifts:
+                        self.user_message_fun("Number of pen lifts: {}".format(self.pen_lifts))
+            if self.options.webhook and not self.options.preview:
+                if self.options.webhook_url is not None:
+                    payload = {'value1': str(digest.name),
+                        'value2': str(text_utils.format_hms(elapsed_time)),
+                        'value3': str(self.options.port),
+                        }
+                    try:
+                        r = requests.post(self.options.webhook_url, data=payload)
+                        # self.user_message_fun("webhook results: " + str(r))
+                    except (RuntimeError, requests.exceptions.ConnectionError) as e:
+                        raise RuntimeError("An error occurred while posting webhook. " +
+                               "Are you connected to the internet? (Error: {})".format(e))
 
     def plot_doc_digest(self, digest):
         """
@@ -1285,7 +1316,7 @@ class AxiDraw(inkex.Effect):
                 trimmed_path.append([tmp_x, tmp_y])  # Selected, usable portions of input_path.
 
                 traj_logger.debug('\nSegment: input_path[{0:1.0f}] -> input_path[{1:1.0f}]'.format(last_index, i))
-                traj_logger.debug('Destination: x: {0:1.3f},  y: {1:1.3f}. Move distance: {2:1.3f}'.format(tmp_x, tmp_y, tmp_dist))
+                traj_logger.debug('Dest: x: {0:1.3f},  y: {1:1.3f}. Distance: {2:1.3f}'.format(tmp_x, tmp_y, tmp_dist))
 
                 last_index = i
             else:
@@ -2385,32 +2416,25 @@ class AxiDraw(inkex.Effect):
             value = ebb_motion.queryEBBLV(self.serial_port)
             if int(value) != self.options.pen_pos_up + 1:
                 """
-                When the EBB is reset, it goes to its default "pen up" position,
-                for which QueryPenUp will tell us that the EBB believes it is
-                in the pen-up position. However, its actual position is the
+                When the EBB is reset, it goes to its default "pen up" position. QueryPenUp
+                will tell us that the in the pen-up state. However, its actual position is the
                 default, not the pen-up position that we've requested.
 
-                To fix this, we can manually command the pen to either the
-                pen-up or pen-down position, as requested. HOWEVER, that may
-                take as much as five seconds in the very slowest pen-movement
-                speeds, and we want to skip that delay if the pen were actually
-                already in the right place, for example if we're plotting right
-                after raising the pen, or plotting twice in a row.
+                To fix this, we could manually command the pen to either the pen-up or pen-down
+                position. HOWEVER, that may take as much as five seconds in the very slowest
+                speeds, and we want to skip that delay if the pen is already in the right place,
+                for example if we're plotting after raising the pen, or plotting twice in a row.
 
-                Solution: Use an otherwise unused EBB firmware variable (EBBLV),
-                which is set to zero upon reset. If we set that value to be
-                nonzero, and later find that it's still nonzero, we know that
-                the servo position has been set (at least once) since reset.
+                Solution: Use an otherwise unused EBB firmware variable (EBBLV), which is set to
+                zero upon reset. If we set that value to be nonzero, and later find that it's still
+                nonzero, we know that the servo position has been set (at least once) since reset.
 
-                Knowing that the pen is up _does not_ confirm that the pen is
-                at the *requested* pen-up position. We can store
-                (self.options.pen_pos_up + 1), with possible values in the range
-                1 - 101 in EBBLV, to verify that the current position is
-                correct, and that we can skip extra pen-up/pen-down movements.
+                Knowing that the pen is up _does not_ confirm that the pen is at the *requested*
+                pen-up position. We can store (self.options.pen_pos_up + 1), with possible values
+                in the range 1 - 101 in EBBLV, to verify that the current position is correct, and
+                that we can skip extra pen-up/pen-down movements.
 
-                We do not _set_ the current correct pen-up value of EBBLV until
-                the pen is actually raised.
-
+                We do not _set_ the current correct pen-up value of EBBLV until the pen is raised.
                 """
                 ebb_motion.setEBBLV(self.serial_port, 0)
                 self.ebblv_set = False
@@ -2429,11 +2453,9 @@ class AxiDraw(inkex.Effect):
 
     def servo_setup(self):
         """
-        Pen position units range from 0% to 100%, which correspond to
-        a typical timing range of 7500 - 25000 in units of 1/(12 MHz).
-        1% corresponds to ~14.6 us, or 175 units of 1/(12 MHz).
+        Pen position units range from 0% to 100%, which correspond to a typical timing range of
+        7500 - 25000 in units of 1/(12 MHz). 1% corresponds to ~14.6 us: 175 units of 1/(12 MHz).
         """
-
         if self.use_layer_pen_height:
             pen_down_pos = self.layer_pen_pos_down
         else:
@@ -2450,16 +2472,13 @@ class AxiDraw(inkex.Effect):
             ebb_motion.setPenDownPos(self.serial_port, int_temp)
 
             """
-            Servo speed units (as set with setPenUpRate) are units of %/second,
-            referring to the percentages above.
-            The EBB takes speeds in units of 1/(12 MHz) steps
-            per 24 ms.  Scaling as above, 1% of range in 1 second
-            with SERVO_MAX = 27831 and SERVO_MIN = 9855
-            corresponds to 180 steps change in 1 s
-            That gives 0.180 steps/ms, or 4.5 steps / 24 ms.
+            Servo speed units (as set with setPenUpRate) are units of %/second, referring to the
+            percentages above. The EBB speed are in units of 1/(12 MHz) steps per 24 ms.  Scaling
+            as above, 1% of range in 1 second with SERVO_MAX = 27831 and SERVO_MIN = 9855
+            corresponds to 180 steps change in 1 s. That gives 0.180 steps/ms, or 4.5 steps/24 ms.
 
-            Our input range (1-100%) corresponds to speeds up to
-            100% range in 0.25 seconds, or 4 * 4.5 = 18 steps/24 ms.
+            Our input range (1-100%) corresponds to speeds up to 100% range in 0.25 seconds, or
+            4 * 4.5 = 18 steps/24 ms.
             """
 
             int_temp = 18 * self.options.pen_rate_raise
@@ -2468,8 +2487,7 @@ class AxiDraw(inkex.Effect):
             int_temp = 18 * self.options.pen_rate_lower
             ebb_motion.setPenDownRate(self.serial_port, int_temp)
 
-            # Set servo timeout
-            ebb_motion.servo_timeout(self.serial_port, self.params.servo_timeout)
+            ebb_motion.servo_timeout(self.serial_port, self.params.servo_timeout) # Set timeout
 
 
     def query_ebb_voltage(self):
@@ -2486,9 +2504,8 @@ class AxiDraw(inkex.Effect):
 
     def get_doc_props(self):
         """
-        Get the document's height and width attributes from the <svg> tag.
-        Use a default value in case the property is not present or is
-        expressed in units of percentages.
+        Get the document's height and width attributes from the <svg> tag. Use a default value in
+        case the property is not present or is expressed in units of percentages.
         """
 
         self.svg_height = plot_utils.getLengthInches(self, 'height')

@@ -2,9 +2,9 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 3.0.1, dated 2021-10-13.
+# Version 3.1.0, dated 2022-01-05.
 #
-# Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # https://github.com/evil-mad/AxiDraw
 #
@@ -87,6 +87,17 @@ resolution = 1          # Resolution: (1-2):
                             # 1: High resolution (smoother, slightly slower) (Default)
                             # 2: Low resolution (coarser, slightly faster)
 
+digest = 0              # Plot digest output option. (Do NOT enable if using within Inkscape.)
+                            # 0: Disabled; No change to behavior or output (Default)
+                            # 1: Output "plob" digest, not full SVG, when saving file
+                            # 2: Disable plots and previews; generate digest only
+
+webhook = False         # Enable webhook alerts
+                            # Default: False
+
+webhook_url = None      # URL for webhook alerts
+
+
 # Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
 # Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
 # not along the XY axes of the machine. This parameter chooses 8X or 16X motor microstepping.
@@ -126,6 +137,8 @@ options_message = True  # If True (default), display an advisory message if Appl
                         #   This message can prevent the situation where one clicks Apply on the
                         #   Options tab and then waits a few minutes before realizing that
                         #   no plot has been initiated.
+
+report_lifts = False    # Report number of pen lifts when reporting plot duration (Default: False)
 
 auto_clip_lift = True   # Option applicable to the Interactive Python API only.
                         #   If True (default), keep pen up when motion is clipped by travel bounds.
@@ -187,8 +200,9 @@ time_slice = 0.025  # Interval, in seconds, of when to update the motors. Defaul
 
 bounds_tolerance = 0.003  # Suppress warnings if bounds are exceeded by less than this distance (inches).
 
-# Allow sufficiently short pen-up moves to be substituted with a pen-down move:
-min_gap = 0.008  # Distance Threshold (inches). Default value: 0.008 inches; smaller than most pen lines.
+min_gap = 0.008     # Automatic path joining threshold, inches. Default: 0.008
+                    # If greater than zero, pen-up moves shorter than this distance
+                    #   will be replaced by pen-down moves. Set negative to disable.
 
 # Servo motion limits, in units of (1/12 MHz), about 83 ns:
 servo_max = 27831  # Highest allowed position; "100%" on the scale.    Default value: 25200 units, or 2.31 ms.

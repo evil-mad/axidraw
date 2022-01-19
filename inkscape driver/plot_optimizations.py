@@ -53,11 +53,10 @@ import copy
 import math
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
 
-from . import rtree
-from . import spatial_grid
-
 path_objects = from_dependency_import('axidrawinternal.path_objects')
 plot_utils = from_dependency_import('plotink.plot_utils')
+rtree = from_dependency_import('plotink.rtree')
+spatial_grid = from_dependency_import('plotink.spatial_grid')
 
 
 def connect_nearby_ends(digest, reverse, min_gap):

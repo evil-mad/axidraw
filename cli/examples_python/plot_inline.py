@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -#-
-from __future__ import print_function
 
 '''
 plot_inline.py
@@ -48,7 +47,7 @@ https://shop.evilmadscientist.com/contact
 
 
 
-Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -166,3 +165,4 @@ https://axidraw.com/doc/py_api/
 '''
 
 ad.plot_run()   # plot the document
+

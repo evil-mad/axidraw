@@ -15,52 +15,52 @@ def core_options(parser, config):
                        type="int", action="store", dest="speed_penup", \
                        default=config["speed_penup"], \
                        help="Maximum transit speed, when pen is up (1-100)")
-    
+
     options.add_option("--accel",\
                        type="int", action="store", dest="accel", \
                        default=config["accel"], \
                        help="Acceleration rate factor (1-100)")
-    
+
     options.add_option("--pen_pos_down",\
                        type="int", action="store", dest="pen_pos_down",\
                        default=config["pen_pos_down"],\
                        help="Height of pen when lowered (0-100)")
-    
+
     options.add_option("--pen_pos_up",\
                        type="int", action="store", dest="pen_pos_up", \
                        default=config["pen_pos_up"], \
                        help="Height of pen when raised (0-100)")
-    
+
     options.add_option("--pen_rate_lower",\
                        type="int", action="store", dest="pen_rate_lower",\
                        default=config["pen_rate_lower"], \
                        help="Rate of lowering pen (1-100)")
-    
+
     options.add_option("--pen_rate_raise",\
                        type="int", action="store", dest="pen_rate_raise",\
                        default=config["pen_rate_raise"],\
                        help="Rate of raising pen (1-100)")
-    
+
     options.add_option("--pen_delay_down",\
                        type="int", action="store", dest="pen_delay_down",\
                        default=config["pen_delay_down"],\
                        help="Optional delay after pen is lowered (ms)")
-    
+
     options.add_option("--pen_delay_up",\
                        type="int", action="store", dest="pen_delay_up", \
                        default=config["pen_delay_up"],\
                        help="Optional delay after pen is raised (ms)")
-    
+
     options.add_option("--no_rotate",\
                        type="inkbool", action="store", dest="no_rotate",\
                        default=False,\
                        help="Disable auto-rotate; preserve plot orientation")
-    
+
     options.add_option("--const_speed",\
                        type="inkbool", action="store", dest="const_speed",\
                        default=config["const_speed"],\
                        help="Use constant velocity when pen is down")
-    
+
     options.add_option("--report_time",\
                        type="inkbool", action="store", dest="report_time",\
                        default=config["report_time"],\
@@ -70,7 +70,7 @@ def core_options(parser, config):
                        type="int", action="store", dest="page_delay",\
                        default=config["page_delay"],\
                        help="Optional delay between copies (s).")
-    
+
     options.add_option("--preview",\
                        type="inkbool", action="store", dest="preview",\
                        default=config["preview"],\
@@ -81,7 +81,7 @@ def core_options(parser, config):
                        default=config["rendering"],\
                        help="Preview mode rendering option (0-3). 0: None. " \
                        + "1: Pen-down movement. 2: Pen-up movement. 3: All movement.")
-    
+
     options.add_option("--model",\
                        type="int", action="store", dest="model",\
                        default=config["model"],\
@@ -106,37 +106,58 @@ def core_options(parser, config):
                        type="string", action="store", dest="setup_type",\
                        default="align",\
                        help="Setup option selected (GUI Only)")
-    
+
     options.add_option("--resume_type",\
                        type="string", action="store", dest="resume_type",\
                        default="plot",
                        help="The resume option selected (GUI Only)")
-    
+
     options.add_option("--auto_rotate",\
                        type="inkbool", action="store", dest="auto_rotate",\
                        default=config["auto_rotate"], \
-                       help="Boolean: Auto select portrait vs landscape")
+                       help="Auto select portrait vs landscape orientation")
 
     options.add_option("--random_start",\
                        type="inkbool", action="store", dest="random_start",\
                        default=config["random_start"], \
-                       help="Boolean: Randomize start locations of closed paths")
+                       help="Randomize start locations of closed paths")
 
     options.add_option("--reordering",\
                        type="int", action="store", dest="reordering",\
                        default=config["reordering"],\
-                       help="Plot optimization option selected")
+                        help="Plot optimization option (0-2)."\
+                        +" 0: Preserve order given in SVG file (Default)."\
+                        + "1: Reorder objects, preserving path orientation. "\
+                        + "2: Reorder objects, allow path reversal. ")
 
     options.add_option("--resolution",\
                        type="int", action="store", dest="resolution",\
                        default=config["resolution"],\
                        help="Resolution option selected")
 
+    options.add_option("--digest",\
+                       type="int", action="store", dest="digest",\
+                       default=config["digest"],\
+                        help="Plot optimization option (0-2)."\
+                        +" 0: No change to behavior or output (Default)."\
+                        + "1: Output 'plob' digest, not full SVG, when saving file. "\
+                        + "2: Disable plots and previews; generate digest only. ")
+
+    options.add_option("--webhook",\
+                       type="inkbool", action="store", dest="webhook",\
+                       default=config["webhook"],\
+                       help="Enable webhook callback when a plot finishes")
+
+    options.add_option("--webhook_url",\
+                       type="string", action="store", dest="webhook_url",\
+                       default=config["webhook_url"],\
+                       help="Webhook URL to be used if webhook is enabled")
+
     return options
 
 def core_mode_options(parser, config):
     options = OptionGroup(parser, "Mode Options")    
-    
+
     options.add_option("--mode",\
                        action="store", type="string", dest="mode",\
                        default="plot", \
@@ -154,20 +175,20 @@ def core_mode_options(parser, config):
                        help="Manual command. One of: [fw_version, raise_pen, lower_pen, " \
                        + "walk_x, walk_y, enable_xy, disable_xy, bootload, strip_data, " \
                        + "read_name, list_names,  write_name]. Default: fw_version")
-    
+
     options.add_option("--walk_dist",\
                        type="float", action="store", dest="walk_dist",\
                        default=1,\
                        help="Distance for manual walk (inches)")
-    
+
     options.add_option("--layer",\
                        type="int", action="store", dest="layer",\
                        default=config["default_layer"],\
                        help="Layer(s) selected for layers mode (1-1000). Default: 1")
-    
+
     options.add_option("--copies",\
                        type="int", action="store", dest="copies",\
                        default=config["copies"],\
                        help="Copies to plot, or 0 for continuous plotting. Default: 1")
-    
+
     return options

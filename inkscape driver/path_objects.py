@@ -54,6 +54,8 @@ PLOB_BASE = """<?xml version="1.0" standalone="no"?>
    </svg>
 """
 
+PLOB_VERSION = "1"
+
 
 class PathItem:
     """
@@ -212,7 +214,7 @@ class DocDigest:
         self.flat = False     # Boolean indicating if the instance has been flattened.
         self.layers = []      # List of PathItem objects in the layer
 
-        self.metadata['plob_version'] = "1.0"
+        self.plotdata['plob_version'] = PLOB_VERSION
 
     def flatten(self):
         """
@@ -238,7 +240,7 @@ class DocDigest:
         self.width = self.height
         self.height = old_width
 
-        self.viewbox = "0 0 {:f} {:f}".format(self.height, self.width)
+        self.viewbox = "0 0 {:f} {:f}".format(self.width, self.height)
 
         if not self.flat:
             self.flatten()
@@ -317,6 +319,9 @@ class DocDigest:
 
         This function is for use _only_ on an input etree that is in the Plob
         format, not a full SVG file with arbitrary contents.
+
+        While documentation layers are not allowed as part of the plob,
+        we will ignore them. That allows a preview to be run before plotting.
         """
 
         # Reset instance variables; ensure that they are clobbered.
@@ -349,7 +354,7 @@ class DocDigest:
             self.viewbox = vb_temp
 
         for node in plob:
-            if node.tag == 'g':
+            if node.tag in ['g', inkex.addNS('g', 'svg')]:
                 # A group that we treat as a layer
                 name_temp = node.get(inkex.addNS('label', 'inkscape'))
                 if not name_temp:
@@ -357,8 +362,11 @@ class DocDigest:
                 layer = LayerItem() # New LayerItem object
                 layer.item_id = node.get('id')
                 layer.name = name_temp
+                if len(str(name_temp)) > 0:
+                    if str(name_temp)[0] == '%':
+                        continue # Skip Documentation layer and its contents
                 for subnode in node:
-                    if subnode.tag == 'polyline':
+                    if subnode.tag in ['polyline', inkex.addNS('polyline', 'svg')]:
                         path = PathItem() # New PathItem object
                         path.from_string(subnode.get('points'))
                         path.item_id = subnode.get('id')
