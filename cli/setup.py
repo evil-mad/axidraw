@@ -17,7 +17,7 @@ here = path.abspath(path.dirname(__file__))
 print("WARNING: It looks like you might be attempting to install this in a non-pip way. This is discouraged. Use `pip install .` (or `pip install -r requirements.txt` if you are a developer with access to the relevant private repositories).")
 
 extras_require = {
-    'dev': [ 'axidrawinternal'], # see installation instructions
+    'dev': [ 'axidrawinternal>=3.0.0'], # see installation instructions
     'test': [
         'coverage', # coverage run -m unittest discover && coverage html
         'mock',
@@ -45,7 +45,10 @@ def replacement_setup(*args, **kwargs):
                     pass
                 subprocess.check_call([sys.executable, '-m', 'pip', 'install', wheel_file])
     except (AttributeError, subprocess.CalledProcessError) as err:
-        raise RuntimeError("Could not install one or more prebuilt dependencies.") from err
+        if sys.version_info < (3, 6):
+            pass # pip has a standard message for this situation (see `python_requires` arg below)
+        else: # python3
+            raise RuntimeError("Could not install one or more prebuilt dependencies.", err.with_traceback(err.__traceback__))
 
     original_setup(*args, **kwargs)
 
@@ -53,8 +56,8 @@ original_setup = setuptools.setup
 setuptools.setup = replacement_setup
 
 replacement_setup(
-    name='pyaxidraw',
-    version='2.7.5',
+    name='axicli',
+    version='3.1.0',
     python_requires='>=3.6.0',
     long_description=long_description,
     long_description_content_type='text/plain',
@@ -63,10 +66,10 @@ replacement_setup(
     author_email='contact@evilmadscientist.com',
     packages=setuptools.find_packages(exclude=['contrib', 'docs', 'test']),
     install_requires=[
-        # this only includes publicly available dependencies
         'ink_extensions>=1.1.0',
-        'lxml',
-        'plotink>=1.2.4',
+        'lxml>=4.6.2',
+        'plotink>=1.4.0',
+        'pyserial>=3.5',
         'requests', # just for the certificates for now
     ],
     extras_require=extras_require,

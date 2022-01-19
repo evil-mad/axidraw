@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -#-
-from __future__ import print_function
 
 '''
 estimate_time.py
@@ -10,12 +9,7 @@ that it will take to plot an SVG file.
 
 Run this demo by calling: python estimate_time.py
 
-To save the time estimate to a file, you may be able to use a command similar to:
-    python estimate_time.py > file.txt
-    
-    
 AxiDraw python API documentation is hosted at: https://axidraw.com/doc/py_api/
-
 
 '''
 
@@ -40,7 +34,7 @@ https://shop.evilmadscientist.com/contact
 
 
 
-Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -103,12 +97,10 @@ if you already know where the file is. This can be as simple as:
 ad.plot_setup("AxiDraw_trivial.svg")
 '''
 
-
-
 ad.options.preview  = True
+ad.options.report_time = True # Enable time estimates
 
 ad.plot_run()   # plot the document
-
-# print("Estimated print time: {0} ms".format(ad.pt_estimate))
-print("{0}".format(ad.pt_estimate))
+print_time_seconds = ad.time_estimate
+print("Estimated print time: {0} s".format(print_time_seconds))
 

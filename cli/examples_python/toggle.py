@@ -38,7 +38,7 @@ https://shop.evilmadscientist.com/contact
 
 
 
-Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
