@@ -2334,7 +2334,7 @@ class AxiDraw(inkex.Effect):
             pen_down_pos = self.options.pen_pos_down
 
         v_distance = float(self.options.pen_pos_up - pen_down_pos)
-        v_time = int((1000.0 * v_distance) / (3 * self.options.pen_rate_raise))
+        v_time = int((1000.0 * v_distance) / (4 * self.options.pen_rate_raise))
         if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
             v_time = -v_time
         v_time += self.options.pen_delay_up
@@ -2373,7 +2373,7 @@ class AxiDraw(inkex.Effect):
             else:
                 pen_down_pos = self.options.pen_pos_down
             v_distance = float(self.options.pen_pos_up - pen_down_pos)
-            v_time = int((1000.0 * v_distance) / (3 * self.options.pen_rate_lower))
+            v_time = int((1000.0 * v_distance) / (4 * self.options.pen_rate_lower))
             if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
                 v_time = -v_time
             v_time += self.options.pen_delay_down
@@ -2481,10 +2481,12 @@ class AxiDraw(inkex.Effect):
             4 * 4.5 = 18 steps/24 ms.
             """
 
-            int_temp = 18 * self.options.pen_rate_raise
+            servo_rate_unit = float(servo_range) / 100.0 / 1000.0 * 24
+            
+            int_temp = int(round(4 * servo_rate_unit * self.options.pen_rate_raise))
             ebb_motion.setPenUpRate(self.serial_port, int_temp)
 
-            int_temp = 18 * self.options.pen_rate_lower
+            int_temp = int(round(4 * servo_rate_unit * self.options.pen_rate_lower))
             ebb_motion.setPenDownRate(self.serial_port, int_temp)
 
             ebb_motion.servo_timeout(self.serial_port, self.params.servo_timeout) # Set timeout
