@@ -2352,7 +2352,7 @@ class AxiDraw(inkex.Effect):
                 ebb_motion.PBOutValue( self.serial_port, 3, 0 ) # I/O Pin B3 output: low
             if v_time > 50:
                 if self.options.mode != "manual":
-                    time.sleep(float(v_time - 10) / 1000.0)  # pause before issuing next command
+                    time.sleep(float(v_time - 30) / 1000.0)  # pause before issuing next command
         self.pen_up = True
         if not self.ebblv_set:
             ebb_motion.setEBBLV(self.serial_port, self.options.pen_pos_up + 1)
@@ -2393,7 +2393,7 @@ class AxiDraw(inkex.Effect):
                 if v_time > 50:
                     if self.options.mode != "manual":
                         # pause before issuing next command
-                        time.sleep(float(v_time - 10) / 1000.0)
+                        time.sleep(float(v_time - 30) / 1000.0)
             self.pen_up = False
 
     def servo_setup_wrapper(self):
