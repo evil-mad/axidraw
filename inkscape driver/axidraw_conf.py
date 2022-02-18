@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 3.1.0, dated 2022-01-05.
+# Version 3.2.0, dated 2022-02-17.
 #
 # Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -204,13 +204,13 @@ min_gap = 0.008     # Automatic path joining threshold, inches. Default: 0.008
                     # If greater than zero, pen-up moves shorter than this distance
                     #   will be replaced by pen-down moves. Set negative to disable.
 
-# Servo motion limits, in units of (1/12 MHz), about 83 ns:
-servo_max = 27831  # Highest allowed position; "100%" on the scale.    Default value: 25200 units, or 2.31 ms.
-servo_min = 9855   # Lowest allowed position; "0%" on the scale.        Default value: 10800 units, or 0.818 ms.
+# Servo motion limits, in units of (1/12 MHz), about 83.3 ns:
+servo_max = 27831  # Highest allowed position; "100%" on the scale.  Default: 27831 units, or 2.32 ms.
+servo_min = 9855   # Lowest allowed position; "0%" on the scale.     Default: 9855 units,  or 0.82 ms.
 
-# Note that previous versions of this configuration file used a wider range, 7500 - 28000, corresponding to a range of 625 us - 2333 us.
-# The new limiting values are equivalent to 16%, 86% on that prior scale, giving a little less vertical range, but higher resolution.
-# More importantly, it constrains the servo to within the travel ranges that they are typically calibrated, following best practice.
+# Times for servo to move over full range, from servo_min to servo_max, at maximum raise/lower rate:
+servo_sweep_time = 0.25 # Duration (s) to sweep servo control signal over 100% range. Default: 0.25
+servo_move_time = 0.33  # Duration (s) for servo to physically move over 100% range. Default: 0.33
 
 skip_voltage_check = False  # Set to True if you would like to disable EBB input power voltage checks. Default: False
 

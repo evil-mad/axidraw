@@ -77,7 +77,7 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
 
-        self.version_string = "3.1.0" # Dated 2022-01-05
+        self.version_string = "3.2.0" # Dated 2022-02-17
 
         self.spew_debugdata = False
 
@@ -2334,7 +2334,8 @@ class AxiDraw(inkex.Effect):
             pen_down_pos = self.options.pen_pos_down
 
         v_distance = float(self.options.pen_pos_up - pen_down_pos)
-        v_time = int((1000.0 * v_distance) / (4 * self.options.pen_rate_raise))
+        v_time = int(1000.0 * v_distance * self.params.servo_move_time /
+            self.options.pen_rate_raise)
         if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
             v_time = -v_time
         v_time += self.options.pen_delay_up
@@ -2373,7 +2374,8 @@ class AxiDraw(inkex.Effect):
             else:
                 pen_down_pos = self.options.pen_pos_down
             v_distance = float(self.options.pen_pos_up - pen_down_pos)
-            v_time = int((1000.0 * v_distance) / (4 * self.options.pen_rate_lower))
+            v_time = int(1000.0 * v_distance * self.params.servo_move_time / 
+                (self.options.pen_rate_lower))
             if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
                 v_time = -v_time
             v_time += self.options.pen_delay_down
@@ -2454,7 +2456,7 @@ class AxiDraw(inkex.Effect):
     def servo_setup(self):
         """
         Pen position units range from 0% to 100%, which correspond to a typical timing range of
-        7500 - 25000 in units of 1/(12 MHz). 1% corresponds to ~14.6 us: 175 units of 1/(12 MHz).
+        9855 - 27831 in units of 83.3 ns (1/(12 MHz)), giving a timing range of 0.82 - 2.32 ms.
         """
         if self.use_layer_pen_height:
             pen_down_pos = self.layer_pen_pos_down
@@ -2472,21 +2474,15 @@ class AxiDraw(inkex.Effect):
             ebb_motion.setPenDownPos(self.serial_port, int_temp)
 
             """
-            Servo speed units (as set with setPenUpRate) are units of %/second, referring to the
-            percentages above. The EBB speed are in units of 1/(12 MHz) steps per 24 ms.  Scaling
-            as above, 1% of range in 1 second with SERVO_MAX = 27831 and SERVO_MIN = 9855
-            corresponds to 180 steps change in 1 s. That gives 0.180 steps/ms, or 4.5 steps/24 ms.
-
-            Our input range (1-100%) corresponds to speeds up to 100% range in 0.25 seconds, or
-            4 * 4.5 = 18 steps/24 ms.
+            Servo rate options (pen_rate_raise, pen_rate_lower) range from 1% to 100%.
+            The EBB servo rate values are in units of 83.3 ns steps per 24 ms.
+            Our servo sweep at 100% rate sweeps over 100% range in servo_sweep_time seconds.
             """
 
-            servo_rate_unit = float(servo_range) / 100.0 / 1000.0 * 24
-            
-            int_temp = int(round(4 * servo_rate_unit * self.options.pen_rate_raise))
+            servo_rate_scale = float(servo_range) * 0.024 / (100 * self.params.servo_sweep_time)
+            int_temp = int(round(servo_rate_scale * self.options.pen_rate_raise))
             ebb_motion.setPenUpRate(self.serial_port, int_temp)
-
-            int_temp = int(round(4 * servo_rate_unit * self.options.pen_rate_lower))
+            int_temp = int(round(servo_rate_scale * self.options.pen_rate_lower))
             ebb_motion.setPenDownRate(self.serial_port, int_temp)
 
             ebb_motion.servo_timeout(self.serial_port, self.params.servo_timeout) # Set timeout
