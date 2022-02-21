@@ -186,8 +186,8 @@ max_step_dist_lr = 0.000696  # Maximum distance covered by 1 step in Low Res mod
 max_step_dist_hr = 0.000348  # Maximum distance covered by 1 step in Hi Res mode, rounded up, in inches.  ~1/(2032 sqrt(2))
 # In planning trajectories, we skip movements shorter than these distances, likely to be < 1 step.
 
-const_speed_factor_lr = 0.25  # When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.25 for Low Res mode
-const_speed_factor_hr = 0.4  # When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.4 for Hi Res mode
+const_speed_factor_lr = 0.25 # In constant-speed mode, multiply pen-down speed by this factor. Default: 0.25 for Low Res mode
+const_speed_factor_hr = 0.4  # In constant-speed mode, multiply pen-down speed by this factor. Default: 0.4 for Hi Res mode
 
 start_pos_x = 0  # Parking position, inches. Default: 0
 start_pos_y = 0  # Parking position, inches. Default: 0
@@ -208,11 +208,14 @@ min_gap = 0.008     # Automatic path joining threshold, inches. Default: 0.008
 servo_max = 27831  # Highest allowed position; "100%" on the scale.  Default: 27831 units, or 2.32 ms.
 servo_min = 9855   # Lowest allowed position; "0%" on the scale.     Default: 9855 units,  or 0.82 ms.
 
-# Times for servo to move over full range, from servo_min to servo_max, at maximum raise/lower rate:
-servo_sweep_time = 0.25 # Duration (s) to sweep servo control signal over 100% range. Default: 0.25
-servo_move_time = 0.33  # Duration (s) for servo to physically move over 100% range. Default: 0.33
+# Time for servo control signal to sweep over full 0-100% range, at 100% pen lift/lower rates:
+servo_sweep_time = 200 # Duration, ms, to sweep servo control signal over 100% range. Default: 200
 
-skip_voltage_check = False  # Set to True if you would like to disable EBB input power voltage checks. Default: False
+# Time for pen lift servo to physically move. Time = slope * distance + min, when using a fast sweep.
+servo_move_min = 45      # Minimum time, ms, for pen lift/lower of non-zero distance.    Default: 45
+servo_move_slope = 2.69  # Additional time, ms, per percentage point of vertical travel. Default: 2.69
+
+skip_voltage_check = False  # Set to True to disable EBB input power voltage checks. Default: False
 
 clip_to_page = True  # Clip plotting area to SVG document size. Default: True
 

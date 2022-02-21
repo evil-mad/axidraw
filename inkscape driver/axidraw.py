@@ -2278,7 +2278,6 @@ class AxiDraw(inkex.Effect):
         else:
             logger.debug(" Connected successfully")
 
-
     def enable_motors(self):
         """
         Enable motors, set native motor resolution, and set speed scales.
@@ -2332,15 +2331,18 @@ class AxiDraw(inkex.Effect):
             pen_down_pos = self.layer_pen_pos_down
         else:
             pen_down_pos = self.options.pen_pos_down
+        v_dist = abs(float(self.options.pen_pos_up - pen_down_pos))
 
-        v_distance = float(self.options.pen_pos_up - pen_down_pos)
-        v_time = int(1000.0 * v_distance * self.params.servo_move_time /
-            self.options.pen_rate_raise)
-        if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
-            v_time = -v_time
-        v_time += self.options.pen_delay_up
-        if v_time < 0:  # Do not allow negative delay times
+        # Servo travel time is estimated as the 4th power average (a smooth blend between):
+        #   (A) Servo transit time for fast servo sweeps (t = slope * v_dist + min) and
+        #   (B) Sweep time for slow sweeps (t = v_dist * full_scale_sweep_time / sweep_rate)
+        v_time = int(((self.params.servo_move_slope * v_dist + self.params.servo_move_min) ** 4 +
+            (self.params.servo_sweep_time * v_dist / self.options.pen_rate_raise) ** 4) ** 0.25)
+        if v_dist < 0.9:  # If up and down positions are equal, no initial delay
             v_time = 0
+
+        v_time += self.options.pen_delay_up
+        v_time = max(0, v_time)  # Do not allow negative delay times
         if self.options.preview:
             self.update_v_charts(0, 0, 0)
             self.vel_data_time += v_time
@@ -2368,43 +2370,47 @@ class AxiDraw(inkex.Effect):
             if not self.pen_up:
                 return # skip if pen is state is _known_ and is down
 
-        if not self.resume_mode and not self.b_stopped:  # skip if resuming or stopped
-            if self.use_layer_pen_height:
-                pen_down_pos = self.layer_pen_pos_down
-            else:
-                pen_down_pos = self.options.pen_pos_down
-            v_distance = float(self.options.pen_pos_up - pen_down_pos)
-            v_time = int(1000.0 * v_distance * self.params.servo_move_time / 
-                (self.options.pen_rate_lower))
-            if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
-                v_time = -v_time
-            v_time += self.options.pen_delay_down
-            if v_time < 0:  # Do not allow negative delay times
-                v_time = 0
-            if self.options.preview:
-                self.update_v_charts(0, 0, 0)
-                self.vel_data_time += v_time
-                self.update_v_charts(0, 0, 0)
-                self.pt_estimate += v_time
-            else:
-                ebb_motion.sendPenDown(self.serial_port, v_time)
-                if self.params.use_b3_out:
-                    ebb_motion.PBOutValue( self.serial_port, 3, 1 ) # I/O Pin B3 output: high
-                if v_time > 50:
-                    if self.options.mode != "manual":
-                        # pause before issuing next command
-                        time.sleep(float(v_time - 30) / 1000.0)
-            self.pen_up = False
+        if self.resume_mode or self.b_stopped:  # skip if resuming or stopped
+            return
+
+        if self.use_layer_pen_height:
+            pen_down_pos = self.layer_pen_pos_down
+        else:
+            pen_down_pos = self.options.pen_pos_down
+        v_dist = abs(float(self.options.pen_pos_up - pen_down_pos))
+
+        # Servo travel time is estimated as the 4th power average (a smooth blend between):
+        #   (A) Servo transit time for fast servo sweeps (t = slope * v_dist + min) and
+        #   (B) Sweep time for slow sweeps (t = v_dist * full_scale_sweep_time / sweep_rate)
+        v_time = int(((self.params.servo_move_slope * v_dist + self.params.servo_move_min) ** 4 +
+            (self.params.servo_sweep_time * v_dist / self.options.pen_rate_raise) ** 4) ** 0.25)
+        if v_dist < 0.9:  # If up and down positions are equal, no initial delay
+            v_time = 0
+
+        v_time += self.options.pen_delay_down
+        v_time = max(0, v_time)  # Do not allow negative delay times
+        if self.options.preview:
+            self.update_v_charts(0, 0, 0)
+            self.vel_data_time += v_time
+            self.update_v_charts(0, 0, 0)
+            self.pt_estimate += v_time
+        else:
+            ebb_motion.sendPenDown(self.serial_port, v_time)
+            if self.params.use_b3_out:
+                ebb_motion.PBOutValue( self.serial_port, 3, 1 ) # I/O Pin B3 output: high
+            if v_time > 50:
+                if self.options.mode != "manual":
+                    # pause before issuing next command
+                    time.sleep(float(v_time - 30) / 1000.0)
+        self.pen_up = False
 
     def servo_setup_wrapper(self):
-        """ Utility wrapper for self.servo_setup """
-        #
-        # 1. Configure servo up & down positions and lifting/lowering speeds.
-        # 2. Query EBB to learn if we're in the up or down state.
-        #
-        # This wrapper is used in the manual, setup, and various plot modes,
-        #   for initial pen raising/lowering.
-
+        """ Utility wrapper for servo_setup()
+            1. Configure servo up & down positions and lifting/lowering speeds.
+            2. Query EBB to learn if we're in the up or down state.
+            This wrapper is used in the manual, setup, and various plot modes,
+              for initial pen raising/lowering.
+        """
         self.servo_setup()  # Pre-stage the pen up and pen down positions
 
         if self.pen_up is not None:
@@ -2466,27 +2472,23 @@ class AxiDraw(inkex.Effect):
         if not self.options.preview:
             servo_range = self.params.servo_max - self.params.servo_min
             servo_slope = float(servo_range) / 100.0
-
             int_temp = int(round(self.params.servo_min + servo_slope * self.options.pen_pos_up))
             ebb_motion.setPenUpPos(self.serial_port, int_temp)
-
             int_temp = int(round(self.params.servo_min + servo_slope * pen_down_pos))
             ebb_motion.setPenDownPos(self.serial_port, int_temp)
 
             """
             Servo rate options (pen_rate_raise, pen_rate_lower) range from 1% to 100%.
             The EBB servo rate values are in units of 83.3 ns steps per 24 ms.
-            Our servo sweep at 100% rate sweeps over 100% range in servo_sweep_time seconds.
+            Our servo sweep at 100% rate sweeps over 100% range in servo_sweep_time ms.
             """
-
-            servo_rate_scale = float(servo_range) * 0.024 / (100 * self.params.servo_sweep_time)
+            servo_rate_scale = float(servo_range) * 0.24 / self.params.servo_sweep_time
             int_temp = int(round(servo_rate_scale * self.options.pen_rate_raise))
             ebb_motion.setPenUpRate(self.serial_port, int_temp)
             int_temp = int(round(servo_rate_scale * self.options.pen_rate_lower))
             ebb_motion.setPenDownRate(self.serial_port, int_temp)
 
             ebb_motion.servo_timeout(self.serial_port, self.params.servo_timeout) # Set timeout
-
 
     def query_ebb_voltage(self):
         """ Check that power supply is detected. """
