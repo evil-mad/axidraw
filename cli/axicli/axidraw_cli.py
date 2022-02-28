@@ -73,7 +73,7 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface 3.1.0"
+cli_version = "AxiDraw Command Line Interface 3.2.0"
 
 quick_help = '''
     Basic syntax to plot a file:      axicli svg_in [OPTIONS]
@@ -156,8 +156,9 @@ def axidraw_CLI(dev = False):
     parser.add_argument("-M","--manual_cmd", \
             metavar='COMMAND', type=str, \
             help="Manual command. One of: [fw_version, lower_pen, raise_pen, "\
-            + "walk_x, walk_y, enable_xy, disable_xy, bootload, strip_data, " \
-            + "read_name, list_names,  write_name]. Default: fw_version")
+            + "walk_x, walk_y, walk_mmx, walk_mmy, walk_home, enable_xy, disable_xy, "\
+            + "bootload, strip_data, read_name, list_names,  write_name]. "\
+            + "Default: fw_version")
 
     parser.add_argument("-w","--walk_dist", \
             metavar='DISTANCE', type=float, \
@@ -197,8 +198,9 @@ def axidraw_CLI(dev = False):
 
     parser.add_argument("-L","--model",\
             metavar='MODELCODE', type=int,\
-            help="AxiDraw Model (1-4). 1: AxiDraw V2 or V3. " \
-            + "2: AxiDraw V3/A3. 3: AxiDraw V3 XLX. 4: AxiDraw MiniKit")
+            help="AxiDraw Model (1-6). 1: AxiDraw V2 or V3. " \
+            + "2:AxiDraw V3/A3 or SE/A3. 3: AxiDraw V3 XLX. " \
+            + "4:AxiDraw MiniKit. 5:AxiDraw SE/A1. 6: AxiDraw SE/A2.")
 
     parser.add_argument("-p","--port",\
             metavar='PORTNAME', type=str,\

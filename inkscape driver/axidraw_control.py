@@ -29,6 +29,7 @@ from importlib import import_module
 import logging
 import threading
 import time
+import signal
 
 from axidrawinternal import axidraw   # https://github.com/evil-mad/axidraw
 from axidrawinternal.axidraw_options import common_options
@@ -47,6 +48,7 @@ if use_multiprocessing:
 else:
     # Multiprocessing does not work on Windows; use multiple threads.
     import threading
+from multiprocessing import Event
 
 logger = logging.getLogger(__name__)
 
@@ -70,6 +72,17 @@ class AxiDrawWrapperClass( inkex.Effect ):
         self.default_logging = default_logging
         if default_logging:
             logger.addHandler(self.default_handler)
+
+        self.set_up_pause_transmitter()
+
+    def set_up_pause_transmitter(self):
+        # intercept ctrl-C (keyboard interrupt) and redefine as "pause" command
+        signal.signal(signal.SIGINT, self.transmit_pause_request)
+        # one pause event for all axidraws
+        self.software_initiated_pause_event = Event()
+
+    def transmit_pause_request(self, *args):
+        self.software_initiated_pause_event.set()
 
     def effect( self ):
         '''
@@ -181,6 +194,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
 #             return # Skip secondary units, without opening class or serial connection
 
         ad = axidraw.AxiDraw(params=self.params, default_logging=self.default_logging)
+        ad.set_up_pause_receiver(self.software_initiated_pause_event)
         ad.getoptions([])
 
         prim = "primary" if primary else "secondary"

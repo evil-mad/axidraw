@@ -143,6 +143,8 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <_option value="1">AxiDraw V2 or AxiDraw V3</_option>
 <_option value="2">AxiDraw V3/A3 or SE/A3</_option>
 <_option value="4">AxiDraw MiniKit</_option>
+<_option value="5">AxiDraw SE/A1</_option>
+<_option value="6">AxiDraw SE/A2</_option>
 <_option value="3">AxiDraw V3 XLX</_option>
 </param>
 <param name="port_config" type="optiongroup" appearance="minimal" indent="1" _gui-text="Machine selection:">
@@ -176,17 +178,18 @@ raise or lower the pen, or enable or disable the motors.
 
 <param name="manual_cmd" type="optiongroup" appearance="minimal"
 _gui-text="               Command: ">
-<_option value="none"           >- Select -</_option>
-<_option value="walk_x"   >Walk Carriage (X, inches)</_option>
-<_option value="walk_y"   >Walk Carriage (Y, inches)</_option>
+<_option value="none"       >- Select -</_option>
+<_option value="walk_x"     >Walk Carriage (X, inches)</_option>
+<_option value="walk_y"     >Walk Carriage (Y, inches)</_option>
 <_option value="walk_mmx"   >Walk Carriage (X, mm)</_option>
 <_option value="walk_mmy"   >Walk Carriage (Y, mm)</_option>
-<_option value="raise_pen"      >Raise the Pen</_option>
-<_option value="lower_pen"      >Lower the Pen</_option>
+<_option value="walk_home"  >Walk Home</_option>
+<_option value="raise_pen"  >Raise the Pen</_option>
+<_option value="lower_pen"  >Lower the Pen</_option>
 <_option value="enable_xy"  >Enable XY Motors</_option>
 <_option value="disable_xy" >Disable XY Motors</_option> 
-<_option value="bootload"       >Enter Bootloader mode</_option>
-<_option value="strip_data"     >Strip plotter data from file</_option>
+<_option value="bootload"   >Enter Bootloader mode</_option>
+<_option value="strip_data" >Strip plotter data from file</_option>
 </param>
 
 <param name="walk_dist" indent="1" type="float" precision="3" min="-300" max="300" _gui-text="Walk distance (+ or -):">1.000</param>
@@ -256,7 +259,7 @@ the Return to Home Corner command.
 
 </param>
 <_param name="copyright" type="description" indent="5" xml:space="preserve"
->Version 3.1.0      —      Copyright 2021 Evil Mad Scientist</_param>
+>Version 3.2.0      —      Copyright 2022 Evil Mad Scientist</_param>
 
 
 

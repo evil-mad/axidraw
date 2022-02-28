@@ -85,8 +85,9 @@ def core_options(parser, config):
     options.add_option("--model",\
                        type="int", action="store", dest="model",\
                        default=config["model"],\
-                       help="AxiDraw Model (1-3). 1: AxiDraw V2 or V3. " \
-                       + "2:AxiDraw V3/A3 or SE/A3. 3: AxiDraw V3 XLX.")
+                       help="AxiDraw Model (1-6). 1: AxiDraw V2 or V3. " \
+                        + "2:AxiDraw V3/A3 or SE/A3. 3: AxiDraw V3 XLX. " \
+                        + "4:AxiDraw MiniKit. 5:AxiDraw SE/A1. 6: AxiDraw SE/A2.")
 
     options.add_option("--port_config",\
                         type="int", action="store", dest="port_config",\
@@ -172,9 +173,10 @@ def core_mode_options(parser, config):
     options.add_option("--manual_cmd",\
                        type="string", action="store", dest="manual_cmd",\
                        default="fw_version",\
-                       help="Manual command. One of: [fw_version, raise_pen, lower_pen, " \
-                       + "walk_x, walk_y, enable_xy, disable_xy, bootload, strip_data, " \
-                       + "read_name, list_names,  write_name]. Default: fw_version")
+                       help="Manual command. One of: [fw_version, raise_pen, lower_pen, "\
+                       + "walk_x, walk_y, walk_mmx, walk_mmy, walk_home, enable_xy, disable_xy, "\
+                       + "bootload, strip_data, read_name, list_names,  write_name]. "\
+                       + "Default: fw_version")
 
     options.add_option("--walk_dist",\
                        type="float", action="store", dest="walk_dist",\

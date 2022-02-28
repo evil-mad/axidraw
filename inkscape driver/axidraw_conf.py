@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 3.1.0, dated 2022-01-05.
+# Version 3.2.0, dated 2022-02-22.
 #
 # Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -59,11 +59,10 @@ rendering = 3           # Preview mode rendering option (0-3):
                             # 2: Render only pen-up movement
                             # 3: Render all movement (Default)
 
-model = 1               # AxiDraw Model (1-4)
-                            # 1: AxiDraw V2 or V3 (Default)
-                            # 2: AxiDraw V3/A3 or SE/A3
-                            # 3: AxiDraw V3 XLX
-                            # 4: AxiDraw MiniKit
+model = 1               # AxiDraw Model (1-6)
+                            # 1: AxiDraw V2 or V3 (Default). 2: AxiDraw V3/A3 or SE/A3.
+                            # 3: AxiDraw V3 XLX. 4: AxiDraw MiniKit.
+                            # 5: AxiDraw SE/A1.  6: AxiDraw SE/A2.
                             
 port = None             # Serial port or named AxiDraw to use
                             # None (Default) will plot to first unit located
@@ -154,20 +153,26 @@ adjusted in everyday use. That said, proceed with caution, and keep a backup cop
 # Page size values typically do not need to be changed. They primarily affect viewpoint and centering.
 # Measured in page pixelssteps.  Default printable area for AxiDraw is 300 x 218 mm
 
-x_travel_default = 11.81  # AxiDraw V2 and AxiDraw V3: X Carriage travel in inches.     Default: 300 mm = about 11.81 inches
-y_travel_default = 8.58   # AxiDraw V2 and AxiDraw V3: Y Carriage travel in inches.     Default: 218 mm = about 8.58 inches
+x_travel_default = 11.81  # AxiDraw V2, V3: X Carriage travel, inches.  Default: 11.81 (300 mm)
+y_travel_default = 8.58   # AxiDraw V2, V3: Y Carriage travel, inches.  Default: 8.58 (218 mm)
 
-x_travel_V3A3 = 16.93     # AxiDraw V3/A3: X Carriage travel in inches.                 Default: 430 mm = about 16.93 inches
-y_travel_V3A3 = 11.69     # AxiDraw V3/A3: Y Carriage travel in inches.                 Default: 297 mm = about 11.69 inches
+x_travel_V3A3 = 16.93     # V3/A3 and SE/A3: X Carriage travel, inches.   Default: 16.93 (430 mm)
+y_travel_V3A3 = 11.69     # V3/A3 and SE/A3: Y Carriage travel, inches.   Default: 11.69 (297 mm)
 
-x_travel_V3XLX = 23.42    # AxiDraw V3 XLX: X Carriage travel in inches.                Default: 595 mm = about 23.42 inches
-y_travel_V3XLX = 8.58     # AxiDraw V3 XLX: Y Carriage travel in inches.                Default: 218 mm = about 8.58 inches
+x_travel_V3XLX = 23.42    # AxiDraw V3 XLX: X Carriage travel, inches.  Default: 23.42 (595 mm
+y_travel_V3XLX = 8.58     # AxiDraw V3 XLX: Y Carriage travel, inches.  Default: 8.58 (218 mm)
 
-x_travel_MiniKit = 6.30  # AxiDraw MiniKit: X Carriage travel in inches.                Default: 160 mm = about 6.30 inches
-y_travel_MiniKit = 4.00   # AxiDraw MiniKit: Y Carriage travel in inches.               Default: 101.6 mm = 4.00 inches
+x_travel_MiniKit = 6.30   # AxiDraw MiniKit: X Carriage travel, inches. Default: 6.30 (160 mm)
+y_travel_MiniKit = 4.00   # AxiDraw MiniKit: Y Carriage travel, inches. Default: 4.00 (101.6 mm)
+
+x_travel_SEA1 = 34.02     # AxiDraw SE/A1: X Carriage travel, inches.   Default: 34.02 (864 mm)
+y_travel_SEA1 = 23.39     # AxiDraw SE/A1: Y Carriage travel, inches.   Default: 23.39 (594 mm)
+
+x_travel_SEA2 = 23.39    # AxiDraw SE/A2: X Carriage travel, inches.    Default: 23.39 (594 mm)
+y_travel_SEA2 = 17.01    # AxiDraw SE/A2: Y Carriage travel, inches.    Default: 17.01 (432 mm )
 
 
-native_res_factor = 1016.0  # Motor resolution calculation factor, steps per inch, and used in conversions. Default: 1016.0
+native_res_factor = 1016.0  # Motor resolution factor, steps per inch. Default: 1016.0
 # Note that resolution is defined along native (not X or Y) axes.
 # Resolution is native_res_factor * sqrt(2) steps per inch in Low Resolution  (Approx 1437 steps per inch)
 #       and 2 * native_res_factor * sqrt(2) steps per inch in High Resolution (Approx 2874 steps per inch)
@@ -178,16 +183,16 @@ max_step_rate = 24.995  # Maximum allowed motor step rate, in steps per millisec
 # We use a conservative value, to help prevent errors due to rounding.
 # This value is normally used _for speed limit checking only_.
 
-speed_lim_xy_lr = 15.000  # Maximum XY speed allowed when in Low Resolution mode, in inches per second.  Default: 15.000 Max: 17.3958
-speed_lim_xy_hr = 8.6979  # Maximum XY speed allowed when in High Resolution mode, in inches per second. Default: 8.6979, Max: 8.6979
+speed_lim_xy_lr = 15.000  # Maximum XY speed allowed when in Low Resolution mode, inches/second.  Default: 15.000 Max: 17.3958
+speed_lim_xy_hr = 8.6979  # Maximum XY speed allowed when in High Resolution mode, inches/second. Default: 8.6979, Max: 8.6979
 # Do not increase these values above Max; they are derived from max_step_rate and the resolution.
 
 max_step_dist_lr = 0.000696  # Maximum distance covered by 1 step in Low Res mode, rounded up, in inches. ~1/(1016 sqrt(2))
 max_step_dist_hr = 0.000348  # Maximum distance covered by 1 step in Hi Res mode, rounded up, in inches.  ~1/(2032 sqrt(2))
 # In planning trajectories, we skip movements shorter than these distances, likely to be < 1 step.
 
-const_speed_factor_lr = 0.25  # When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.25 for Low Res mode
-const_speed_factor_hr = 0.4  # When in constant-speed mode, multiply the pen-down speed by this factor. Default: 0.4 for Hi Res mode
+const_speed_factor_lr = 0.25 # In constant-speed mode, multiply pen-down speed by this factor. Default: 0.25 for Low Res mode
+const_speed_factor_hr = 0.4  # In constant-speed mode, multiply pen-down speed by this factor. Default: 0.4 for Hi Res mode
 
 start_pos_x = 0  # Parking position, inches. Default: 0
 start_pos_y = 0  # Parking position, inches. Default: 0
@@ -204,15 +209,18 @@ min_gap = 0.008     # Automatic path joining threshold, inches. Default: 0.008
                     # If greater than zero, pen-up moves shorter than this distance
                     #   will be replaced by pen-down moves. Set negative to disable.
 
-# Servo motion limits, in units of (1/12 MHz), about 83 ns:
-servo_max = 27831  # Highest allowed position; "100%" on the scale.    Default value: 25200 units, or 2.31 ms.
-servo_min = 9855   # Lowest allowed position; "0%" on the scale.        Default value: 10800 units, or 0.818 ms.
+# Servo motion limits, in units of (1/12 MHz), about 83.3 ns:
+servo_max = 27831  # Highest allowed position; "100%" on the scale.  Default: 27831 units, or 2.32 ms.
+servo_min = 9855   # Lowest allowed position; "0%" on the scale.     Default: 9855 units,  or 0.82 ms.
 
-# Note that previous versions of this configuration file used a wider range, 7500 - 28000, corresponding to a range of 625 us - 2333 us.
-# The new limiting values are equivalent to 16%, 86% on that prior scale, giving a little less vertical range, but higher resolution.
-# More importantly, it constrains the servo to within the travel ranges that they are typically calibrated, following best practice.
+# Time for servo control signal to sweep over full 0-100% range, at 100% pen lift/lower rates:
+servo_sweep_time = 200 # Duration, ms, to sweep servo control signal over 100% range. Default: 200
 
-skip_voltage_check = False  # Set to True if you would like to disable EBB input power voltage checks. Default: False
+# Time for pen lift servo to physically move. Time = slope * distance + min, when using a fast sweep.
+servo_move_min = 45      # Minimum time, ms, for pen lift/lower of non-zero distance.    Default: 45
+servo_move_slope = 2.69  # Additional time, ms, per percentage point of vertical travel. Default: 2.69
+
+skip_voltage_check = False  # Set to True to disable EBB input power voltage checks. Default: False
 
 clip_to_page = True  # Clip plotting area to SVG document size. Default: True
 

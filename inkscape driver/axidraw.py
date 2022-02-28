@@ -34,6 +34,7 @@ import logging
 import math
 import time
 from array import array
+from multiprocessing import Event
 
 from lxml import etree
 
@@ -77,7 +78,7 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
 
-        self.version_string = "3.1.0" # Dated 2022-01-05
+        self.version_string = "3.2.0" # Dated 2022-02-17
 
         self.spew_debugdata = False
 
@@ -87,6 +88,7 @@ class AxiDraw(inkex.Effect):
         self.pen_up = None # Initial state of pen is neither up nor down, but _unknown_.
         self.virtual_pen_up = False # Pen state when stepping through plot before resuming
         self.ebblv_set = False # EBBLV is not yet set.
+        self.connected = False # Variable for Python API to poll for connection status.
 
         self.Secondary = False
         self.user_message_fun = user_message_fun
@@ -99,7 +101,6 @@ class AxiDraw(inkex.Effect):
         self.start_y = None
         self.end_x = None
         self.end_y = None
-
         self.pen_lifts = 0
 
         # logging setup
@@ -109,6 +110,14 @@ class AxiDraw(inkex.Effect):
 
         if self.spew_debugdata:
             logger.setLevel(logging.DEBUG) # by default level is INFO
+
+    def set_up_pause_receiver(self, software_pause_event):
+        """ use a multiprocessing.Event/threading.Event to communicate a
+        keyboard interrupt (ctrl-C) to pause the AxiDraw """
+        self._software_pause_event = software_pause_event
+
+    def receive_pause_request(self):
+        return hasattr(self, "_software_pause_event") and self._software_pause_event.is_set()
 
     def set_secondary(self, suppress_standard_out=True):
         """ Various things are slightly different if this is a "secondary"
@@ -183,6 +192,12 @@ class AxiDraw(inkex.Effect):
         elif self.options.model == 4:
             self.x_bounds_max = self.params.x_travel_MiniKit
             self.y_bounds_max = self.params.y_travel_MiniKit
+        elif self.options.model == 5:
+            self.x_bounds_max = self.params.x_travel_SEA1
+            self.y_bounds_max = self.params.y_travel_SEA1
+        elif self.options.model == 6:
+            self.x_bounds_max = self.params.x_travel_SEA2
+            self.y_bounds_max = self.params.y_travel_SEA2
         else:
             self.x_bounds_max = self.params.x_travel_default
             self.y_bounds_max = self.params.y_travel_default
@@ -448,7 +463,7 @@ class AxiDraw(inkex.Effect):
                             time.sleep(0.100)  # Use short intervals to improve responsiveness
                             self.pause_res_check() # Detect button press while paused between plots
 
-        elif self.options.mode == "align" or self.options.mode == "toggle":
+        elif self.options.mode in ('align', 'toggle'):
             self.setup_command()
 
         elif self.options.mode == "manual":
@@ -459,7 +474,7 @@ class AxiDraw(inkex.Effect):
         if self.serial_port is not None:
             ebb_motion.doTimedPause(self.serial_port, 10) # Pause for motion commands to finish.
             if self.options.port is None:  # Do not close serial port if it was opened externally.
-                ebb_serial.closePort(self.serial_port)
+                self.disconnect()
 
     def resume_plot_setup(self):
         """ Initialization for resuming plots """
@@ -591,8 +606,7 @@ class AxiDraw(inkex.Effect):
                     gettext.gettext("Entering bootloader mode for firmware programming.\n" +
                                     "To resume normal operation, you will need to first\n" +
                                     "disconnect the AxiDraw from both USB and power."))
-                ebb_serial.closePort(self.serial_port) # Manually close port
-                self.serial_port = None                # Indicate that serial port is closed.
+                self.disconnect() # Disconnect from AxiDraw; end serial session
             else:
                 logger.error('Failed while trying to enter bootloader.')
             return
@@ -619,10 +633,9 @@ class AxiDraw(inkex.Effect):
                 else:
                     logger.error('Error encountered while writing nickname.')
                 ebb_serial.reboot(self.serial_port)    # Reboot required after writing nickname
-                ebb_serial.closePort(self.serial_port) # Manually close port
-                self.serial_port = None                # Indicate that serial port is closed.
+                self.disconnect() # Disconnect from AxiDraw; end serial session
             else:
-                logger.error("AxiDraw naming requires firmware version 2.5.5 or higher.")
+                logger.error("This function requires a newer firmware version. See: axidraw.com/fw")
             return
 
         # Next: Commands that require both power and serial connectivity:
@@ -639,8 +652,21 @@ class AxiDraw(inkex.Effect):
             self.enable_motors()
         elif self.options.manual_cmd == "disable_xy":
             ebb_motion.sendDisableMotors(self.serial_port)
-        else:  # self.options.manual_cmd is walk motor:
-            if self.options.manual_cmd == "walk_y":
+        else:  # walk motors or move home cases:
+            self.servo_setup_wrapper()
+            self.enable_motors()  # Set plotting resolution
+            if self.options.manual_cmd == "walk_home":
+                if ebb_serial.min_version(self.serial_port, "2.6.2"):
+                    a_pos, b_pos = ebb_motion.query_steps(self.serial_port)
+                    n_delta_x = -(a_pos + b_pos) / (4 * self.params.native_res_factor)
+                    n_delta_y = -(a_pos - b_pos) / (4 * self.params.native_res_factor)
+                    if self.options.resolution == 2:  # Low-resolution mode
+                        n_delta_x *= 2
+                        n_delta_y *= 2
+                else:
+                    logger.error("This function requires newer firmware. Update at: axidraw.com/fw")
+                    return
+            elif self.options.manual_cmd == "walk_y":
                 n_delta_x = 0
                 n_delta_y = self.options.walk_dist
             elif self.options.manual_cmd == "walk_x":
@@ -655,15 +681,13 @@ class AxiDraw(inkex.Effect):
             else:
                 return
 
-            self.servo_setup_wrapper()
-
-            self.enable_motors()  # Set plotting resolution
             self.f_curr_x = self.svg_last_known_x_old + self.pt_first[0]
             self.f_curr_y = self.svg_last_known_y_old + self.pt_first[1]
             self.ignore_limits = True
             f_x = self.f_curr_x + n_delta_x # Note: Walks are relative, not absolute!
             f_y = self.f_curr_y + n_delta_y # New position is not saved; use with care.
             self.plot_seg_with_v(f_x, f_y, 0, 0)
+
 
     def update_v_charts(self, v_1, v_2, v_total):
         """ Update velocity charts, using some appropriate scaling for X and Y display."""
@@ -2183,6 +2207,8 @@ class AxiDraw(inkex.Effect):
         # if (self.options.mode == "plot") and (self.node_count == 24):
         #     self.force_pause = True
 
+        self.force_pause |= self.receive_pause_request()
+
         if self.force_pause:
             pause_state = 1
         elif self.serial_port is not None:
@@ -2190,6 +2216,7 @@ class AxiDraw(inkex.Effect):
                 pause_state = int(str_button[0])
             except:
                 logger.error('\nUSB connection to AxiDraw lost.')
+                self.connected = False
                 pause_state = 2  # Pause the plot; we appear to have lost connectivity.
                 logger.debug('\n (Node # : ' + str(self.node_count) + ')')
 
@@ -2259,11 +2286,8 @@ class AxiDraw(inkex.Effect):
             self.serial_port = ebb_serial.testPort(the_port)
             self.options.port = None  # Clear this input, to ensure that we close the port later.
         else:
-            # This function may be passed a serial port object reference;
-            # an instance of serial.serialposix.Serial.
-            # In that case, we should interact with that given
-            # port object, and leave it open at the end.
-
+            # self.options.port may be a serial port object of type serial.serialposix.Serial.
+            # In that case, interact with that given port object, and leave it open at the end.
             self.serial_port = self.options.port
         if self.serial_port is None:
             if named_port:
@@ -2271,25 +2295,18 @@ class AxiDraw(inkex.Effect):
             else:
                 logger.error(gettext.gettext("Failed to connect to AxiDraw."))
             return
-
-        # Successfully connected
+        self.connected = True
         if named_port:
             logger.debug(gettext.gettext('Connected successfully to port: ' + str(named_port)))
         else:
             logger.debug(" Connected successfully")
 
-
     def enable_motors(self):
         """
         Enable motors, set native motor resolution, and set speed scales.
-
-        The "pen down" speed scale is adjusted with the following factors
-        that make the controls more intuitive:
-        * Reduce speed by factor of 2 when using 8X microstepping
-        * Reduce speed by factor of 2 when disabling acceleration
-
-        These factors prevent unexpected dramatic changes in speed when turning
-        those two options on and off.
+        The "pen down" speed scale is adjusted by reducing speed when using 8X microstepping or
+        disabling aceleration. These factors prevent unexpected dramatic changes in speed when
+        turning those two options on and off.
         """
         if self.use_layer_speed:
             local_speed_pendown = self.layer_speed_pendown
@@ -2298,19 +2315,21 @@ class AxiDraw(inkex.Effect):
 
         if self.options.resolution == 1:  # High-resolution ("Super") mode
             if not self.options.preview:
-                ebb_motion.sendEnableMotors(self.serial_port, 1)  # 16X microstepping
+                res_1, res_2 = ebb_motion.query_enable_motors(self.serial_port)
+                if not (res_1 == 1 and res_2 == 1): # Do not re-enable if already enabled
+                    ebb_motion.sendEnableMotors(self.serial_port, 1)  # 16X microstepping
             self.step_scale = 2.0 * self.params.native_res_factor
             self.speed_pendown = local_speed_pendown * self.params.speed_lim_xy_hr / 110.0
             self.speed_penup = self.options.speed_penup * self.params.speed_lim_xy_hr / 110.0
             if self.options.const_speed:
                 self.speed_pendown = self.speed_pendown * self.params.const_speed_factor_hr
-
         else:  # i.e., self.options.resolution == 2; Low-resolution ("Normal") mode
             if not self.options.preview:
-                ebb_motion.sendEnableMotors(self.serial_port, 2)  # 8X microstepping
+                res_1, res_2 = ebb_motion.query_enable_motors(self.serial_port)
+                if not (res_1 == 2 and res_2 == 2): # Do not re-enable if already enabled
+                    ebb_motion.sendEnableMotors(self.serial_port, 2)  # 8X microstepping
             self.step_scale = self.params.native_res_factor
             # Low-res mode: Allow faster pen-up moves. Keep maximum pen-down speed the same.
-            # Speeds given as maximum inches/second in XY plane
             self.speed_penup = self.options.speed_penup * self.params.speed_lim_xy_lr / 110.0
             self.speed_pendown = local_speed_pendown * self.params.speed_lim_xy_lr / 110.0
             if self.options.const_speed:
@@ -2332,14 +2351,18 @@ class AxiDraw(inkex.Effect):
             pen_down_pos = self.layer_pen_pos_down
         else:
             pen_down_pos = self.options.pen_pos_down
+        v_dist = abs(float(self.options.pen_pos_up - pen_down_pos))
 
-        v_distance = float(self.options.pen_pos_up - pen_down_pos)
-        v_time = int((1000.0 * v_distance) / (4 * self.options.pen_rate_raise))
-        if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
-            v_time = -v_time
-        v_time += self.options.pen_delay_up
-        if v_time < 0:  # Do not allow negative delay times
+        # Servo travel time is estimated as the 4th power average (a smooth blend between):
+        #   (A) Servo transit time for fast servo sweeps (t = slope * v_dist + min) and
+        #   (B) Sweep time for slow sweeps (t = v_dist * full_scale_sweep_time / sweep_rate)
+        v_time = int(((self.params.servo_move_slope * v_dist + self.params.servo_move_min) ** 4 +
+            (self.params.servo_sweep_time * v_dist / self.options.pen_rate_raise) ** 4) ** 0.25)
+        if v_dist < 0.9:  # If up and down positions are equal, no initial delay
             v_time = 0
+
+        v_time += self.options.pen_delay_up
+        v_time = max(0, v_time)  # Do not allow negative delay times
         if self.options.preview:
             self.update_v_charts(0, 0, 0)
             self.vel_data_time += v_time
@@ -2349,9 +2372,8 @@ class AxiDraw(inkex.Effect):
             ebb_motion.sendPenUp(self.serial_port, v_time)
             if self.params.use_b3_out:
                 ebb_motion.PBOutValue( self.serial_port, 3, 0 ) # I/O Pin B3 output: low
-            if v_time > 50:
-                if self.options.mode != "manual":
-                    time.sleep(float(v_time - 10) / 1000.0)  # pause before issuing next command
+            if (v_time > 50) and (self.options.mode != "manual"):
+                time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
         self.pen_up = True
         if not self.ebblv_set:
             ebb_motion.setEBBLV(self.serial_port, self.options.pen_pos_up + 1)
@@ -2366,43 +2388,43 @@ class AxiDraw(inkex.Effect):
         if self.pen_up is not None:
             if not self.pen_up:
                 return # skip if pen is state is _known_ and is down
+        if self.resume_mode or self.b_stopped:  # skip if resuming or stopped
+            return
 
-        if not self.resume_mode and not self.b_stopped:  # skip if resuming or stopped
-            if self.use_layer_pen_height:
-                pen_down_pos = self.layer_pen_pos_down
-            else:
-                pen_down_pos = self.options.pen_pos_down
-            v_distance = float(self.options.pen_pos_up - pen_down_pos)
-            v_time = int((1000.0 * v_distance) / (4 * self.options.pen_rate_lower))
-            if v_time < 0:  # Handle case that pen_pos_down is above pen_pos_up
-                v_time = -v_time
-            v_time += self.options.pen_delay_down
-            if v_time < 0:  # Do not allow negative delay times
-                v_time = 0
-            if self.options.preview:
-                self.update_v_charts(0, 0, 0)
-                self.vel_data_time += v_time
-                self.update_v_charts(0, 0, 0)
-                self.pt_estimate += v_time
-            else:
-                ebb_motion.sendPenDown(self.serial_port, v_time)
-                if self.params.use_b3_out:
-                    ebb_motion.PBOutValue( self.serial_port, 3, 1 ) # I/O Pin B3 output: high
-                if v_time > 50:
-                    if self.options.mode != "manual":
-                        # pause before issuing next command
-                        time.sleep(float(v_time - 10) / 1000.0)
-            self.pen_up = False
+        if self.use_layer_pen_height:
+            pen_down_pos = self.layer_pen_pos_down
+        else:
+            pen_down_pos = self.options.pen_pos_down
+        v_dist = abs(float(self.options.pen_pos_up - pen_down_pos))
+
+        # Timing uses the same transit time model detailed in pen_raise():
+        v_time = int(((self.params.servo_move_slope * v_dist + self.params.servo_move_min) ** 4 +
+            (self.params.servo_sweep_time * v_dist / self.options.pen_rate_raise) ** 4) ** 0.25)
+        if v_dist < 0.9:  # If up and down positions are equal, no initial delay
+            v_time = 0
+
+        v_time += self.options.pen_delay_down
+        v_time = max(0, v_time)  # Do not allow negative delay times
+        if self.options.preview:
+            self.update_v_charts(0, 0, 0)
+            self.vel_data_time += v_time
+            self.update_v_charts(0, 0, 0)
+            self.pt_estimate += v_time
+        else:
+            ebb_motion.sendPenDown(self.serial_port, v_time)
+            if self.params.use_b3_out:
+                ebb_motion.PBOutValue( self.serial_port, 3, 1 ) # I/O Pin B3 output: high
+            if (v_time > 50) and (self.options.mode != "manual"):
+                time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
+        self.pen_up = False
 
     def servo_setup_wrapper(self):
-        """ Utility wrapper for self.servo_setup """
-        #
-        # 1. Configure servo up & down positions and lifting/lowering speeds.
-        # 2. Query EBB to learn if we're in the up or down state.
-        #
-        # This wrapper is used in the manual, setup, and various plot modes,
-        #   for initial pen raising/lowering.
-
+        """ Utility wrapper for servo_setup()
+            1. Configure servo up & down positions and lifting/lowering speeds.
+            2. Query EBB to learn if we're in the up or down state.
+            This wrapper is used in the manual, setup, and various plot modes,
+              for initial pen raising/lowering.
+        """
         self.servo_setup()  # Pre-stage the pen up and pen down positions
 
         if self.pen_up is not None:
@@ -2452,9 +2474,9 @@ class AxiDraw(inkex.Effect):
                     self.virtual_pen_up = False
 
     def servo_setup(self):
-        """
+        """ Set servo up/down positions, raising/lowering rates, and power timeout
         Pen position units range from 0% to 100%, which correspond to a typical timing range of
-        7500 - 25000 in units of 1/(12 MHz). 1% corresponds to ~14.6 us: 175 units of 1/(12 MHz).
+        9855 - 27831 in units of 83.3 ns (1/(12 MHz)), giving a timing range of 0.82 - 2.32 ms.
         """
         if self.use_layer_pen_height:
             pen_down_pos = self.layer_pen_pos_down
@@ -2464,33 +2486,22 @@ class AxiDraw(inkex.Effect):
         if not self.options.preview:
             servo_range = self.params.servo_max - self.params.servo_min
             servo_slope = float(servo_range) / 100.0
-
             int_temp = int(round(self.params.servo_min + servo_slope * self.options.pen_pos_up))
             ebb_motion.setPenUpPos(self.serial_port, int_temp)
-
             int_temp = int(round(self.params.servo_min + servo_slope * pen_down_pos))
             ebb_motion.setPenDownPos(self.serial_port, int_temp)
 
-            """
-            Servo speed units (as set with setPenUpRate) are units of %/second, referring to the
-            percentages above. The EBB speed are in units of 1/(12 MHz) steps per 24 ms.  Scaling
-            as above, 1% of range in 1 second with SERVO_MAX = 27831 and SERVO_MIN = 9855
-            corresponds to 180 steps change in 1 s. That gives 0.180 steps/ms, or 4.5 steps/24 ms.
+            # Servo rate options (pen_rate_raise, pen_rate_lower) range from 1% to 100%.
+            # The EBB servo rate values are in units of 83.3 ns steps per 24 ms.
+            # Our servo sweep at 100% rate sweeps over 100% range in servo_sweep_time ms.
 
-            Our input range (1-100%) corresponds to speeds up to 100% range in 0.25 seconds, or
-            4 * 4.5 = 18 steps/24 ms.
-            """
-
-            servo_rate_unit = float(servo_range) / 100.0 / 1000.0 * 24
-            
-            int_temp = int(round(4 * servo_rate_unit * self.options.pen_rate_raise))
+            servo_rate_scale = float(servo_range) * 0.24 / self.params.servo_sweep_time
+            int_temp = int(round(servo_rate_scale * self.options.pen_rate_raise))
             ebb_motion.setPenUpRate(self.serial_port, int_temp)
-
-            int_temp = int(round(4 * servo_rate_unit * self.options.pen_rate_lower))
+            int_temp = int(round(servo_rate_scale * self.options.pen_rate_lower))
             ebb_motion.setPenDownRate(self.serial_port, int_temp)
 
             ebb_motion.servo_timeout(self.serial_port, self.params.servo_timeout) # Set timeout
-
 
     def query_ebb_voltage(self):
         """ Check that power supply is detected. """
@@ -2765,10 +2776,11 @@ class AxiDraw(inkex.Effect):
         return self.pen_up
 
     def disconnect(self):
-        '''End interactive session; disconnect from AxiDraw '''
+        '''End serial session; disconnect from AxiDraw '''
         if self.serial_port:
             ebb_serial.closePort(self.serial_port)
         self.serial_port = None
+        self.connected = False
 
 class SecondaryLoggingHandler(logging.Handler):
     '''To be used for logging to AxiDraw.text_out and AxiDraw.error_out.'''
