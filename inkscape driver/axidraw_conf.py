@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 3.2.0, dated 2022-02-17.
+# Version 3.2.0, dated 2022-02-22.
 #
 # Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -59,11 +59,10 @@ rendering = 3           # Preview mode rendering option (0-3):
                             # 2: Render only pen-up movement
                             # 3: Render all movement (Default)
 
-model = 1               # AxiDraw Model (1-4)
-                            # 1: AxiDraw V2 or V3 (Default)
-                            # 2: AxiDraw V3/A3 or SE/A3
-                            # 3: AxiDraw V3 XLX
-                            # 4: AxiDraw MiniKit
+model = 1               # AxiDraw Model (1-6)
+                            # 1: AxiDraw V2 or V3 (Default). 2: AxiDraw V3/A3 or SE/A3.
+                            # 3: AxiDraw V3 XLX. 4: AxiDraw MiniKit.
+                            # 5: AxiDraw SE/A1.  6: AxiDraw SE/A2.
                             
 port = None             # Serial port or named AxiDraw to use
                             # None (Default) will plot to first unit located
@@ -154,20 +153,26 @@ adjusted in everyday use. That said, proceed with caution, and keep a backup cop
 # Page size values typically do not need to be changed. They primarily affect viewpoint and centering.
 # Measured in page pixelssteps.  Default printable area for AxiDraw is 300 x 218 mm
 
-x_travel_default = 11.81  # AxiDraw V2 and AxiDraw V3: X Carriage travel in inches.     Default: 300 mm = about 11.81 inches
-y_travel_default = 8.58   # AxiDraw V2 and AxiDraw V3: Y Carriage travel in inches.     Default: 218 mm = about 8.58 inches
+x_travel_default = 11.81  # AxiDraw V2, V3: X Carriage travel, inches.  Default: 11.81 (300 mm)
+y_travel_default = 8.58   # AxiDraw V2, V3: Y Carriage travel, inches.  Default: 8.58 (218 mm)
 
-x_travel_V3A3 = 16.93     # AxiDraw V3/A3: X Carriage travel in inches.                 Default: 430 mm = about 16.93 inches
-y_travel_V3A3 = 11.69     # AxiDraw V3/A3: Y Carriage travel in inches.                 Default: 297 mm = about 11.69 inches
+x_travel_V3A3 = 16.93     # V3/A3 and SE/A3: X Carriage travel, inches.   Default: 16.93 (430 mm)
+y_travel_V3A3 = 11.69     # V3/A3 and SE/A3: Y Carriage travel, inches.   Default: 11.69 (297 mm)
 
-x_travel_V3XLX = 23.42    # AxiDraw V3 XLX: X Carriage travel in inches.                Default: 595 mm = about 23.42 inches
-y_travel_V3XLX = 8.58     # AxiDraw V3 XLX: Y Carriage travel in inches.                Default: 218 mm = about 8.58 inches
+x_travel_V3XLX = 23.42    # AxiDraw V3 XLX: X Carriage travel, inches.  Default: 23.42 (595 mm
+y_travel_V3XLX = 8.58     # AxiDraw V3 XLX: Y Carriage travel, inches.  Default: 8.58 (218 mm)
 
-x_travel_MiniKit = 6.30  # AxiDraw MiniKit: X Carriage travel in inches.                Default: 160 mm = about 6.30 inches
-y_travel_MiniKit = 4.00   # AxiDraw MiniKit: Y Carriage travel in inches.               Default: 101.6 mm = 4.00 inches
+x_travel_MiniKit = 6.30   # AxiDraw MiniKit: X Carriage travel, inches. Default: 6.30 (160 mm)
+y_travel_MiniKit = 4.00   # AxiDraw MiniKit: Y Carriage travel, inches. Default: 4.00 (101.6 mm)
+
+x_travel_SEA1 = 34.02     # AxiDraw SE/A1: X Carriage travel, inches.   Default: 34.02 (864 mm)
+y_travel_SEA1 = 23.39     # AxiDraw SE/A1: Y Carriage travel, inches.   Default: 23.39 (594 mm)
+
+x_travel_SEA2 = 23.39    # AxiDraw SE/A2: X Carriage travel, inches.    Default: 23.39 (594 mm)
+y_travel_SEA2 = 17.01    # AxiDraw SE/A2: Y Carriage travel, inches.    Default: 17.01 (432 mm )
 
 
-native_res_factor = 1016.0  # Motor resolution calculation factor, steps per inch, and used in conversions. Default: 1016.0
+native_res_factor = 1016.0  # Motor resolution factor, steps per inch. Default: 1016.0
 # Note that resolution is defined along native (not X or Y) axes.
 # Resolution is native_res_factor * sqrt(2) steps per inch in Low Resolution  (Approx 1437 steps per inch)
 #       and 2 * native_res_factor * sqrt(2) steps per inch in High Resolution (Approx 2874 steps per inch)
@@ -178,8 +183,8 @@ max_step_rate = 24.995  # Maximum allowed motor step rate, in steps per millisec
 # We use a conservative value, to help prevent errors due to rounding.
 # This value is normally used _for speed limit checking only_.
 
-speed_lim_xy_lr = 15.000  # Maximum XY speed allowed when in Low Resolution mode, in inches per second.  Default: 15.000 Max: 17.3958
-speed_lim_xy_hr = 8.6979  # Maximum XY speed allowed when in High Resolution mode, in inches per second. Default: 8.6979, Max: 8.6979
+speed_lim_xy_lr = 15.000  # Maximum XY speed allowed when in Low Resolution mode, inches/second.  Default: 15.000 Max: 17.3958
+speed_lim_xy_hr = 8.6979  # Maximum XY speed allowed when in High Resolution mode, inches/second. Default: 8.6979, Max: 8.6979
 # Do not increase these values above Max; they are derived from max_step_rate and the resolution.
 
 max_step_dist_lr = 0.000696  # Maximum distance covered by 1 step in Low Res mode, rounded up, in inches. ~1/(1016 sqrt(2))

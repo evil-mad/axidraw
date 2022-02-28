@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -209,17 +209,21 @@ class DigestSVG:
                             if str(str_layer_name)[0] == '%':
                                 continue # Skip Documentation layer and its contents
 
-                    if self.layer_selection >= 0: # Check for selected layer name
+                    if self.layer_selection >= 0 and len(str(str_layer_name)) > 0: # layers mode
                         layer_match = False
                         layer_name_int = -1
-
                         temp_num_string = 'x'
                         string_pos = 1
-                        max_length = len(str_layer_name)
+
+                        layer_name_temp = str(str_layer_name) # Ignore leading '!' in layers mode
+                        if str(str_layer_name)[0] == '!':
+                            layer_name_temp = str_layer_name[1:]
+
+                        max_length = len(layer_name_temp)
                         while string_pos <= max_length:
-                            layer_name_fragment = str_layer_name[:string_pos]
+                            layer_name_fragment = layer_name_temp[:string_pos]
                             if layer_name_fragment.isdigit():
-                                temp_num_string = str_layer_name[:string_pos]
+                                temp_num_string = layer_name_temp[:string_pos]
                                 string_pos += 1
                             else:
                                 break
