@@ -78,7 +78,7 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
 
-        self.version_string = "3.2.0" # Dated 2022-02-17
+        self.version_string = "3.2.1" # Dated 2022-03-26
 
         self.spew_debugdata = False
 
@@ -103,8 +103,7 @@ class AxiDraw(inkex.Effect):
         self.end_y = None
         self.pen_lifts = 0
 
-        # logging setup
-        if default_logging:
+        if default_logging: # logging setup
             logger.setLevel(logging.INFO)
             logger.addHandler(self.logging_attrs["default_handler"])
 
@@ -1038,11 +1037,11 @@ class AxiDraw(inkex.Effect):
                         'value3': str(self.options.port),
                         }
                     try:
-                        r = requests.post(self.options.webhook_url, data=payload)
-                        # self.user_message_fun("webhook results: " + str(r))
-                    except (RuntimeError, requests.exceptions.ConnectionError) as e:
+                        wh_result = requests.post(self.options.webhook_url, data=payload)
+                        # self.user_message_fun("webhook results: " + str(wh_result))
+                    except (RuntimeError, requests.exceptions.ConnectionError) as wh_err:
                         raise RuntimeError("An error occurred while posting webhook. " +
-                               "Are you connected to the internet? (Error: {})".format(e))
+                               "Are you connected to the internet? (Error: {})".format(wh_err))
 
     def plot_doc_digest(self, digest):
         """
@@ -1051,8 +1050,6 @@ class AxiDraw(inkex.Effect):
         Takes a flattened path_objects.DocDigest object as input. All
         selection of elements to plot and their rendering, including
         transforms, needs to be handled before this routine.
-
-        This routine does support pausing/resuming a paused plot.
         """
 
         if not digest:
@@ -1101,20 +1098,14 @@ class AxiDraw(inkex.Effect):
     def eval_layer_properties(self, str_layer_name):
         """
         Parse layer name for encoded commands.
+        Syntax described at: https://wiki.evilmadscientist.com/AxiDraw_Layer_Control
 
         Parse characters following the layer number (if any) to see if there is
         a "+H" or "+S" escape code, that indicates that overrides the pen-down
         height or speed for a given layer. A "+D" indicates a given time delay.
-
-        One additional single-character escape codes is:
-        "!" (leading character only)-- inserts a programmatic pause.
-
-        The escape sequences are described at:
-        https://wiki.evilmadscientist.com/AxiDraw_Layer_Control
+        A leading "!" creates a programmatic pause.
         """
 
-        # Look at layer name.  Sample first character, then first two, and
-        # so on, until the string ends or the string no longer consists of digit characters only.
         temp_num_string = 'x'
         string_pos = 1
         current_layer_name = str(str_layer_name)
@@ -1145,6 +1136,8 @@ class AxiDraw(inkex.Effect):
                     self.force_pause = True
                     self.pause_res_check()  # Carry out the pause, or resume if required.
 
+                current_layer_name = current_layer_name[1:] # Remove leading '!'
+                max_length -= 1
             while string_pos <= max_length:
                 layer_name_fragment = current_layer_name[:string_pos]
                 if layer_name_fragment.isdigit():
@@ -1198,22 +1191,18 @@ class AxiDraw(inkex.Effect):
                             if 0 <= parameter_int <= 100:
                                 self.use_layer_pen_height = True
                                 self.layer_pen_pos_down = parameter_int
-
                         if key == "+s":
                             if 0 < parameter_int <= 110:
                                 self.use_layer_speed = True
                                 self.layer_speed_pendown = parameter_int
-
                     string_pos = param_start + len(temp_num_string)
                 else:
                     break  # exit loop.
-
         if self.layer_speed_pendown != old_speed:
             self.enable_motors()  # Set speed value variables for this layer.
         if self.layer_pen_pos_down != old_pen_down:
             self.servo_setup()  # Set pen down height for this layer.
             # This new value will be used when we next lower the pen. (It's up between layers.)
-
 
     def plot_polyline(self, vertex_list):
         """
