@@ -4,8 +4,6 @@
 <id>command.evilmadscientist.axidraw_naming</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw_naming.py</dependency>
-<dependency type="executable" location="extensions">inkex.py</dependency>
-
 
 <param name="mode" type="notebook" >
 <page name="list_names" _gui-text="Read AxiDraw Name">

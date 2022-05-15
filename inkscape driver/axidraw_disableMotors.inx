@@ -4,7 +4,6 @@
 <id>command.evilmadscientist.axidraw_disable</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw_control.py</dependency>
-<dependency type="executable" location="extensions">inkex.py</dependency>
 
 <param name="mode" type="notebook" gui-hidden="true">
 <page name="manual" _gui-text="AxiDraw Custom Manual Control">

@@ -3,8 +3,6 @@
   <_name>Plot Optimization (Legacy)</_name>
   <id>command.evilmadscientist.axidraw.reorder</id>
   <dependency type="executable" location="extensions">axidraw_svg_reorder.py</dependency>
-  <dependency type="executable" location="extensions">inkex.py</dependency>
-
 
 <_param indent="5" name="splashpage" type="description" 
 appearance="header">AxiDraw Plot Optimization Tool</_param>
