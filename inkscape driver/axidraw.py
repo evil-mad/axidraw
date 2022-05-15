@@ -78,7 +78,7 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
 
-        self.version_string = "3.2.1" # Dated 2022-03-26
+        self.version_string = "3.2.2" # Dated 2022-05-14
 
         self.spew_debugdata = False
 

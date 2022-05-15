@@ -4,7 +4,6 @@
 <id>command.evilmadscientist.axidraw-manager</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw_control.py</dependency>
-<dependency type="executable" location="extensions">inkex.py</dependency>
 <param name="mode" type="notebook">
 
 <page name="plot" _gui-text="Plot">
@@ -140,7 +139,7 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <page name="sysinfo" _gui-text="Config">
 <_param name="instructions_config1" type="description" appearance="header">Hardware configuration</_param>
 <param name="model" type="optiongroup" appearance="minimal" indent="1" _gui-text="AxiDraw model:">
-<_option value="1">AxiDraw V2 or AxiDraw V3</_option>
+<_option value="1">AxiDraw V2, V3, or SE/A4</_option>
 <_option value="2">AxiDraw V3/A3 or SE/A3</_option>
 <_option value="4">AxiDraw MiniKit</_option>
 <_option value="5">AxiDraw SE/A1</_option>
@@ -259,7 +258,7 @@ the Return to Home Corner command.
 
 </param>
 <_param name="copyright" type="description" indent="5" xml:space="preserve"
->Version 3.2.1      —      Copyright 2022 Evil Mad Scientist</_param>
+>Version 3.2.2      —      Copyright 2022 Evil Mad Scientist</_param>
 
 
 
