@@ -1,10 +1,10 @@
 import sys
 import ast
 from collections import namedtuple
-from distutils.version import LooseVersion
+from packaging.version import parse
 
 from axidrawinternal.plot_utils_import import from_dependency_import
-ebb_serial = from_dependency_import('plotink.ebb_serial')  # Requires v 0.13 in plotink    https://github.com/evil-mad/plotink
+ebb_serial = from_dependency_import('plotink.ebb_serial')  # https://github.com/evil-mad/plotink
 requests = from_dependency_import('requests')
 
 Versions = namedtuple("Versions", "axidraw_control ebb_firmware dev_axidraw_control")
@@ -60,19 +60,19 @@ def log_axidraw_control_version(online_versions, current_version_string, log_fun
     log_fun("This is AxiDraw Control version {}.".format(current_version_string))
 
     if online_versions:   
-        if LooseVersion(online_versions.axidraw_control) > LooseVersion(current_version_string):
+        if parse(online_versions.axidraw_control) > parse(current_version_string):
             log_fun("An update is available to a newer version, v. {}.".format(
                 online_versions.axidraw_control))
             log_fun("Please visit: axidraw.com/sw for the latest software.")
-        elif LooseVersion(current_version_string) > LooseVersion(online_versions.axidraw_control):
+        elif parse(current_version_string) > parse(online_versions.axidraw_control):
             log_fun("~~ An early-release version ~~")
-            if (LooseVersion(online_versions.dev_axidraw_control)
-                > LooseVersion(current_version_string)):
+            if (parse(online_versions.dev_axidraw_control)
+                > parse(current_version_string)):
                 log_fun("An update is available to a newer version, v. {}.".format(
                     online_versions.dev_axidraw_control))
                 log_fun("To update, please contact AxiDraw technical support.")
-            elif (LooseVersion(online_versions.dev_axidraw_control)
-                  == LooseVersion(current_version_string)):
+            elif (parse(online_versions.dev_axidraw_control)
+                  == parse(current_version_string)):
                 log_fun("This is the newest available development version.")
 
             log_fun('(The current "stable" release is v. {}).'.format(
@@ -87,7 +87,7 @@ def log_ebb_version(fw_version_string, online_versions, log_fun):
     log_fun("\nYour AxiDraw has firmware version {}.".format(fw_version_string))
             
     if online_versions:
-        if LooseVersion(online_versions.ebb_firmware) > LooseVersion(fw_version_string):
+        if parse(online_versions.ebb_firmware) > parse(fw_version_string):
             log_fun("An update is available to EBB firmware v. {};".format(
                 online_versions.ebb_firmware))
             log_fun("To download the updater, please visit: axidraw.com/fw\n")

@@ -38,12 +38,24 @@ def replacement_setup(*args, **kwargs):
             pkg_pattern = re.compile('(?P<pkg>[a-zA-Z]*)-[0-9]')
             for wheel_file in glob.glob(path.join(depdir, "*")):
                 pkg_name = pkg_pattern.search(wheel_file).group('pkg')
+                pip_prefix = [sys.executable, '-m', 'pip']
                 try:
-                    subprocess.check_call(
-                        [sys.executable, '-m', 'pip', 'uninstall', '--yes', pkg_name])
+                    subprocess.check_call(pip_prefix + ['uninstall', '--yes', pkg_name])
                 except subprocess.CalledProcessError: # Will be raised if there is no version to uninstall
                     pass
-                subprocess.check_call([sys.executable, '-m', 'pip', 'install', wheel_file])
+                try:
+                    subprocess.run(pip_prefix + ['install', wheel_file],
+                                   capture_output=True, check=True)
+                except subprocess.CalledProcessError as cpe:
+                    # in certain cases, if the user has attempted to install AxiCli with the --user
+                    # flag, there is an error due to not propagating this flag. In this case,
+                    # try installing again with --user. See
+                    # https://github.com/evil-mad/axidraw/issues/119 and
+                    # https://gitlab.com/evil-mad/AxiCli/-/issues/84
+                    if "--user" in str(cpe.stderr):
+                        subprocess.run(pip_prefix + ['install', '--user', wheel_file], check=True)
+                    else:
+                        raise
     except (AttributeError, subprocess.CalledProcessError) as err:
         if sys.version_info < (3, 6):
             pass # pip has a standard message for this situation (see `python_requires` arg below)
@@ -57,7 +69,7 @@ setuptools.setup = replacement_setup
 
 replacement_setup(
     name='axicli',
-    version='3.2.1',
+    version='3.3.0',
     python_requires='>=3.6.0',
     long_description=long_description,
     long_description_content_type='text/plain',
@@ -69,7 +81,7 @@ replacement_setup(
         # this only includes publicly available dependencies
         'ink_extensions>=1.1.0',
         'lxml>=4.6.5',
-        'plotink>=1.5.0',
+        'plotink>=1.6.1',
         'pyserial>=3.5',
         'requests', # just for the certificates for now
     ],
@@ -77,6 +89,7 @@ replacement_setup(
     entry_points={
         'console_scripts': [
             'axicli = axicli.__main__:axidraw_CLI',
+            'htacli = axicli.__main__:hta_CLI',
         ]
     },
 )

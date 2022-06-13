@@ -7,6 +7,32 @@ Please see https://axidraw.com/doc/cli_api/ for full documentation
 
 =========================================
 
+v 3.3 (June 2022)
+
+Expand model option values with AxiDraw V3/B6.
+
+v 3.2 (February 2022)
+
+Expand model option values with AxiDraw SE/A1, SE/A2.
+
+Improved model for time duration of raising/lowering pen-lift servo motor;
+two adjustable parameters added to the configuration file.
+
+New walk_home command added to the list of manual commands.
+
+Plots underway can now be paused with Control+C in addition to the physical pause button.
+
+
+v 3.1 (January 2022)
+
+New plot digest feature: The digest option can enable saving a plot digest,
+rather than the full SVG output
+
+New Webhook notifications feature. Added webhook and webhook_url options.
+
+New parameter in the axidraw_conf.py configuration file: report_lifts enables
+reporting the number of pen lifts in a plot.
+
 v 3.0 (October 2021)
 
 Significant changes to plot optimization: 

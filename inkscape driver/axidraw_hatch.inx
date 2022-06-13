@@ -64,7 +64,7 @@ object, the hatches will be grouped with their original (filled) objects.
 </param>
 <separator />
 <param name="aboutpage_7" type="description"  indent="2">
-v2.4.1. Copyright 2021, Evil Mad Scientist</_param>
+v2.4.2. Copyright 2022, Evil Mad Scientist</_param>
  
   </page>
   </param>

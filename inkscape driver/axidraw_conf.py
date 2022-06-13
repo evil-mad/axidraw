@@ -150,26 +150,29 @@ Please note that these values have been carefully chosen, and generally do not n
 adjusted in everyday use. That said, proceed with caution, and keep a backup copy.
 '''
 
-# Page size values typically do not need to be changed. They primarily affect viewpoint and centering.
-# Measured in page pixelssteps.  Default printable area for AxiDraw is 300 x 218 mm
+# Travel area limits typically do not need to be changed. 
+# For each model, there is an X travel and Y travel limit, given in inches.
 
-x_travel_default = 11.81  # AxiDraw V2, V3: X Carriage travel, inches.  Default: 11.81 (300 mm)
-y_travel_default = 8.58   # AxiDraw V2, V3: Y Carriage travel, inches.  Default: 8.58 (218 mm)
+x_travel_default = 11.81 # AxiDraw V2, V3, SE/A4: X.    Default: 11.81 in (300 mm)
+y_travel_default = 8.58  # AxiDraw V2, V3, SE/A4: Y.    Default:  8.58 in (218 mm)
 
-x_travel_V3A3 = 16.93     # V3/A3 and SE/A3: X Carriage travel, inches.   Default: 16.93 (430 mm)
-y_travel_V3A3 = 11.69     # V3/A3 and SE/A3: Y Carriage travel, inches.   Default: 11.69 (297 mm)
+x_travel_V3A3 = 16.93    # V3/A3 and SE/A3: X           Default: 16.93 in (430 mm)
+y_travel_V3A3 = 11.69    # V3/A3 and SE/A3: Y           Default: 11.69 in (297 mm)
 
-x_travel_V3XLX = 23.42    # AxiDraw V3 XLX: X Carriage travel, inches.  Default: 23.42 (595 mm
-y_travel_V3XLX = 8.58     # AxiDraw V3 XLX: Y Carriage travel, inches.  Default: 8.58 (218 mm)
+x_travel_V3XLX = 23.42   # AxiDraw V3 XLX: X            Default: 23.42 in (595 mm)
+y_travel_V3XLX = 8.58    # AxiDraw V3 XLX: Y            Default:  8.58 in (218 mm)
 
-x_travel_MiniKit = 6.30   # AxiDraw MiniKit: X Carriage travel, inches. Default: 6.30 (160 mm)
-y_travel_MiniKit = 4.00   # AxiDraw MiniKit: Y Carriage travel, inches. Default: 4.00 (101.6 mm)
+x_travel_MiniKit = 6.30  # AxiDraw MiniKit: X           Default:  6.30 in (160 mm)
+y_travel_MiniKit = 4.00  # AxiDraw MiniKit: Y           Default:  4.00 in (101.6 mm)
 
-x_travel_SEA1 = 34.02     # AxiDraw SE/A1: X Carriage travel, inches.   Default: 34.02 (864 mm)
-y_travel_SEA1 = 23.39     # AxiDraw SE/A1: Y Carriage travel, inches.   Default: 23.39 (594 mm)
+x_travel_SEA1 = 34.02    # AxiDraw SE/A1: X             Default: 34.02 in (864 mm)
+y_travel_SEA1 = 23.39    # AxiDraw SE/A1: Y             Default: 23.39 in (594 mm)
 
-x_travel_SEA2 = 23.39    # AxiDraw SE/A2: X Carriage travel, inches.    Default: 23.39 (594 mm)
-y_travel_SEA2 = 17.01    # AxiDraw SE/A2: Y Carriage travel, inches.    Default: 17.01 (432 mm )
+x_travel_SEA2 = 23.39    # AxiDraw SE/A2: X             Default: 23.39 in (594 mm)
+y_travel_SEA2 = 17.01    # AxiDraw SE/A2: Y             Default: 17.01 in (432 mm )
+
+x_travel_V3B6 = 7.48     # AxiDraw V3/B6: X             Default: 7.48 in (190 mm)
+y_travel_V3B6 = 5.51     # AxiDraw V3/B6: Y             Default: 5.51 in (140 mm)
 
 
 native_res_factor = 1016.0  # Motor resolution factor, steps per inch. Default: 1016.0

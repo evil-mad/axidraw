@@ -78,7 +78,7 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
 
-        self.version_string = "3.2.2" # Dated 2022-05-14
+        self.version_string = "3.3.0" # Dated 2022-06-11
 
         self.spew_debugdata = False
 
@@ -197,6 +197,9 @@ class AxiDraw(inkex.Effect):
         elif self.options.model == 6:
             self.x_bounds_max = self.params.x_travel_SEA2
             self.y_bounds_max = self.params.y_travel_SEA2
+        elif self.options.model == 7:
+            self.x_bounds_max = self.params.x_travel_V3B6
+            self.y_bounds_max = self.params.y_travel_V3B6
         else:
             self.x_bounds_max = self.params.x_travel_default
             self.y_bounds_max = self.params.y_travel_default

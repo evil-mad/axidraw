@@ -6,7 +6,7 @@ future==0.18.2
 idna==3.3
 ink-extensions==1.1.0
 lxml==4.6.5
-plotink==1.5.0
+plotink==1.6.1
 pyserial==3.5
 requests==2.26.0
 urllib3==1.26.7
