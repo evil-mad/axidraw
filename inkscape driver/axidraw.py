@@ -34,7 +34,7 @@ import logging
 import math
 import time
 from array import array
-from multiprocessing import Event
+# from multiprocessing import Event
 
 from lxml import etree
 
@@ -78,7 +78,7 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
 
-        self.version_string = "3.3.0" # Dated 2022-06-11
+        self.version_string = "3.4.0" # Dated 2022-07-22
 
         self.spew_debugdata = False
 
@@ -217,8 +217,10 @@ class AxiDraw(inkex.Effect):
         # Input limit checking; constrain input values and prevent zero speeds:
         self.options.pen_pos_up = plot_utils.constrainLimits(self.options.pen_pos_up, 0, 100)
         self.options.pen_pos_down = plot_utils.constrainLimits(self.options.pen_pos_down, 0, 100)
-        self.options.pen_rate_raise = plot_utils.constrainLimits(self.options.pen_rate_raise, 1, 200)
-        self.options.pen_rate_lower = plot_utils.constrainLimits(self.options.pen_rate_lower, 1, 200)
+        self.options.pen_rate_raise = \
+            plot_utils.constrainLimits(self.options.pen_rate_raise, 1, 200)
+        self.options.pen_rate_lower = \
+            plot_utils.constrainLimits(self.options.pen_rate_lower, 1, 200)
         self.options.speed_pendown = plot_utils.constrainLimits(self.options.speed_pendown, 1, 110)
         self.options.speed_penup = plot_utils.constrainLimits(self.options.speed_penup, 1, 200)
         self.options.accel = plot_utils.constrainLimits(self.options.accel, 1, 110)
@@ -792,14 +794,15 @@ class AxiDraw(inkex.Effect):
             """
             Optimize digest
             """
-            allow_reverse = self.options.reordering > 1
+            allow_reverse = self.options.reordering in {2, 3}
 
-            plot_optimizations.connect_nearby_ends(digest, allow_reverse, self.params.min_gap)
+            if self.options.reordering < 3: # Set reordering to 4 to disable path joining
+                plot_optimizations.connect_nearby_ends(digest, allow_reverse, self.params.min_gap)
 
             if self.options.random_start:
                 plot_optimizations.randomize_start(digest, self.svg_rand_seed)
 
-            if self.options.reordering > 0:
+            if self.options.reordering in {1, 2, 3}:
                 plot_optimizations.reorder(digest, allow_reverse)
 
         # If it is necessary to save as a Plob, that conversion can be made like so:
@@ -952,7 +955,7 @@ class AxiDraw(inkex.Effect):
 
                 ns_prefix = "plot"
                 if self.options.rendering > 1:
-                    p_style.update({'stroke': 'rgb(255, 159, 159)'})
+                    p_style.update({'stroke': self.params.preview_color_up})
                     path_attrs = {
                         'style': simplestyle.formatStyle(p_style),
                         'd': " ".join(self.path_data_pu),
@@ -961,7 +964,7 @@ class AxiDraw(inkex.Effect):
                                      inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
                 if self.options.rendering == 1 or self.options.rendering == 3:
-                    p_style.update({'stroke': 'blue'})
+                    p_style.update({'stroke': self.params.preview_color_down})
                     path_attrs = {
                         'style': simplestyle.formatStyle(p_style),
                         'd': " ".join(self.path_data_pd),
@@ -1331,22 +1334,26 @@ class AxiDraw(inkex.Effect):
                 tmp_y = input_path[i][1]
                 trimmed_path.append([tmp_x, tmp_y])  # Selected, usable portions of input_path.
 
-                traj_logger.debug('\nSegment: input_path[{0:1.0f}] -> input_path[{1:1.0f}]'.format(last_index, i))
-                traj_logger.debug('Dest: x: {0:1.3f},  y: {1:1.3f}. Distance: {2:1.3f}'.format(tmp_x, tmp_y, tmp_dist))
+                traj_logger.debug('\nSegment: input_path[{0:1.0f}] -> input_path[{1:1.0f}]'.format
+                    (last_index, i))
+                traj_logger.debug('Dest: x: {0:1.3f},  y: {1:1.3f}. Distance: {2:1.3f}'.format(
+                    tmp_x, tmp_y, tmp_dist))
 
                 last_index = i
             else:
-                traj_logger.debug('\nSegment: input_path[{0:1.0f}] -> input_path[{1:1.0f}] is zero (or near zero); skipping!'.format(last_index, i))
-                traj_logger.debug('  x: {0:1.3f},  y: {1:1.3f}, distance: {2:1.3f}'.format(input_path[i][0], input_path[i][1], tmp_dist))
+                traj_logger.debug('\nSegment: input_path[{0:1.0f}] -> input_path[{1:1.0f}]' +
+                    ' is zero (or near zero); skipping!'.format(last_index, i))
+                traj_logger.debug('  x: {0:1.3f},  y: {1:1.3f}, distance: {2:1.3f}'.format(
+                    input_path[i][0], input_path[i][1], tmp_dist))
 
         traj_length = len(traj_dists)
 
         # Handle zero-segment plot:
         if traj_length < 2:
-            traj_logger.debug('\nSkipped a path element that did not have any well-defined segments.')
+            traj_logger.debug('\nSkipped a path element without well-defined segments.')
             return
 
-        # Handle simple segments (lines) that do not require any complex planning (after removing zero-length elements):
+        # Remove zero-length elements and plot the element if it is just a line
         if traj_length < 3:
             traj_logger.debug('\nDrawing straight line, not a curve.')
             self.plot_seg_with_v(trimmed_path[0][0], trimmed_path[0][1], 0, 0)
@@ -1356,8 +1363,8 @@ class AxiDraw(inkex.Effect):
         traj_logger.debug('traj_dists[0]: {0:1.3f}'.format(traj_dists[0]))
         if traj_logger.isEnabledFor(logging.DEBUG):
             for i in range(0, len(trimmed_path)):
-                traj_logger.debug('i: {0:1.0f}, x: {1:1.3f}, y: {2:1.3f}, distance: {3:1.3f}'.format(i,
-                    trimmed_path[i][0], trimmed_path[i][1], traj_dists[i + 1]))
+                traj_logger.debug('i: {0:1.0f}, x: {1:1.3f}, y: {2:1.3f}, distance: ' +
+                    '{3:1.3f}'.format(i, trimmed_path[i][0], trimmed_path[i][1], traj_dists[i + 1]))
                 traj_logger.debug('  And... traj_dists[i+1]: {0:1.3f}'.format(traj_dists[i + 1]))
 
         # Acceleration/deceleration rates:
@@ -1506,7 +1513,7 @@ class AxiDraw(inkex.Effect):
             if vcurrent_max > vjunction_max:
                 vcurrent_max = vjunction_max
 
-            traj_vels.append(vcurrent_max)  # "Forward-going" speed limit for velocity at this particular vertex.
+            traj_vels.append(vcurrent_max)  # "Forward-going" speed limit at this vertex.
         traj_vels.append(0.0)  # Add zero velocity, for final vertex.
 
         if traj_logger.isEnabledFor(logging.DEBUG):
@@ -1523,10 +1530,10 @@ class AxiDraw(inkex.Effect):
         Velocity at vertex: Part III
 
         We have, thus far, ensured that we could reach the desired velocities, going forward, but
-        have also assumed an effectively infinite deceleration rate.        
+        have also assumed an effectively infinite deceleration rate.
 
         We now go through the completed array in reverse, limiting velocities to ensure that we 
-        can properly decelerate in the given distances.        
+        can properly decelerate in the given distances.
         """
 
         for j in range(1, traj_length):
@@ -1594,19 +1601,17 @@ class AxiDraw(inkex.Effect):
             motor_dist2 = ( xDist - yDist ) # Distance for motor to move, Axis 2
 
         We will only discuss motor steps, and resolution, within the context of native axes.
-
         """
 
         self.pause_res_check()
 
-        spew_segment_debug_data = self.spew_debugdata
-        #         spew_segment_debug_data = True
+        spew_segment_debug_data = self.spew_debugdata # Set true to display always
 
         seg_logger = logging.getLogger('.'.join([__name__, 'segment']))
         if spew_segment_debug_data:
             seg_logger.setLevel(logging.DEBUG) # by default level is INFO
 
-        seg_logger.debug('plot_seg_with_v({0}, {1}, {2}, {3})'.format(x_dest, y_dest, v_i, v_f))
+        seg_logger.debug('\nplot_seg_with_v({0}, {1}, {2}, {3})'.format(x_dest, y_dest, v_i, v_f))
         if self.resume_mode or self.b_stopped:
             spew_text = '\nSkipping '
         else:
@@ -1742,6 +1747,12 @@ class AxiDraw(inkex.Effect):
         # Use the same model for deceleration distance; modeling it with backwards motion:
         decel_dist_max = (vf_inches_per_sec * t_decel_max) + (0.5 * accel_rate * t_decel_max * t_decel_max)
 
+        max_vel_time_estimate = (segment_length_inches / speed_limit)
+
+        seg_logger.debug('accel_dist_max: ' + str(accel_dist_max))
+        seg_logger.debug('decel_dist_max: ' + str(decel_dist_max))
+        seg_logger.debug('max_vel_time_estimate: ' + str(max_vel_time_estimate))
+
         # time slices: Slice travel into intervals that are (say) 30 ms long.
         time_slice = self.params.time_slice  # Default slice intervals
 
@@ -1766,8 +1777,8 @@ class AxiDraw(inkex.Effect):
         Case 1: 'Trapezoid'
             Segment length is long enough to reach full speed.
             Segment length > accel_dist_max + decel_dist_max
-            We will get to full speed, with an opportunity to "coast" at full speed
-            in the middle.
+            As a second check, make sure that the segment is long enough that it would take at
+            least 4 time slices at maximum velocity.
 
         Case 2: 'Triangle'
             Segment length is not long enough to reach full speed.
@@ -1792,7 +1803,8 @@ class AxiDraw(inkex.Effect):
 
 
         if not constant_vel_mode or self.pen_up:  # Allow accel when pen is up.
-            if segment_length_inches > (accel_dist_max + decel_dist_max + time_slice * speed_limit):
+            if (segment_length_inches > (accel_dist_max + decel_dist_max + time_slice * speed_limit)
+                and max_vel_time_estimate > 4 * time_slice ):
                 """
                 Case 1: 'Trapezoid'
                 """
@@ -2033,6 +2045,7 @@ class AxiDraw(inkex.Effect):
                             # Short segment; Not enough time for multiple segments at different velocities.
                             vi_inches_per_sec = vmax  # These are _slow_ segments-- use fastest possible interpretation.
                             constant_vel_mode = True
+                            seg_logger.debug('-> [Min-length segment]' + '\n')
 
         if constant_vel_mode:
             """
@@ -2163,10 +2176,9 @@ class AxiDraw(inkex.Effect):
                                         x_new_t, y_new_t))
                     else:
                         ebb_motion.doXYMove(self.serial_port, move_steps2, move_steps1, move_time)
-                        if move_time > 50:
+                        if move_time > 50: # Sleep before issuing next command
                             if self.options.mode != "manual":
-                                time.sleep(float(move_time - 30) / 1000.0)  # pause before issuing next command
-
+                                time.sleep(float(move_time - 30) / 1000.0)
                     seg_logger.debug('XY move:({0}, {1}), in {2} ms'.format(move_steps1, move_steps2, move_time))
                     seg_logger.debug('fNew(X,Y) :({0:.2}, {1:.2})'.format(f_new_x, f_new_y))
                     if (move_steps1 / move_time) >= self.params.max_step_rate:

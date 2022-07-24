@@ -73,7 +73,7 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface 3.3.0"
+cli_version = "AxiDraw Command Line Interface 3.4.0"
 
 quick_help = '''
     Basic syntax to plot a file:      axicli svg_in [OPTIONS]
@@ -187,10 +187,11 @@ def axidraw_CLI(dev = False):
 
     parser.add_argument("-G","--reordering", \
             metavar='VALUE', type=int, \
-            help="SVG reordering option (0-2)."\
-            + " 0: None; Preserve order of objects given in SVG file."\
-            + " 1: Reorder objects, preserving path orientation."\
-            + " 2: Reorder objects, allow path reversal.")
+            help="SVG reordering option (0-4; 3 deprecated)."\
+            + " 0: Least; Only connect adjoining paths."\
+            + " 1: Basic; Also reorder paths for speed."\
+            + " 2: Full; Also allow path reversal."\
+            + " 4: None; Strictly preserve file order.")
 
     parser.add_argument("-Y","--random_start", \
             action="store_const", const='True', \
@@ -283,7 +284,7 @@ def axidraw_CLI(dev = False):
 
         print("Re-ordering SVG File.")
         print("This can take a while for large files.")
-        print("(Note: reorder mode is deprecated and will be removed in a future version.)")
+        print("(Warning: Reorder mode is deprecated and will be removed in a future version.)")
 
         exit_status.run(adc.effect)    # Sort the document
 

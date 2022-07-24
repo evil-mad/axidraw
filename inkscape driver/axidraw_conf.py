@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 # 
 # https://github.com/evil-mad/axidraw
-# Version 3.2.0, dated 2022-02-22.
+# Version 3.4.0, dated 2022-07-22.
 #
 # Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -75,10 +75,11 @@ port_config = 0         # Serial port behavior option (0-2)
 auto_rotate = True      # Auto-select portrait vs landscape orientation
                             # Default: True
 
-reordering = 0          # Plot optimization option
-                            # 0: Preserve order of objects given in SVG file (Default)
-                            # 1: Reorder objects, preserving path orientation
-                            # 2: Reorder objects, allow path reversal
+reordering = 0          # Plot optimization option (0-4; 3 is deprecated)
+                            # 0: Least; Only connect adjoining paths (Default)
+                            # 1: Basic; Also reorder paths for speed
+                            # 2: Full; Also allow path reversal
+                            # 4: None; Strictly preserve file order
 
 random_start = False    # Randomize start locations of closed paths. (Default: False)
 
@@ -119,10 +120,6 @@ check_updates = True    # If True, allow AxiDraw Control to check online to see
                         #    this is the only internet-enabled function in the
                         #    AxiDraw software.
 
-smoothness = 10.0       # Curve smoothing (default: 10.0)
-
-cornering = 10.0        # Cornering speed factor (default: 10.0)
-
 use_b3_out = False      # If True, enable digital output pin B3, which will be high (3.3V)
                         #   when the pen is down, and low otherwise. Can be used to control
                         #   external devices like valves, relays, or lasers.
@@ -142,12 +139,26 @@ report_lifts = False    # Report number of pen lifts when reporting plot duratio
 auto_clip_lift = True   # Option applicable to the Interactive Python API only.
                         #   If True (default), keep pen up when motion is clipped by travel bounds.
 
+# Colors used to represent pen-up and pen-down travel in preview mode:
+preview_color_up = 'LightPink' # Pen-up travel color. Default: LightPink; rgb(255, 182, 193)
+preview_color_down = 'Blue'    # Pen-up travel color. Default: Blue; rgb(0, 0, 255)
+
+skip_voltage_check = False  # Set to True to disable EBB input power voltage checks. Default: False
+
+clip_to_page = True  # Clip plotting area to SVG document size. Default: True
+
+min_gap = 0.008     # Automatic path joining threshold, inches. Default: 0.008
+                    # If greater than zero, pen-up moves shorter than this distance
+                    #   will be replaced by pen-down moves. Set negative to disable.
+                    # Setting reordering to 4 (strict) will also disable path joining.
+
 '''
 Secondary control parameters:
 
 Values below this point are configured only in this file, not through the user interface(s).
-Please note that these values have been carefully chosen, and generally do not need to be 
-adjusted in everyday use. That said, proceed with caution, and keep a backup copy.
+These values have been carefully chosen, and generally do not need to be adjusted in everyday use.
+And, you can easily change these values such that things will not work as you expect them to.
+That said, proceed with caution, and keep a backup copy.
 '''
 
 # Travel area limits typically do not need to be changed. 
@@ -208,10 +219,6 @@ time_slice = 0.025  # Interval, in seconds, of when to update the motors. Defaul
 
 bounds_tolerance = 0.003  # Suppress warnings if bounds are exceeded by less than this distance (inches).
 
-min_gap = 0.008     # Automatic path joining threshold, inches. Default: 0.008
-                    # If greater than zero, pen-up moves shorter than this distance
-                    #   will be replaced by pen-down moves. Set negative to disable.
-
 # Servo motion limits, in units of (1/12 MHz), about 83.3 ns:
 servo_max = 27831  # Highest allowed position; "100%" on the scale.  Default: 27831 units, or 2.32 ms.
 servo_min = 9855   # Lowest allowed position; "0%" on the scale.     Default: 9855 units,  or 0.82 ms.
@@ -223,9 +230,9 @@ servo_sweep_time = 200 # Duration, ms, to sweep servo control signal over 100% r
 servo_move_min = 45      # Minimum time, ms, for pen lift/lower of non-zero distance.    Default: 45
 servo_move_slope = 2.69  # Additional time, ms, per percentage point of vertical travel. Default: 2.69
 
-skip_voltage_check = False  # Set to True to disable EBB input power voltage checks. Default: False
+smoothness = 10.0       # Curve smoothing (default: 10.0)
 
-clip_to_page = True  # Clip plotting area to SVG document size. Default: True
+cornering = 10.0        # Cornering speed factor (default: 10.0)
 
 # the tolerance for determining when the bezier has been segmented enough to plot:
 bezier_segmentation_tolerance = 0.02 / smoothness

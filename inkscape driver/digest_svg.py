@@ -541,6 +541,8 @@ class DigestSVG:
                 continue
             if node.tag == inkex.addNS('font', 'svg') or node.tag == 'font':
                 continue
+            if node.tag == inkex.addNS('templateinfo', 'inkscape'):
+                continue
             if node.tag == etree.Comment:
                 continue
             if node.tag == inkex.addNS('color-profile', 'svg') or node.tag == 'color-profile':

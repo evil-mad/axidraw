@@ -121,11 +121,11 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 <param indent="1" name="random_start" type="boolean" _gui-text="Randomize starts of closed paths">false</param>
 <param indent="1" name="report_time" type="boolean" _gui-text="Report time elapsed">false</param> 
 
-
 <param indent="1" name="reordering" type="optiongroup" appearance="minimal" _gui-text="Plot optimization:">
-<_option value="0">None: Preserve file order</_option>
-<_option value="1">Basic: Reorder but preserve direction</_option>
-<_option value="2">Full: Reorder and allow path reversal</_option>
+<_option value="0">Least; Only connect adjoining paths</_option>
+<_option value="1">Basic; Also reorder paths for speed</_option>
+<_option value="2">Full; Also allow path reversal</_option>
+<_option value="4">None; Strictly preserve file order</_option>
 </param>
 
 <param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
@@ -134,7 +134,6 @@ _gui-text="Pen height: DOWN, (%):">30</param>
 </param>
 
 </page>
-
 
 <page name="sysinfo" _gui-text="Config">
 <_param name="instructions_config1" type="description" appearance="header">Hardware configuration</_param>
@@ -259,7 +258,7 @@ the Return to Home Corner command.
 
 </param>
 <_param name="copyright" type="description" indent="5" xml:space="preserve"
->Version 3.3.0      —      Copyright 2022 Evil Mad Scientist</_param>
+>Version 3.4.0      —      Copyright 2022 Evil Mad Scientist</_param>
 
 
 
