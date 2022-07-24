@@ -1,15 +1,45 @@
-AxiDraw API Change Log    
+AxiDraw API Change Log
 
-This document notes changes that affect the various interfaces. It does
+This document notes changes that affect the APIs. It does
 not cover all internal changes nor bug fixes.
 
-Please see https://axidraw.com/doc/cli_api/ for full documentation
+Please see https://axidraw.com/doc/cli_api/ for current CLI API documentation and
+and https://axidraw.com/doc/py_api/ for current Python API documentation.
+
+=========================================
+
+v 3.4 (July 2022)
+
+Added a new "strict" value to reordering that disables all optimizations including
+path joining. Changed description (but not behavior) of the other values for clarity.
+
+New parameters in the axidraw_conf.py configuration file: preview_color_up and preview_color_down
+allow one to set the colors used in preview rendering.
+
+Archive release at:
+https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_340.zip
 
 =========================================
 
 v 3.3 (June 2022)
 
 Expand model option values with AxiDraw V3/B6.
+
+Archived release at:
+https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_330.zip
+
+=========================================
+
+v 3.2.1 (February 2022) 
+
+Bugfix release.
+
+Add two new python example files.
+
+Archived release at:
+https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_321.zip
+
+=========================================
 
 v 3.2 (February 2022)
 
@@ -22,6 +52,10 @@ New walk_home command added to the list of manual commands.
 
 Plots underway can now be paused with Control+C in addition to the physical pause button.
 
+Archived release at:
+https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_320.zip
+
+=========================================
 
 v 3.1 (January 2022)
 
@@ -32,6 +66,11 @@ New Webhook notifications feature. Added webhook and webhook_url options.
 
 New parameter in the axidraw_conf.py configuration file: report_lifts enables
 reporting the number of pen lifts in a plot.
+
+Archived release at:
+https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_310r1.zip
+
+=========================================
 
 v 3.0 (October 2021)
 
@@ -61,10 +100,13 @@ Breaking changes:
     0: Preserve order of objects given in SVG file (Default).
     1: Reorder objects, preserving path orientation
     2: Reorder objects, allow path reversal
-    3: Use value of 2 (deprecated) 
-    
-  A value of 3 will behave identically to 2 for compatibility, however this
-  option value is now deprecated.
+    3: [Deprecated]
+
+  A value of 3 will behave identically to 2 for compatibility for the time being,
+  however this option value is now deprecated.
+
+Archived release at:
+https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_302r1.zip
 
 =========================================
 
@@ -95,6 +137,22 @@ the turtle position is outside of the plotting bounds.
 * New parameter in the axidraw_conf.py configuration file: auto_clip_lift, which
 can disable automatic pen lifts at plotting bounds and the new behavior of pendown.
 
+Archived release at:
+https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_275r2.zip
+
+=========================================
+
+v 2.7.4 (June 2021)
+
+Drop support for Python 3.5. Python 3.6 or newer is now required.
+
+Results returned by the "usb_query" function in the Python API are
+now stripped of whitespace; previously, they were not.
+
+Archived release at:
+https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_274r1.zip
+
+
 =========================================
 
 v 2.7.0 (November 2020)
@@ -103,23 +161,48 @@ Add support for macOS 11 Big Sur.
 
 Drop support for Python 2. Python 3.5-3.9 now supported.
 
+New version posted 2020-11-21 (no version number change) includes dependency updates
+for compatibility with Mac computers using Apple Silicon.
+
 =========================================
 
 v 2.6.3 (August 2020)
 
 Add new turtle_pos and current_pos functions.
 
+Several new example scripts added for Python API, along with a section
+in this documentation listing what the different example scripts do.
+
+This is the last point release of the software supporting Python 2, and is
+archived for download at:
+https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_263_r2.zip
+
+You can also install it via:
+pip install https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_263_r2.zip
+
 =========================================
 
 v 2.6.0 (July 2020)
 
-Add usb_command and usb_query functions in interactive context.
+Last major release to support both Python 2 and Python 3.
+Future releases starting with 2.7.0 will require Python 3.5+.
+
+Add "one line" installation instructions.
+
+Add usb_command and usb_query functions in Python interactive context.
 
 Add walk_mmx and walk_mmy parameters, for manual walk in millimeter units.
 
-Renamed ebb_version to fw_version. The deprecated option
+Add mm units for interactive moves in Python API, in addition to cm, inch units.
+
+Add direct access to additional parameters, using new "params" syntax.
+
+Renamed ebb_version to fw_version. The deprecated manual command
 name (ebb_version) is still functional but will be removed
 in a future version.
+
+Certain operations that print output now also populate Python variables:
+"version" mode, "fw_version" manual command, "report_time" option.
 
 New parameters are available in the axidraw_conf.py configuration
 file: servo_timeout and use_b3_out
@@ -129,6 +212,8 @@ file: servo_timeout and use_b3_out
 v 2.5.x -- 2020-01-02
 
 Deprecated a value for port_config.
+
+list_names populates an accessible Python variable in the python API.
 
 v 2.5.6 -- 2019-12-13
 
@@ -160,6 +245,8 @@ Changed names of some parameters in axidraw_conf.py.
 =========================================
 
 v 2.4.0 (April 2019)
+
+Changed names of some parameters in axidraw_conf.py. 
 
 Refactoring of CLI and python interfaces. CLI is now
 accessible system-wide and called as "axicli" directly
@@ -235,7 +322,7 @@ XY interactive mode.
 
 =========================================
 
-v. 2.0.x (July 2018)
+v. 2.0 (July 2018)
 Significant changes to options, names, and syntax, for clarity and
 compatibility moving forward.
 
@@ -431,4 +518,4 @@ The --fileOutput option was removed in favor of being able to directly specify
 the output file name on the command line argument.
 
 
-~~~ Copyright 2019 Windell H. Oskay, Evil Mad Scientist Laboratories ~~~
+~~~ Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories ~~~
