@@ -163,8 +163,8 @@ def core_mode_options(parser, config):
     options.add_option("--mode",\
                         action="store", type="string", dest="mode",\
                         default="plot", \
-                        help="Mode or GUI tab. One of: [plot, layers, align, toggle, manual"\
-                        + ", sysinfo, version, res_plot, res_home]. Default: plot.")
+                        help="Mode or GUI tab. One of: [plot, layers, align, toggle, cycle"\
+                        + ", manual, sysinfo, version, res_plot, res_home]. Default: plot.")
 
     options.add_option("--submode",\
                         action="store", type="string", dest="submode",\

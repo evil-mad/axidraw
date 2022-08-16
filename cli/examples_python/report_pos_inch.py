@@ -2,31 +2,21 @@
 # -*- encoding: utf-8 -#-
 
 '''
-plot.py
+report_pos_inch.py
 
-Demonstrate use of axidraw module in "plot" mode, to plot an SVG file.
+Run this demo by calling: python report_pos_inch.py
 
-Run this demo by calling: python plot.py
+Prints X.XXX, Y.YYY, where
+X.XXX is the current AxiDraw X position and
+Y.YYY is the current AxiDraw Y position, in inch units.
 
-
-This is a minimal example to show how one can import the AxiDraw module
-and use it to plot an SVG file with the AxiDraw.
-
-(There is also a separate "interactive" mode, which can be used for moving
-the AxiDraw to various points upon command, rather than plotting an SVG file.)
-
+Requires Python 3.6 or newer and the AxiDraw python API, version 3.2 or newer.
 
 AxiDraw python API documentation is hosted at: https://axidraw.com/doc/py_api/
 
-'''
 
 
 
-
-
-
-
-'''
 About this software:
 
 The AxiDraw writing and drawing machine is a product of Evil Mad Scientist
@@ -41,13 +31,15 @@ AxiDraw software development is hosted at https://github.com/evil-mad/axidraw
 
 Additional AxiDraw documentation is available at http://axidraw.com/docs
 
-AxiDraw owners may request technical support for this software through our 
+AxiDraw owners may request technical support for this software through our
 github issues page, support forums, or by contacting us directly at:
 https://shop.evilmadscientist.com/contact
 
 
 
-Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+
+
+Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -71,56 +63,24 @@ SOFTWARE.
 
 '''
 
-
-
-import os.path
 from pyaxidraw import axidraw
 
-ad = axidraw.AxiDraw()             # Create class instance
-
-
-
-'''
-Try a few different possible locations for our file,
-so that this can be called from either the root or examples_python directory,
-or if you're in the same directory with the file.
-'''
-
-location1 = "test/assets/AxiDraw_trivial.svg"
-location2 = "../test/assets/AxiDraw_trivial.svg"
-location3 = "AxiDraw_trivial.svg"
-
-file = None
-
-if os.path.exists(location1):
-    file = location1
-if os.path.exists(location2):
-    file = location2
-if os.path.exists(location3):
-    file = location3
-
-if file:
-    print("Example file located at: " + file)
-    ad.plot_setup(file)    # Parse the input file
-else:
-    print("Unable to locate example file; exiting.")
+ad = axidraw.AxiDraw() # Initialize class
+ad.interactive()
+ad.connect()  # Open USB serial session
+if not ad.connected:
     exit()
 
-'''
-The above code, starting with "location1" can all be replaced by a single line
-if you already know where the file is. This can be as simple as:
+result = ad.usb_query('QS\r') # Query global step position
+result_list = result.strip().split(",")
+a_pos, b_pos = int(result_list[0]), int(result_list[1])
 
-ad.plot_setup("AxiDraw_trivial.svg")
-'''
+x_pos_inch = (a_pos + b_pos) / (4 * ad.params.native_res_factor)
+y_pos_inch = (a_pos - b_pos) / (4 * ad.params.native_res_factor)
+if ad.options.resolution == 2:  # Low-resolution mode
+    x_pos_inch *= 2
+    y_pos_inch *= 2
 
+print("{0:0.3f}, {1:0.3f}".format(x_pos_inch, y_pos_inch))
 
-ad.options.speed_pendown = 50 # Set maximum pen-down speed to 50%
-
-
-'''
-See documentation for a description of additional options and their allowed values:
-https://axidraw.com/doc/py_api/
-
-'''
-
-ad.plot_run()   # plot the document
+ad.disconnect()             # Close serial port to AxiDraw
