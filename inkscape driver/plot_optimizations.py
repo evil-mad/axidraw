@@ -26,7 +26,7 @@ This module provides some plot optimization tools.
 Part of the AxiDraw driver for Inkscape
 https://github.com/evil-mad/AxiDraw
 
-Requires Python 3.6 or newer.
+Requires Python 3.7 or newer.
 
 
 The included functions operate upon a "flat" DocDigest object.

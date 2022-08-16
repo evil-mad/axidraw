@@ -24,7 +24,7 @@ https://github.com/evil-mad/AxiDraw
 
 See version_string below for current version and date.
 
-Requires Python 3.6 or newer and Pyserial 3.5 or newer.
+Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
 
 import copy
@@ -58,6 +58,10 @@ from axidrawinternal import path_objects
 from axidrawinternal import digest_svg
 from axidrawinternal import boundsclip
 from axidrawinternal import plot_optimizations
+from axidrawinternal import plot_status
+from axidrawinternal import pen_handling
+from axidrawinternal import plot_warnings
+# from axidrawinternal import preview
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +72,7 @@ class AxiDraw(inkex.Effect):
 
     def __init__(self, default_logging=True, user_message_fun=message.emit, params=None):
         if params is None:
-            params = import_module("axidrawinternal.axidraw_conf") # Use default configuration file
+            params = import_module("axidrawinternal.axidraw_conf") # Default configuration file
         self.params = params
 
         inkex.Effect.__init__(self)
@@ -78,30 +82,26 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
 
-        self.version_string = "3.4.0" # Dated 2022-07-22
+        self.version_string = "3.5.0" # Dated 2022-07-31
 
-        self.spew_debugdata = False
+        self.plot_status = plot_status.PlotStatus()
+        self.pen = pen_handling.PenHandler()
+        self.warnings = plot_warnings.PlotWarnings()
+        # self.preview = preview.Preview()
 
-        self.delay_between_copies = False  # Not currently delaying between copies
-        self.ignore_limits = False
+        self.spew_debugdata = False # Possibly add this as a PlotStatus variable
+        self.pathcount = int(0)
         self.set_defaults()
-        self.pen_up = None # Initial state of pen is neither up nor down, but _unknown_.
-        self.virtual_pen_up = False # Pen state when stepping through plot before resuming
-        self.ebblv_set = False # EBBLV is not yet set.
-        self.connected = False # Variable for Python API to poll for connection status.
 
-        self.Secondary = False
+        self.connected = False # Python API variable.
+
+        self.Secondary = False # Possibly add this as a PlotStatus variable
         self.user_message_fun = user_message_fun
-
-        # So that we only generate a warning once for each unsupported SVG element,
-        #   we use a dictionary to track which elements have received a warning
-        self.warnings = {}
 
         self.start_x = None
         self.start_y = None
         self.end_x = None
         self.end_y = None
-        self.pen_lifts = 0
 
         if default_logging: # logging setup
             logger.setLevel(logging.INFO)
@@ -163,19 +163,15 @@ class AxiDraw(inkex.Effect):
         self.svg_application_old = None
         self.svg_plob_version = None
         self.use_layer_speed = False
-        self.use_layer_pen_height = False
-        self.resume_mode = False
-        self.b_stopped = False
-        self.e_stopped = False
-        self.serial_port = None
-        self.force_pause = False  # Flag to initiate forced pause
-        self.node_count = int(0)  # NOTE: python uses 32-bit ints.
+        self.node_count = 0
+        self.pathcount = int(0)
+        self.plot_status.reset() # Clear serial port and pause status flags
+        self.pen.reset() # Clear virtual pen state, lift count, layer pen height flag
+        self.warnings.reset() # Clear any warning messages
 
         self.x_bounds_min = 0.0
         self.y_bounds_min = 0.0
-
         self.svg_transform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
-
 
     def update_options(self):
         """ Parse and update certain options; called in effect and in interactive modes
@@ -224,6 +220,7 @@ class AxiDraw(inkex.Effect):
         self.options.speed_pendown = plot_utils.constrainLimits(self.options.speed_pendown, 1, 110)
         self.options.speed_penup = plot_utils.constrainLimits(self.options.speed_penup, 1, 200)
         self.options.accel = plot_utils.constrainLimits(self.options.accel, 1, 110)
+        self.pen.update(self.options, self.params)
 
 
     def effect(self):
@@ -238,7 +235,7 @@ class AxiDraw(inkex.Effect):
         self.text_out = '' # Text log for basic communication messages
         self.error_out = '' # Text log for significant errors
 
-        self.pt_estimate = 0.0  # plot time estimate, milliseconds
+        self.plot_status.stats.pt_estimate = 0.0  # plot time estimate, milliseconds
         self.time_estimate = 0.0 # plot time estimate, s. Available to Python API
 
         self.doc_units = "in"
@@ -256,10 +253,8 @@ class AxiDraw(inkex.Effect):
         self.pt_first = (self.f_curr_x, self.f_curr_y)
 
         self.node_target = int(0)
-        self.pathcount = int(0)
-        self.layer_pen_pos_down = -1
         self.layer_speed_pendown = -1
-        self.copies_to_plot = 1
+        self.plot_status.copies_to_plot = 1
 
         # New values to write to file:
         self.svg_layer = int(0)
@@ -277,11 +272,6 @@ class AxiDraw(inkex.Effect):
         self.svg_height = 0
         self.rotate_page = False
 
-        self.use_tag_nest_level = 0
-
-        self.speed_pendown = self.params.speed_pendown * self.params.speed_lim_xy_hr / 110.0 # in/s
-        self.speed_penup = self.params.speed_penup * self.params.speed_lim_xy_hr / 110.0  # in/s
-
         self.update_options()
 
         self.warn_out_of_bounds = False
@@ -290,7 +280,6 @@ class AxiDraw(inkex.Effect):
         self.pen_down_travel_inches = 0.0
         self.path_data_pu = []  # pen-up path data for preview layers
         self.path_data_pd = []  # pen-down path data for preview layers
-        self.path_data_pen_up = -1  # A value of -1 indicates an indeterminate state
 
         self.vel_data_plot = False
         self.vel_data_time = 0
@@ -345,11 +334,8 @@ class AxiDraw(inkex.Effect):
                 self.options.mode = "res_plot"
 
         if self.options.mode == "setup":
-            # setup mode + setup_type -> either align or toggle modes.
-            if self.options.setup_type == "align":
-                self.options.mode = "align"
-            else:
-                self.options.mode = "toggle"
+            # setup mode -> either align, toggle, or cycle modes.
+            self.options.mode = self.options.setup_type
 
         if self.options.digest > 1: # Generate digest only; do not run plot or preview
             self.options.preview = True # Disable serial communication; restrict certain functions
@@ -358,32 +344,41 @@ class AxiDraw(inkex.Effect):
             self.serial_connect()
 
         if self.options.mode == "sysinfo":
-            versions.log_version_info(self.serial_port, self.params.check_updates,
+            versions.log_version_info(self.plot_status.port, self.params.check_updates,
                                       self.version_string, self.options.preview,
                                       self.user_message_fun, logger)
 
-        if self.serial_port is None and not self.options.preview:
-            # unable to connect to axidraw
-            return
+        if self.plot_status.port is None and not self.options.preview:
+            return # unable to connect to axidraw
 
         self.svg = self.document.getroot()
         self.resume_data_needs_updating = False
 
-        if self.options.page_delay < 0:
-            self.options.page_delay = 0
+        self.options.page_delay = max(self.options.page_delay, 0)
+
+        if self.plot_status.progress.review(self.plot_status, self.options): # CLI progress bar
+            if self.options.mode == "layers": # prepare for dry run
+                self.svg_layer = self.options.layer
+            else:
+                self.svg_layer = -1  # Plotting all layers
+            self.read_plotdata(self.svg) # Is this necessary? Possibly, for resume
+            if self.options.mode == "res_plot":
+                self.resume_plot_setup()
+            self.plot_document() # "Dry run": Calculate plot time & node count for progress bar
+            self.user_message_fun(
+                self.plot_status.progress.restore(self.plot_status, self.options))
 
         self.read_plotdata(self.svg)
         if self.options.mode == "plot":
-            self.copies_to_plot = self.options.copies
-            if self.copies_to_plot == 0:
-                self.copies_to_plot = -1
+            self.plot_status.copies_to_plot = self.options.copies
+            if self.plot_status.copies_to_plot == 0:
+                self.plot_status.copies_to_plot = -1
                 if self.options.preview:
                     # Special case: 0 (continuous copies), but in preview mode.
-                    self.copies_to_plot = 1
+                    self.plot_status.copies_to_plot = 1
                     # In this case, revert back to single copy, since there is
-                    # no way to terminate. Canceling is initiated by
-                    # USB/button press!
-            while self.copies_to_plot != 0:
+                    # essentially no way to terminate.
+            while self.plot_status.copies_to_plot != 0:
                 self.resume_data_needs_updating = True
                 # # New random seed for new plot; Changes every 10 ms:
                 self.svg_rand_seed = int(time.time()*100)
@@ -392,29 +387,35 @@ class AxiDraw(inkex.Effect):
                 self.svg_last_path = 0
                 self.svg_layer = -1  # indicate (to resume routine) that we are plotting all layers
 
-                self.delay_between_copies = False # We are not currently delaying between copies
-                self.copies_to_plot -= 1
+                self.plot_status.delay_between_copies = False # Not delaying between copies
+                self.plot_status.copies_to_plot -= 1
                 self.plot_document()
-                self.delay_between_copies = True  # We are currently delaying between copies
+                self.plot_status.delay_between_copies = True  # Currently delaying between copies
 
+                if self.plot_status.copies_to_plot == 0 or self.plot_status.b_stopped:
+                    continue # No delay after last copy, or if stopped.
+
+                self.plot_status.progress.launch(self.plot_status, self.options, True,
+                    1000 * self.options.page_delay)
                 time_counter = 10 * self.options.page_delay
                 while time_counter > 0:
                     time_counter -= 1
-                    if self.copies_to_plot != 0 and not self.b_stopped:
+                    if self.plot_status.copies_to_plot != 0 and not self.plot_status.b_stopped:
                         # Delay if we're between copies, not after the last or paused.
                         if self.options.preview:
-                            self.pt_estimate += 100
+                            self.plot_status.stats.pt_estimate += 100
                         else:
                             time.sleep(0.100)  # Use short intervals to improve responsiveness
-                            self.pause_res_check()  # Detect button press while paused between plots
-                            if self.b_stopped:
-                                self.copies_to_plot = 0
-
-        elif self.options.mode == "res_home" or self.options.mode == "res_plot":
+                            self.plot_status.progress.update_rel(100)
+                            self.pause_res_check() # Detect button press while between plots
+                            if self.plot_status.b_stopped:
+                                self.plot_status.copies_to_plot = 0
+                self.plot_status.progress.close()
+        elif self.options.mode in ["res_home", "res_plot"]:
             self.resume_data_needs_updating = True
             self.resume_plot_setup()
-            if self.resume_mode:
-                self.copies_to_plot = 0 # Flag for reporting plot time
+            if self.plot_status.resume.resume_mode:
+                self.plot_status.copies_to_plot = 0 # Flag for reporting plot time
                 self.plot_document()
             elif self.options.mode == "res_home":
                 if not self.svg_data_read:
@@ -442,32 +443,38 @@ class AxiDraw(inkex.Effect):
                     "No in-progress plot data found in file; unable to resume."))
 
         elif self.options.mode == "layers":
-            self.copies_to_plot = self.options.copies
-            if self.copies_to_plot == 0: # Special case: Continuous copies selected
-                self.copies_to_plot = -1 # Flag for continuous copies
+            self.plot_status.copies_to_plot = self.options.copies
+            if self.plot_status.copies_to_plot == 0: # Special case: Continuous copies selected
+                self.plot_status.copies_to_plot = -1 # Flag for continuous copies
                 if self.options.preview:    # However in preview mode, if continuous is
-                    self.copies_to_plot = 1 #  selected, then only run a single copy.
-            while self.copies_to_plot != 0:
+                    self.plot_status.copies_to_plot = 1 #  selected, then only run a single copy.
+            while self.plot_status.copies_to_plot != 0:
                 self.resume_data_needs_updating = True
                 self.svg_rand_seed = int(time.time() * 100)  # New random seed for new plot
                 self.svg_last_path = 0
                 self.svg_node_count = 0
                 self.svg_layer = self.options.layer
-                self.delay_between_copies = False
-                self.copies_to_plot -= 1
+                self.plot_status.delay_between_copies = False
+                self.plot_status.copies_to_plot -= 1
                 self.plot_document()
-                self.delay_between_copies = True # We are currently delaying between copies
+                self.plot_status.delay_between_copies = True # Currently delaying between copies
+                self.plot_status.progress.launch(self.plot_status, self.options, True,
+                    1000 * self.options.page_delay)
                 time_counter = 10 * self.options.page_delay
                 while time_counter > 0:
                     time_counter -= 1
-                    if self.copies_to_plot != 0 and not self.b_stopped:
+                    if self.plot_status.copies_to_plot != 0 and not self.plot_status.b_stopped:
+                        # Delay if we're between copies, not after the last or paused.
                         if self.options.preview:
-                            self.pt_estimate += 100
+                            self.plot_status.stats.pt_estimate += 100
                         else:
                             time.sleep(0.100)  # Use short intervals to improve responsiveness
-                            self.pause_res_check() # Detect button press while paused between plots
-
-        elif self.options.mode in ('align', 'toggle'):
+                            self.plot_status.progress.update_rel(100)
+                            self.pause_res_check() # Detect button press while between plots
+                            if self.plot_status.b_stopped:
+                                self.plot_status.copies_to_plot = 0
+                self.plot_status.progress.close()
+        elif self.options.mode in ('align', 'toggle', 'cycle'):
             self.setup_command()
 
         elif self.options.mode == "manual":
@@ -475,10 +482,14 @@ class AxiDraw(inkex.Effect):
 
         if self.resume_data_needs_updating:
             self.update_plotdata()
-        if self.serial_port is not None:
-            ebb_motion.doTimedPause(self.serial_port, 10) # Pause for motion commands to finish.
+        if self.plot_status.port is not None:
+            ebb_motion.doTimedPause(self.plot_status.port, 10) # Add a last, timed motion command.
             if self.options.port is None:  # Do not close serial port if it was opened externally.
                 self.disconnect()
+
+        for warning_message in self.warnings.return_text_list():
+            self.user_message_fun(warning_message)
+
 
     def resume_plot_setup(self):
         """ Initialization for resuming plots """
@@ -496,14 +507,15 @@ class AxiDraw(inkex.Effect):
 
                 self.node_target = self.svg_node_count_old
                 self.svg_layer = self.svg_layer_old
-                self.servo_setup_wrapper()
-                self.pen_raise()
+                self.pen.servo_setup_wrapper(self.options, self.params, self.plot_status)
+                v_time = self.pen.pen_raise(self.options, self.params, self.plot_status)
+                self.v_chart_rest(v_time)
                 self.enable_motors()  # Set plotting resolution
                 if self.options.mode == "res_plot":
-                    self.resume_mode = True
+                    self.plot_status.resume.resume_mode = True
 
                 self.f_curr_x = self.svg_last_known_x_old + self.pt_first[0]
-                self.f_curr_y = self.svg_last_known_y_old + self.pt_first[0]
+                self.f_curr_y = self.svg_last_known_y_old + self.pt_first[1]
 
                 self.svg_rand_seed = self.svg_rand_seed_old  # Use old random seed
                 logger.debug('Entering resume mode at layer:  ' + str(self.svg_layer))
@@ -573,18 +585,19 @@ class AxiDraw(inkex.Effect):
             self.user_message_fun('Command unavailable while in preview mode.')
             return
 
-        if self.serial_port is None:
+        if self.plot_status.port is None:
             return
 
         self.query_ebb_voltage()
-
-        self.servo_setup_wrapper()
+        self.pen.servo_setup_wrapper(self.options, self.params, self.plot_status)
 
         if self.options.mode == "align":
-            self.pen_raise()
-            ebb_motion.sendDisableMotors(self.serial_port)
+            self.pen.pen_raise(self.options, self.params, self.plot_status)
+            ebb_motion.sendDisableMotors(self.plot_status.port)
         elif self.options.mode == "toggle":
-            ebb_motion.TogglePen(self.serial_port)
+            self.pen.toggle(self.options, self.params, self.plot_status)
+        elif self.options.mode == "cycle":
+            self.pen.cycle(self.options, self.params, self.plot_status)
 
     def manual_command(self):
         """ Execute commands in the "manual" mode/tab """
@@ -594,17 +607,17 @@ class AxiDraw(inkex.Effect):
             self.user_message_fun('Command unavailable while in preview mode.')
             return
 
-        if self.serial_port is None:
+        if self.plot_status.port is None:
             return
 
         if self.options.manual_cmd == "fw_version":
-            # Note: self.fw_version_string may be accessed through python API
-            self.fw_version_string = ebb_serial.queryVersion(self.serial_port)
+            # Note: self.fw_version_string is for python API
+            self.fw_version_string = ebb_serial.queryVersion(self.plot_status.port)
             self.user_message_fun(self.fw_version_string)
             return
 
         if self.options.manual_cmd == "bootload":
-            success = ebb_serial.bootload(self.serial_port)
+            success = ebb_serial.bootload(self.plot_status.port)
             if success:
                 self.user_message_fun(
                     gettext.gettext("Entering bootloader mode for firmware programming.\n" +
@@ -616,7 +629,7 @@ class AxiDraw(inkex.Effect):
             return
 
         if self.options.manual_cmd == "read_name":
-            name_string = ebb_serial.query_nickname(self.serial_port)
+            name_string = ebb_serial.query_nickname(self.plot_status.port)
             if name_string is None:
                 logger.error(gettext.gettext("Error; unable to read nickname.\n"))
             else:
@@ -629,14 +642,14 @@ class AxiDraw(inkex.Effect):
             temp_string = temp_string[:16] # Only use first 16 characters in name
             if not temp_string:
                 temp_string = "" # Use empty string to clear nickname.
-            version_status = ebb_serial.min_version(self.serial_port, "2.5.5")
+            version_status = ebb_serial.min_version(self.plot_status.port, "2.5.5")
             if version_status:
-                renamed = ebb_serial.write_nickname(self.serial_port, temp_string)
+                renamed = ebb_serial.write_nickname(self.plot_status.port, temp_string)
                 if renamed is True:
                     self.user_message_fun('Nickname written. Rebooting EBB.')
                 else:
                     logger.error('Error encountered while writing nickname.')
-                ebb_serial.reboot(self.serial_port)    # Reboot required after writing nickname
+                ebb_serial.reboot(self.plot_status.port)    # Reboot required after writing nickname
                 self.disconnect() # Disconnect from AxiDraw; end serial session
             else:
                 logger.error("This function requires a newer firmware version. See: axidraw.com/fw")
@@ -645,23 +658,23 @@ class AxiDraw(inkex.Effect):
         # Next: Commands that require both power and serial connectivity:
         self.query_ebb_voltage()
         # Query if button pressed, to clear the result:
-        ebb_motion.QueryPRGButton(self.serial_port)
+        ebb_motion.QueryPRGButton(self.plot_status.port)
         if self.options.manual_cmd == "raise_pen":
-            self.servo_setup_wrapper()
-            self.pen_raise()
+            self.pen.servo_setup_wrapper(self.options, self.params, self.plot_status)
+            self.pen.pen_raise(self.options, self.params, self.plot_status)
         elif self.options.manual_cmd == "lower_pen":
-            self.servo_setup_wrapper()
-            self.pen_lower()
+            self.pen.servo_setup_wrapper(self.options, self.params, self.plot_status)
+            self.pen.pen_lower(self.options, self.params, self.plot_status)
         elif self.options.manual_cmd == "enable_xy":
             self.enable_motors()
         elif self.options.manual_cmd == "disable_xy":
-            ebb_motion.sendDisableMotors(self.serial_port)
+            ebb_motion.sendDisableMotors(self.plot_status.port)
         else:  # walk motors or move home cases:
-            self.servo_setup_wrapper()
+            self.pen.servo_setup_wrapper(self.options, self.params, self.plot_status)
             self.enable_motors()  # Set plotting resolution
             if self.options.manual_cmd == "walk_home":
-                if ebb_serial.min_version(self.serial_port, "2.6.2"):
-                    a_pos, b_pos = ebb_motion.query_steps(self.serial_port)
+                if ebb_serial.min_version(self.plot_status.port, "2.6.2"):
+                    a_pos, b_pos = ebb_motion.query_steps(self.plot_status.port)
                     n_delta_x = -(a_pos + b_pos) / (4 * self.params.native_res_factor)
                     n_delta_y = -(a_pos - b_pos) / (4 * self.params.native_res_factor)
                     if self.options.resolution == 2:  # Low-resolution mode
@@ -687,14 +700,28 @@ class AxiDraw(inkex.Effect):
 
             self.f_curr_x = self.svg_last_known_x_old + self.pt_first[0]
             self.f_curr_y = self.svg_last_known_y_old + self.pt_first[1]
-            self.ignore_limits = True
             f_x = self.f_curr_x + n_delta_x # Note: Walks are relative, not absolute!
             f_y = self.f_curr_y + n_delta_y # New position is not saved; use with care.
-            self.plot_seg_with_v(f_x, f_y, 0, 0)
+            self.plot_seg_with_v(f_x, f_y, 0, 0, ignore_limits=True)
+
+
+    def v_chart_rest(self, v_time):
+        """
+        Update velocity charts and plot time estimate with a zero-velocity segment for
+        given time duration; typically used after raising or lowering the pen.
+        """
+        if not self.options.preview:
+            return
+        self.update_v_charts(0, 0, 0)
+        self.vel_data_time += v_time
+        self.update_v_charts(0, 0, 0)
+        self.plot_status.stats.pt_estimate += v_time
 
 
     def update_v_charts(self, v_1, v_2, v_total):
         """ Update velocity charts, using some appropriate scaling for X and Y display."""
+        if not self.vel_data_plot:
+            return
         temp_time = self.vel_data_time / 1000.0
         scale_factor = 10.0 / self.options.resolution
         self.vel_chart1.append(" {0:0.3f} {1:0.3f}".format(temp_time, 8.5 - v_1 / scale_factor))
@@ -720,10 +747,12 @@ class AxiDraw(inkex.Effect):
         if not self.options.preview:
             self.options.rendering = 0 # Only render previews if we are in preview mode.
             self.vel_data_plot = False
-            if self.serial_port is None:
+            if self.plot_status.port is None:
                 return
             self.query_ebb_voltage()
-            _unused = ebb_motion.QueryPRGButton(self.serial_port) # Initialize button detection
+            _unused = ebb_motion.QueryPRGButton(self.plot_status.port) # Initialize button detection
+
+        self.plot_status.progress.launch(self.plot_status, self.options)
 
         if not hasattr(self, 'backup_original'):
             self.backup_original = copy.deepcopy(self.document)
@@ -757,12 +786,10 @@ class AxiDraw(inkex.Effect):
             digester = digest_svg.DigestSVG() # Initialize class
             digest_params = [self.svg_width, self.svg_height, s_x, s_y, self.svg_layer,\
                 self.params.bezier_segmentation_tolerance,\
-                self.params.segment_supersample_tolerance, self.warnings]
+                self.params.segment_supersample_tolerance]
 
-            digest = digester.process_svg(self.svg, digest_params, self.svg_transform)
-            self.warnings = digester.warnings
-            if digester.warning_text.strip():
-                self.user_message_fun(digester.warning_text)
+            digest = digester.process_svg(self.svg, self.warnings,
+                digest_params, self.svg_transform,)
 
             """
             Possible future work: Perform hidden-line clipping at this point, based on object
@@ -781,20 +808,18 @@ class AxiDraw(inkex.Effect):
             """
             Clip digest at plot bounds
             """
-            if not self.ignore_limits:
-                if self.rotate_page:
-                    doc_bounds = [self.svg_height + 1e-9, self.svg_width + 1e-9]
-                else:
-                    doc_bounds = [self.svg_width + 1e-9, self.svg_height + 1e-9]
-                out_of_bounds_flag = boundsclip.clip_at_bounds(digest, self.bounds, doc_bounds,\
-                    self.params.bounds_tolerance, self.params.clip_to_page)
-                if out_of_bounds_flag:
-                    self.warn_out_of_bounds = True
-
+            if self.rotate_page:
+                doc_bounds = [self.svg_height + 1e-9, self.svg_width + 1e-9]
+            else:
+                doc_bounds = [self.svg_width + 1e-9, self.svg_height + 1e-9]
+            out_of_bounds_flag = boundsclip.clip_at_bounds(digest, self.bounds, doc_bounds,\
+                self.params.bounds_tolerance, self.params.clip_to_page)
+            if out_of_bounds_flag:
+                self.warnings.add_new('bounds')
             """
             Optimize digest
             """
-            allow_reverse = self.options.reordering in {2, 3}
+            allow_reverse = self.options.reordering in [2, 3]
 
             if self.options.reordering < 3: # Set reordering to 4 to disable path joining
                 plot_optimizations.connect_nearby_ends(digest, allow_reverse, self.params.min_gap)
@@ -815,18 +840,19 @@ class AxiDraw(inkex.Effect):
             return
 
         try:  # wrap everything in a try so we can be sure to close the serial port
-            self.servo_setup_wrapper()
-            self.pen_raise()
+            self.pen.servo_setup_wrapper(self.options, self.params, self.plot_status)
+            v_time = self.pen.pen_raise(self.options, self.params, self.plot_status)
+            self.v_chart_rest(v_time)
             self.enable_motors()  # Set plotting resolution
 
-            if self.options.mode == "res_home" or self.options.mode == "res_plot":
-                if self.resume_mode:
+            if self.options.mode in ('res_home', 'res_plot'):
+                if self.plot_status.resume.resume_mode:
                     f_x = self.svg_paused_x_old + self.pt_first[0]
                     f_y = self.svg_paused_y_old + self.pt_first[1]
-                    self.resume_mode = False # __Temporarily__ disable (!)
+                    self.plot_status.resume.resume_mode = False # __Temporarily__ disable (!)
                     self.plot_seg_with_v(f_x, f_y, 0, 0) # pen-up move to starting point
-                    self.resume_mode = True
-                    self.node_count = 0
+                    self.plot_status.resume.resume_mode = True
+                    self.node_count = 0 # Clear this _after_ move to first point.
                 elif self.options.mode == "res_home":
                     f_x = self.pt_first[0]
                     f_y = self.pt_first[1]
@@ -838,9 +864,10 @@ class AxiDraw(inkex.Effect):
 
             self.plot_doc_digest(digest) # Step through and plot contents of document digest
 
-            self.pen_raise()  # Always end with pen-up
+            v_time = self.pen.pen_raise(self.options, self.params, self.plot_status)
+            self.v_chart_rest(v_time)
 
-            if not self.b_stopped and self.pt_first: # Return to home after end of normal plot:
+            if not self.plot_status.b_stopped and self.pt_first: # Return Home after normal plot
                 self.x_bounds_min = 0
                 self.y_bounds_min = 0
                 if self.end_x is not None:  # Option for different final XY position:
@@ -875,7 +902,7 @@ class AxiDraw(inkex.Effect):
                 self.document = copy.deepcopy(self.original_document)
                 self.svg = self.document.getroot()
 
-            if not self.b_stopped:
+            if not self.plot_status.b_stopped:
                 if self.options.mode in ["plot", "layers", "res_home", "res_plot"]:
                     # Clear saved plot data from the SVG file,
                     # IF we have _successfully completed_ a plot in plot, layer, or resume mode.
@@ -888,15 +915,6 @@ class AxiDraw(inkex.Effect):
                     self.svg_paused_x = 0
                     self.svg_paused_y = 0
                     self.svg_rand_seed = 0
-
-            if self.warn_out_of_bounds:
-                warning_text = "Warning: AxiDraw movement was limited by its "
-                warning_text += "physical range of motion.\nIf everything else "
-                warning_text += "looks correct, you may have an issue with "
-                warning_text += "your document size, or you may have the "
-                warning_text += "wrong AxiDraw model selected. Please contact "
-                warning_text += "technical support if you need assistance.\n"
-                self.user_message_fun(gettext.gettext(warning_text))
 
             if self.options.preview:
                 # Remove old preview layers, whenever preview mode is enabled
@@ -963,7 +981,7 @@ class AxiDraw(inkex.Effect):
                     etree.SubElement(preview_sl_u,
                                      inkex.addNS('path', 'svg '), path_attrs, nsmap=inkex.NSS)
 
-                if self.options.rendering == 1 or self.options.rendering == 3:
+                if self.options.rendering in (1, 3):
                     p_style.update({'stroke': self.params.preview_color_down})
                     path_attrs = {
                         'style': simplestyle.formatStyle(p_style),
@@ -1004,12 +1022,17 @@ class AxiDraw(inkex.Effect):
         finally: # In case of an exception and loss of the serial port...
             pass
 
-        if self.copies_to_plot == 0:  # Only calculate after plotting last copy
+        self.plot_status.progress.close()
+
+        if self.plot_status.copies_to_plot == 0:  # Only calculate after plotting last copy
+
+            if self.plot_status.progress.enable:
+                self.user_message_fun("\naxicli plot complete.\n")
             elapsed_time = time.time() - self.start_time
             self.time_elapsed = elapsed_time # Available for use by python API
             if self.options.report_time:
-                if self.options.preview:
-                    self.time_estimate = self.pt_estimate / 1000.0 # Available to python API
+                if self.options.preview: # Variable for public python API
+                    self.time_estimate = self.plot_status.stats.pt_estimate / 1000.0
                 else:
                     self.time_estimate = elapsed_time # Available for use by python API
                 d_dist = 0.0254 * self.pen_down_travel_inches
@@ -1018,24 +1041,23 @@ class AxiDraw(inkex.Effect):
                 self.distance_pendown = d_dist # Available for use by python API
                 self.distance_total = t_dist # Available for use by python API
 
-                if not self.called_externally: # Verbose mode; report data to user
+                if not self.called_externally: # Verbose; report data to user
                     if self.options.preview:
                         self.user_message_fun("Estimated print time: " +\
-                            text_utils.format_hms(self.pt_estimate, True))
-
+                            text_utils.format_hms(self.plot_status.stats.pt_estimate, True))
 
                     elapsed_text = text_utils.format_hms(elapsed_time)
                     if self.options.preview:
-                        self.user_message_fun("Length of path to draw: {0:1.2f} m".format(d_dist))
-                        self.user_message_fun("Pen-up travel distance: {0:1.2f} m".format(u_dist))
-                        self.user_message_fun("Total movement distance: {0:1.2f} m".format(t_dist))
-                        self.user_message_fun("This estimate took " + elapsed_text)
+                        self.user_message_fun(f"Length of path to draw: {d_dist:1.2f} m")
+                        self.user_message_fun(f"Pen-up travel distance: {u_dist:1.2f} m")
+                        self.user_message_fun(f"Total movement distance: {t_dist:1.2f} m")
+                        self.user_message_fun("This estimate took " + elapsed_text + "\n")
                     else:
                         self.user_message_fun("Elapsed time: " + elapsed_text)
-                        self.user_message_fun("Length of path drawn: {0:1.2f} m".format(d_dist))
-                        self.user_message_fun("Total distance moved: {0:1.2f} m".format(t_dist))
+                        self.user_message_fun(f"Length of path drawn: {d_dist:1.2f} m")
+                        self.user_message_fun(f"Total distance moved: {t_dist:1.2f} m\n")
                     if self.params.report_lifts:
-                        self.user_message_fun("Number of pen lifts: {}".format(self.pen_lifts))
+                        self.user_message_fun(f"Number of pen lifts: {self.pen.status.lifts}\n")
             if self.options.webhook and not self.options.preview:
                 if self.options.webhook_url is not None:
                     payload = {'value1': str(digest.name),
@@ -1047,7 +1069,7 @@ class AxiDraw(inkex.Effect):
                         # self.user_message_fun("webhook results: " + str(wh_result))
                     except (RuntimeError, requests.exceptions.ConnectionError) as wh_err:
                         raise RuntimeError("An error occurred while posting webhook. " +
-                               "Are you connected to the internet? (Error: {})".format(wh_err))
+                                f"Are you connected to the internet? (Error: {wh_err})\n")
 
     def plot_doc_digest(self, digest):
         """
@@ -1062,23 +1084,24 @@ class AxiDraw(inkex.Effect):
             return
 
         for layer in digest.layers:
-            old_use_layer_pen_height = self.use_layer_pen_height  # A Boolean
+
+            self.pen.end_temp_height(self.options, self.params, self.plot_status)
             old_use_layer_speed = self.use_layer_speed  # A Boolean
-            old_layer_pen_pos_down = self.layer_pen_pos_down  # Numeric value
             old_layer_speed_pendown = self.layer_speed_pendown  # Numeric value
 
-            self.eval_layer_properties(layer.name)
-            self.pen_raise()
+            v_time = self.pen.pen_raise(self.options, self.params, self.plot_status)
+            self.v_chart_rest(v_time)
+            self.eval_layer_properties(layer.name) # Raise pen; compute with pen up.
 
             for path_item in layer.paths:
-                if self.b_stopped:
+                if self.plot_status.b_stopped:
                     return
 
                 # if we're in resume mode AND self.pathcount < self.svg_last_path, skip.
                 # if we're in resume mode and self.pathcount = self.svg_last_path,
                 # start here, and set self.node_count equal to self.svg_last_path_nc
                 do_we_plot_this_path = True
-                if self.resume_mode:
+                if self.plot_status.resume.resume_mode:
                     if self.pathcount < self.svg_last_path_old:
                         self.pathcount += 1
                         do_we_plot_this_path = False
@@ -1089,16 +1112,13 @@ class AxiDraw(inkex.Effect):
                     self.plot_polyline(path_item.subpaths[0])
 
             # Restore old layer status variables
-            self.use_layer_pen_height = old_use_layer_pen_height
             self.use_layer_speed = old_use_layer_speed
 
             if self.layer_speed_pendown != old_layer_speed_pendown:
                 self.layer_speed_pendown = old_layer_speed_pendown
                 self.enable_motors() # Set speed value variables for this layer.
 
-            if self.layer_pen_pos_down != old_layer_pen_pos_down:
-                self.layer_pen_pos_down = old_layer_pen_pos_down
-                self.servo_setup   # Set pen height value variables for this layer.
+            self.pen.end_temp_height(self.options, self.params, self.plot_status)
 
 
     def eval_layer_properties(self, str_layer_name):
@@ -1126,7 +1146,7 @@ class AxiDraw(inkex.Effect):
                 # may be treated as a _single_ pause when resuming.
 
                 do_we_pause_now = False
-                if self.resume_mode:
+                if self.plot_status.resume.resume_mode:
                     if self.pathcount < self.svg_last_path_old:  # Fully plotted; skip.
                         # This pause was *already executed*, and we are resuming past it. Skip.
                         self.pathcount += 1
@@ -1139,7 +1159,7 @@ class AxiDraw(inkex.Effect):
                     self.svg_last_path = self.pathcount # The number of the last path completed
                     self.svg_last_path_nc = self.node_count # Node count after last path completed
 
-                    self.force_pause = True
+                    self.plot_status.force_pause = True # set flag to pause the plot
                     self.pause_res_check()  # Carry out the pause, or resume if required.
 
                 current_layer_name = current_layer_name[1:] # Remove leading '!'
@@ -1152,13 +1172,9 @@ class AxiDraw(inkex.Effect):
                 else:
                     break
 
-        old_pen_down = self.layer_pen_pos_down
         old_speed = self.layer_speed_pendown
 
-        # set default values before checking for any overrides:
-        self.use_layer_pen_height = False
         self.use_layer_speed = False
-        self.layer_pen_pos_down = -1
         self.layer_speed_pendown = -1
 
         # Check to see if there is additional information coded in the layer name.
@@ -1195,8 +1211,9 @@ class AxiDraw(inkex.Effect):
                                         self.pause_res_check() # Was button pressed while delaying?
                         if key == "+h":
                             if 0 <= parameter_int <= 100:
-                                self.use_layer_pen_height = True
-                                self.layer_pen_pos_down = parameter_int
+                                self.pen.set_temp_height(self.options, self.params,
+                                    parameter_int, self.plot_status)
+                                # New height will be used when we next lower the pen.
                         if key == "+s":
                             if 0 < parameter_int <= 110:
                                 self.use_layer_speed = True
@@ -1206,9 +1223,7 @@ class AxiDraw(inkex.Effect):
                     break  # exit loop.
         if self.layer_speed_pendown != old_speed:
             self.enable_motors()  # Set speed value variables for this layer.
-        if self.layer_pen_pos_down != old_pen_down:
-            self.servo_setup()  # Set pen down height for this layer.
-            # This new value will be used when we next lower the pen. (It's up between layers.)
+
 
     def plot_polyline(self, vertex_list):
         """
@@ -1221,8 +1236,8 @@ class AxiDraw(inkex.Effect):
         """
 
         # logger.debug('plot_polyline()\nPolyline vertex_list: ' + str(vertex_list))
-        if self.b_stopped:
-            logger.debug('Returning: self.b_stopped.')
+        if self.plot_status.b_stopped:
+            logger.debug('Returning: self.plot_status.b_stopped.')
             return
         if not vertex_list:
             logger.debug('No vertex list to plot. Returning.')
@@ -1231,22 +1246,26 @@ class AxiDraw(inkex.Effect):
             logger.debug('No full segments in vertex list. Returning.')
             return
 
-        self.pen_raise()    # Raise pen for travel to first vertex
+        # Raise pen for travel to first vertex:
+        v_time = self.pen.pen_raise(self.options, self.params, self.plot_status)
+        self.v_chart_rest(v_time)
 
-        if not self.ignore_limits:
-            for vertex in vertex_list:
-                vertex[0], t_x = plot_utils.checkLimitsTol(vertex[0], 0, self.x_max_phy, 1e-9)
-                vertex[1], t_y = plot_utils.checkLimitsTol(vertex[1], 0, self.y_max_phy, 1e-9)
-                if t_x or t_y:
-                    logger.debug('Travel truncated to bounds at plot_polyline.')
+        for vertex in vertex_list:
+            vertex[0], t_x = plot_utils.checkLimitsTol(vertex[0], 0, self.x_max_phy, 1e-9)
+            vertex[1], t_y = plot_utils.checkLimitsTol(vertex[1], 0, self.y_max_phy, 1e-9)
+            if t_x or t_y:
+                logger.debug('Travel truncated to bounds at plot_polyline.')
 
         # Pen up straight move, zero velocity at endpoints, to first vertex location
         self.plot_seg_with_v(vertex_list[0][0], vertex_list[0][1], 0, 0)
 
-        self.pen_lower()
+         # **** Main programmatic pen lowering while plotting ****
+        v_time = self.pen.pen_lower(self.options, self.params, self.plot_status)
+        self.v_chart_rest(v_time)
+
         self.plan_trajectory(vertex_list)
 
-        if not self.b_stopped: # an "index" for resuming plots quickly-- record last complete path
+        if not self.plot_status.b_stopped: # Populate our "index" for resuming plots quickly:
             self.svg_last_path = self.pathcount # The number of the last path completed
             self.svg_last_path_nc = self.node_count # Node count after the last path was completed.
 
@@ -1270,7 +1289,7 @@ class AxiDraw(inkex.Effect):
 
         traj_logger.debug('\nplan_trajectory()\n')
 
-        if self.b_stopped:
+        if self.plot_status.b_stopped:
             return
         if self.f_curr_x is None:
             return
@@ -1297,7 +1316,7 @@ class AxiDraw(inkex.Effect):
                 traj_logger.debug('\ntraj_length: ' + str(traj_length))
 
         speed_limit = self.speed_pendown  # Maximum travel rate (in/s), in XY plane.
-        if self.pen_up:
+        if self.pen.status.pen_up:
             speed_limit = self.speed_penup  # Unlikely case, but handle it anyway...
 
         traj_logger.debug('\nspeed_limit (plan_trajectory) ' + str(speed_limit) + ' in/s')
@@ -1368,7 +1387,7 @@ class AxiDraw(inkex.Effect):
                 traj_logger.debug('  And... traj_dists[i+1]: {0:1.3f}'.format(traj_dists[i + 1]))
 
         # Acceleration/deceleration rates:
-        if self.pen_up:
+        if self.pen.status.pen_up:
             accel_rate = self.params.accel_rate_pu * self.options.accel / 100.0
         else:
             accel_rate = self.params.accel_rate * self.options.accel / 100.0
@@ -1510,8 +1529,7 @@ class AxiDraw(inkex.Effect):
                 rfactor = 100000
             vjunction_max = math.sqrt(accel_rate * rfactor)
 
-            if vcurrent_max > vjunction_max:
-                vcurrent_max = vjunction_max
+            vcurrent_max = min(vcurrent_max, vjunction_max)
 
             traj_vels.append(vcurrent_max)  # "Forward-going" speed limit at this vertex.
         traj_vels.append(0.0)  # Add zero velocity, for final vertex.
@@ -1545,10 +1563,9 @@ class AxiDraw(inkex.Effect):
 
             if v_initial > v_final and seg_length > 0:
                 v_init_max = plot_utils.vInitial_VF_A_Dx(v_final, -accel_rate, seg_length)
-
-                traj_logger.debug('VInit Calc: (v_final = {0:1.3f}, accel_rate = {1:1.3f}, seg_length = {2:1.3f}) '
-                                  .format(v_final, accel_rate, seg_length))
-
+                traj_logger.debug(
+                    f'VInit Calc: (v_final = {v_final:1.3f}, accel_rate = {accel_rate:1.3f},' +
+                    f' seg_length = {seg_length:1.3f}) ')
                 if v_init_max < v_initial:
                     v_initial = v_init_max
                 traj_vels[i - 1] = v_initial
@@ -1558,18 +1575,19 @@ class AxiDraw(inkex.Effect):
                 traj_logger.debug('traj_vels III: {0:1.3f}'.format(dist))
             traj_logger.debug(' ')
 
-        #             traj_logger.debug( 'List results for this input path:')
-        #             for i in range(0, traj_length-1):
-        #                 traj_logger.debug( 'i: %1.0f' %(i))
-        #                 traj_logger.debug( 'x: %1.3f,  y: %1.3f' %(trimmed_path[i][0],trimmed_path[i][1]))
-        #                 traj_logger.debug( 'distance: %1.3f' %(traj_dists[i+1]))
-        #                 traj_logger.debug( 'traj_vels[i]: %1.3f' %(traj_vels[i]))
-        #                 traj_logger.debug( 'traj_vels[i+1]: %1.3f\n' %(traj_vels[i+1]))
+            # traj_logger.debug( 'List results for this input path:')
+            # for i in range(0, traj_length-1):
+            #     traj_logger.debug( 'i: %1.0f' %(i))
+            #     traj_logger.debug( 'x: %1.3f, y: %1.3f' %(trimmed_path[i][0],trimmed_path[i][1]))
+            #     traj_logger.debug( 'distance: %1.3f' %(traj_dists[i+1]))
+            #     traj_logger.debug( 'traj_vels[i]: %1.3f' %(traj_vels[i]))
+            #     traj_logger.debug( 'traj_vels[i+1]: %1.3f\n' %(traj_vels[i+1]))
 
         for i in range(0, traj_length - 1):
-            self.plot_seg_with_v(trimmed_path[i][0], trimmed_path[i][1], traj_vels[i], traj_vels[i + 1])
+            self.plot_seg_with_v(trimmed_path[i][0], trimmed_path[i][1],
+                traj_vels[i], traj_vels[i + 1])
 
-    def plot_seg_with_v(self, x_dest, y_dest, v_i, v_f):
+    def plot_seg_with_v(self, x_dest, y_dest, v_i, v_f, ignore_limits=False):
         """
         Plot a straight line segment with given initial and final velocity.
 
@@ -1579,6 +1597,7 @@ class AxiDraw(inkex.Effect):
         Inputs:     Destination (x,y)
                     Initial velocity
                     Final velocity
+                    ignore_limits (boolean): Used in manual walks to disregard travel limits
 
         Method: Divide the segment up into smaller segments, each
         of which has constant velocity.
@@ -1612,12 +1631,12 @@ class AxiDraw(inkex.Effect):
             seg_logger.setLevel(logging.DEBUG) # by default level is INFO
 
         seg_logger.debug('\nplot_seg_with_v({0}, {1}, {2}, {3})'.format(x_dest, y_dest, v_i, v_f))
-        if self.resume_mode or self.b_stopped:
+        if self.plot_status.resume.resume_mode or self.plot_status.b_stopped:
             spew_text = '\nSkipping '
         else:
             spew_text = '\nExecuting '
         spew_text += 'plot_seg_with_v() function\n'
-        if self.pen_up:
+        if self.pen.status.pen_up:
             spew_text += '  Pen-up transit'
         else:
             spew_text += '  Pen-down move'
@@ -1625,34 +1644,36 @@ class AxiDraw(inkex.Effect):
         spew_text += ' to (x = {0:1.3f}, y = {1:1.3f})\n'.format(x_dest, y_dest)
         spew_text += '    w/ v_i = {0:1.2f}, v_f = {1:1.2f} '.format(v_i, v_f)
         seg_logger.debug(spew_text)
-        if self.resume_mode:
+        if self.plot_status.resume.resume_mode:
             seg_logger.debug(' -> NOTE: ResumeMode is active')
-        if self.b_stopped:
+        if self.plot_status.b_stopped:
             seg_logger.debug(' -> NOTE: Stopped by button press.')
 
         constant_vel_mode = False
-        if self.options.const_speed and not self.pen_up:
+        if self.options.const_speed and not self.pen.status.pen_up:
             constant_vel_mode = True
 
-        if self.b_stopped:
-            self.copies_to_plot = 0
+        if self.plot_status.b_stopped:
+            self.plot_status.copies_to_plot = 0
             return
         if self.f_curr_x is None:
             return
 
-        if not self.ignore_limits:  # check page size limits:
-            tolerance = self.params.bounds_tolerance  # Truncate up to 1 step at boundaries without throwing an error.
-            x_dest, x_bounded = plot_utils.checkLimitsTol(x_dest, self.x_bounds_min, self.x_bounds_max, tolerance)
-            y_dest, y_bounded = plot_utils.checkLimitsTol(y_dest, self.y_bounds_min, self.y_bounds_max, tolerance)
+        if not ignore_limits:  # check page size limits:
+            tolerance = self.params.bounds_tolerance # Truncate up to 1 step w/o error.
+            x_dest, x_bounded = plot_utils.checkLimitsTol(x_dest,
+                self.x_bounds_min, self.x_bounds_max, tolerance)
+            y_dest, y_bounded = plot_utils.checkLimitsTol(y_dest,
+                self.y_bounds_min, self.y_bounds_max, tolerance)
             if x_bounded or y_bounded:
-                self.warn_out_of_bounds = True
+                self.warnings.add_new('bounds')
 
         delta_x_inches = x_dest - self.f_curr_x
         delta_y_inches = y_dest - self.f_curr_y
 
         # Velocity inputs; clarify units.
-        vi_inches_per_sec = v_i
-        vf_inches_per_sec = v_f
+        vi_inch_per_s = v_i
+        vf_inch_per_s = v_f
 
         # Look at distance to move along 45-degree axes, for native motor steps:
         # Recall that step_scale gives a scaling factor for converting from inches to steps,
@@ -1685,13 +1706,13 @@ class AxiDraw(inkex.Effect):
         seg_logger.debug('\ndelta_x_inches to be moved: ' + str(delta_x_inches_rounded))
         seg_logger.debug('delta_y_inches to be moved: ' + str(delta_y_inches_rounded))
         seg_logger.debug('segment_length_inches: ' + str(segment_length_inches))
-        if not self.pen_up:
+        if not self.pen.status.pen_up:
             seg_logger.debug('\nBefore speedlimit check::')
-            seg_logger.debug('vi_inches_per_sec: {0}'.format(vi_inches_per_sec))
-            seg_logger.debug('vf_inches_per_sec: {0}\n'.format(vf_inches_per_sec))
+            seg_logger.debug('vi_inch_per_s: {0}'.format(vi_inch_per_s))
+            seg_logger.debug('vf_inch_per_s: {0}\n'.format(vf_inch_per_s))
 
         if self.options.report_time:  # Also keep track of distance:
-            if self.pen_up:
+            if self.pen.status.pen_up:
                 self.pen_up_travel_inches = self.pen_up_travel_inches + segment_length_inches
             else:
                 self.pen_down_travel_inches = self.pen_down_travel_inches + segment_length_inches
@@ -1699,13 +1720,13 @@ class AxiDraw(inkex.Effect):
         # Maximum travel speeds:
         # & acceleration/deceleration rate: (Maximum speed) / (time to reach that speed)
 
-        if self.pen_up:
+        if self.pen.status.pen_up:
             speed_limit = self.speed_penup
         else:
             speed_limit = self.speed_pendown
 
         # Acceleration/deceleration rates:
-        if self.pen_up:
+        if self.pen.status.pen_up:
             accel_rate = self.params.accel_rate_pu * self.options.accel / 100.0
         else:
             accel_rate = self.params.accel_rate * self.options.accel / 100.0
@@ -1716,36 +1737,34 @@ class AxiDraw(inkex.Effect):
         # Distance that is required to reach full speed, from zero speed:  x = 1/2 a t^2
         # accel_dist = 0.5 * accel_rate * t_max * t_max
 
-        if vi_inches_per_sec > speed_limit:
-            vi_inches_per_sec = speed_limit
-        if vf_inches_per_sec > speed_limit:
-            vf_inches_per_sec = speed_limit
+        vi_inch_per_s = min(vi_inch_per_s, speed_limit)
+        vf_inch_per_s = min(vf_inch_per_s, speed_limit)
 
         seg_logger.debug('\nspeed_limit (PlotSegment) ' + str(speed_limit))
         seg_logger.debug('After speedlimit check::')
-        seg_logger.debug('vi_inches_per_sec: {0}'.format(vi_inches_per_sec))
-        seg_logger.debug('vf_inches_per_sec: {0}\n'.format(vf_inches_per_sec))
+        seg_logger.debug('vi_inch_per_s: {0}'.format(vi_inch_per_s))
+        seg_logger.debug('vf_inch_per_s: {0}\n'.format(vf_inch_per_s))
 
         # Times to reach maximum speed, from our initial velocity
         # vMax = vi + a*t  =>  t = (vMax - vi)/a
         # vf = vMax - a*t   =>  t = -(vf - vMax)/a = (vMax - vf)/a
         # -- These are _maximum_ values. We often do not have enough time/space to reach full speed.
 
-        t_accel_max = (speed_limit - vi_inches_per_sec) / accel_rate
-        t_decel_max = (speed_limit - vf_inches_per_sec) / accel_rate
+        t_accel_max = (speed_limit - vi_inch_per_s) / accel_rate
+        t_decel_max = (speed_limit - vf_inch_per_s) / accel_rate
 
         seg_logger.debug('\naccel_rate: {0:.3}'.format(accel_rate))
         seg_logger.debug('speed_limit: {0:.3}'.format(speed_limit))
-        seg_logger.debug('vi_inches_per_sec: {0}'.format(vi_inches_per_sec))
-        seg_logger.debug('vf_inches_per_sec: {0}'.format(vf_inches_per_sec))
+        seg_logger.debug('vi_inch_per_s: {0}'.format(vi_inch_per_s))
+        seg_logger.debug('vf_inch_per_s: {0}'.format(vf_inch_per_s))
         seg_logger.debug('t_accel_max: {0:.3}'.format(t_accel_max))
         seg_logger.debug('t_decel_max: {0:.3}'.format(t_decel_max))
 
-        # Distance that is required to reach full speed, from our start at speed vi_inches_per_sec:
+        # Distance that is required to reach full speed, from our start at speed vi_inch_per_s:
         # distance = vi * t + (1/2) a t^2
-        accel_dist_max = (vi_inches_per_sec * t_accel_max) + (0.5 * accel_rate * t_accel_max * t_accel_max)
+        accel_dist_max = (vi_inch_per_s * t_accel_max) + (0.5 * accel_rate * t_accel_max * t_accel_max)
         # Use the same model for deceleration distance; modeling it with backwards motion:
-        decel_dist_max = (vf_inches_per_sec * t_decel_max) + (0.5 * accel_rate * t_decel_max * t_decel_max)
+        decel_dist_max = (vf_inch_per_s * t_decel_max) + (0.5 * accel_rate * t_decel_max * t_decel_max)
 
         max_vel_time_estimate = (segment_length_inches / speed_limit)
 
@@ -1768,7 +1787,7 @@ class AxiDraw(inkex.Effect):
 
         time_elapsed = 0.0
         position = 0.0
-        velocity = vi_inches_per_sec
+        velocity = vi_inch_per_s
 
         """
         Next, we wish to estimate total time duration of this segment.
@@ -1802,7 +1821,7 @@ class AxiDraw(inkex.Effect):
         """
 
 
-        if not constant_vel_mode or self.pen_up:  # Allow accel when pen is up.
+        if not constant_vel_mode or self.pen.status.pen_up:  # Allow accel when pen is up.
             if (segment_length_inches > (accel_dist_max + decel_dist_max + time_slice * speed_limit)
                 and max_vel_time_estimate > 4 * time_slice ):
                 """
@@ -1818,7 +1837,7 @@ class AxiDraw(inkex.Effect):
                 if intervals > 0:
                     time_per_interval = t_accel_max / intervals
 
-                    velocity_step_size = (speed_max - vi_inches_per_sec) / (intervals + 1.0)
+                    velocity_step_size = (speed_max - vi_inch_per_s) / (intervals + 1.0)
                     # For six time intervals of acceleration, first interval is at velocity (max/7)
                     # 6th (last) time interval is at 6*max/7
                     # after this interval, we are at full speed.
@@ -1859,7 +1878,7 @@ class AxiDraw(inkex.Effect):
 
                 if intervals > 0:
                     time_per_interval = t_decel_max / intervals
-                    velocity_step_size = (speed_max - vf_inches_per_sec) / (intervals + 1.0)
+                    velocity_step_size = (speed_max - vf_inch_per_s) / (intervals + 1.0)
 
                     for index in range(0, intervals):  # Calculate deceleration phase
                         velocity -= velocity_step_size
@@ -1887,8 +1906,8 @@ class AxiDraw(inkex.Effect):
                 (This does assume that the segment requested is self consistent, and planned
                 with respect to our acceleration requirements.)
 
-                In a more detail, with short notation Vi = vi_inches_per_sec,
-                    Vf = vf_inches_per_sec, and Amax = accel_rate_local, Dv = (Vf - Vi)
+                In a more detail, with short notation Vi = vi_inch_per_s,
+                    Vf = vf_inch_per_s, and Amax = accel_rate_local, Dv = (Vf - Vi)
 
                 (i) We accelerate from Vi, at Amax to some maximum velocity Vmax.
                 This takes place during an interval of time Ta.
@@ -1936,13 +1955,15 @@ class AxiDraw(inkex.Effect):
                 else:
                     accel_rate_local = accel_rate
 
-                if accel_rate_local > 0:  # Handle edge cases including when we are already at maximum speed
-                    ta = (math.sqrt(2 * vi_inches_per_sec * vi_inches_per_sec + 2 * vf_inches_per_sec * vf_inches_per_sec + 4 * accel_rate_local * segment_length_inches)
-                          - 2 * vi_inches_per_sec) / (2 * accel_rate_local)
+                if accel_rate_local > 0:  # Edge cases including "already at maximum speed":
+                    ta = (math.sqrt(2 * vi_inch_per_s * vi_inch_per_s +
+                        2 * vf_inch_per_s * vf_inch_per_s +
+                        4 * accel_rate_local * segment_length_inches) -
+                        2 * vi_inch_per_s) / (2 * accel_rate_local)
                 else:
                     ta = 0
 
-                vmax = vi_inches_per_sec + accel_rate_local * ta
+                vmax = vi_inch_per_s + accel_rate_local * ta
                 seg_logger.debug('vmax: ' + str(vmax))
 
                 intervals = int(math.floor(ta / time_slice))  # Number of intervals during acceleration
@@ -1951,7 +1972,7 @@ class AxiDraw(inkex.Effect):
                     ta = 0
 
                 if accel_rate_local > 0:  # Handle edge cases including when we are already at maximum speed
-                    td = ta - (vf_inches_per_sec - vi_inches_per_sec) / accel_rate_local
+                    td = ta - (vf_inch_per_s - vi_inch_per_s) / accel_rate_local
                 else:
                     td = 0
 
@@ -1962,7 +1983,7 @@ class AxiDraw(inkex.Effect):
                         seg_logger.debug('Triangle intervals UP: ' + str(intervals))
 
                         time_per_interval = ta / intervals
-                        velocity_step_size = (vmax - vi_inches_per_sec) / (intervals + 1.0)
+                        velocity_step_size = (vmax - vi_inch_per_s) / (intervals + 1.0)
                         # For six time intervals of acceleration, first interval is at velocity (max/7)
                         # 6th (last) time interval is at 6*max/7
                         # after this interval, we are at full speed.
@@ -1980,7 +2001,7 @@ class AxiDraw(inkex.Effect):
                         seg_logger.debug('Triangle intervals Down: ' + str(d_intervals))
 
                         time_per_interval = td / d_intervals
-                        velocity_step_size = (vmax - vf_inches_per_sec) / (d_intervals + 1.0)
+                        velocity_step_size = (vmax - vf_inch_per_s) / (d_intervals + 1.0)
                         # For six time intervals of acceleration, first interval is at velocity (max/7)
                         # 6th (last) time interval is at 6*max/7
                         # after this interval, we are at full speed.
@@ -2012,10 +2033,11 @@ class AxiDraw(inkex.Effect):
                     # Combining these (with same t) gives: 2 a x = (vf^2 - vi^2)  => a = (vf^2 - vi^2)/2x
                     # So long as this 'a' is less than accel_rate, we can linearly interpolate in velocity.
 
-                    vi_inches_per_sec = (vmax + vi_inches_per_sec) / 2  # Boost initial speed for this segment
-                    velocity = vi_inches_per_sec  # Boost initial speed for this segment
+                    vi_inch_per_s = (vmax + vi_inch_per_s) / 2
+                    velocity = vi_inch_per_s  # Boost initial speed for this segment
 
-                    local_accel = (vf_inches_per_sec * vf_inches_per_sec - vi_inches_per_sec * vi_inches_per_sec) / (2.0 * segment_length_inches)
+                    local_accel = (vf_inch_per_s * vf_inch_per_s - vi_inch_per_s * vi_inch_per_s) /\
+                        (2.0 * segment_length_inches)
 
                     if local_accel > accel_rate:
                         local_accel = accel_rate
@@ -2025,13 +2047,13 @@ class AxiDraw(inkex.Effect):
                         # Initial velocity = final velocity -> Skip to constant velocity routine.
                         constant_vel_mode = True
                     else:
-                        t_segment = (vf_inches_per_sec - vi_inches_per_sec) / local_accel
+                        t_segment = (vf_inch_per_s - vi_inch_per_s) / local_accel
 
-                        intervals = int(math.floor(t_segment / time_slice))  # Number of intervals during deceleration
+                        intervals = int(math.floor(t_segment / time_slice)) # Number during decel.
                         if intervals > 1:
                             time_per_interval = t_segment / intervals
-                            velocity_step_size = (vf_inches_per_sec - vi_inches_per_sec) / (intervals + 1.0)
-                            # For six time intervals of acceleration, first interval is at velocity (max/7)
+                            velocity_step_size = (vf_inch_per_s - vi_inch_per_s) / (intervals + 1.0)
+                            # For six time intervals of acceleration, first is at velocity (max/7)
                             # 6th (last) time interval is at 6*max/7
                             # after this interval, we are at full speed.
 
@@ -2040,11 +2062,10 @@ class AxiDraw(inkex.Effect):
                                 time_elapsed += time_per_interval
                                 position += velocity * time_per_interval
                                 duration_array.append(int(round(time_elapsed * 1000.0)))
-                                dist_array.append(position)  # Estimated distance along direction of travel
-                        else:
-                            # Short segment; Not enough time for multiple segments at different velocities.
-                            vi_inches_per_sec = vmax  # These are _slow_ segments-- use fastest possible interpretation.
-                            constant_vel_mode = True
+                                dist_array.append(position)  # Distance along direction of travel
+                        else: # Short segment; No time for segments at different velocities.
+                            vi_inch_per_s = vmax  # These are _slow_ segments;
+                            constant_vel_mode = True  #   use fastest possible interpretation.
                             seg_logger.debug('-> [Min-length segment]' + '\n')
 
         if constant_vel_mode:
@@ -2055,16 +2076,17 @@ class AxiDraw(inkex.Effect):
             seg_logger.debug('-> [Constant Velocity Mode Segment]' + '\n')
             # Single segment with constant velocity.
 
-            if self.options.const_speed and not self.pen_up:
+            if self.options.const_speed and not self.pen.status.pen_up:
                 velocity = self.speed_pendown  # Constant pen-down speed
-            elif vf_inches_per_sec > vi_inches_per_sec:
-                velocity = vf_inches_per_sec
-            elif vi_inches_per_sec > vf_inches_per_sec:
-                velocity = vi_inches_per_sec
-            elif vi_inches_per_sec > 0:  # Allow case of two are equal, but nonzero
-                velocity = vi_inches_per_sec
+            elif vf_inch_per_s > vi_inch_per_s:
+                velocity = vf_inch_per_s
+            elif vi_inch_per_s > vf_inch_per_s:
+                velocity = vi_inch_per_s
+            elif vi_inch_per_s > 0:  # Allow case of two are equal, but nonzero
+                velocity = vi_inch_per_s
             else:  # Both endpoints are equal to zero.
-                velocity = self.speed_pendown / 10  # TODO: Check this method. May be better to level it out to same value as others.
+                velocity = self.speed_pendown / 10
+                # TODO: Check this method. May be better to level it out to same value as others.
 
             seg_logger.debug('velocity: ' + str(velocity))
 
@@ -2084,14 +2106,14 @@ class AxiDraw(inkex.Effect):
 
         for index in range(0, len(dist_array)):
             # Scale our trajectory to the "actual" travel distance that we need:
-            fractional_distance = dist_array[index] / position  # Fractional position along the intended path
+            fractional_distance = dist_array[index] / position # Position along intended path
             dest_array1.append(int(round(fractional_distance * motor_steps1)))
             dest_array2.append(int(round(fractional_distance * motor_steps2)))
             sum(dest_array1)
 
         seg_logger.debug('\nSanity check after computing motion:')
-        seg_logger.debug('Final motor_steps1: {0:}'.format(dest_array1[-1]))  # View last element in list
-        seg_logger.debug('Final motor_steps2: {0:}'.format(dest_array2[-1]))  # View last element in list
+        seg_logger.debug('Final motor_steps1: {0:}'.format(dest_array1[-1])) # Last element in list
+        seg_logger.debug('Final motor_steps2: {0:}'.format(dest_array2[-1])) # Last element in list
 
         prev_motor1 = 0
         prev_motor2 = 0
@@ -2103,17 +2125,18 @@ class AxiDraw(inkex.Effect):
             move_time = duration_array[index] - prev_time
             prev_time = duration_array[index]
 
-            if move_time < 1:
-                move_time = 1  # don't allow zero-time moves.
+            move_time = max(move_time, 1) # don't allow zero-time moves.
 
             if abs(float(move_steps1) / float(move_time)) < 0.002:
                 move_steps1 = 0  # don't allow too-slow movements of this axis
             if abs(float(move_steps2) / float(move_time)) < 0.002:
                 move_steps2 = 0  # don't allow too-slow movements of this axis
 
-            # Don't allow too fast movements of either axis: Catch rounding errors that could cause an overspeed event
-            while (abs(float(move_steps1) / float(move_time)) >= self.params.max_step_rate) or (abs(float(move_steps2) / float(move_time)) >= self.params.max_step_rate):
+            # Catch rounding errors that could cause an overspeed event:
+            while (abs(float(move_steps1) / float(move_time)) >= self.params.max_step_rate) or\
+                (abs(float(move_steps2) / float(move_time)) >= self.params.max_step_rate):
                 move_time += 1
+                seg_logger.debug('Note: Added delay to avoid overspeed event')
 
             prev_motor1 += move_steps1
             prev_motor2 += move_steps2
@@ -2127,21 +2150,22 @@ class AxiDraw(inkex.Effect):
                 x_delta = (motor_dist1_temp + motor_dist2_temp)
                 y_delta = (motor_dist1_temp - motor_dist2_temp)
 
-                if not self.resume_mode and not self.b_stopped:
+                if not self.plot_status.resume.resume_mode and not self.plot_status.b_stopped:
 
                     f_new_x = self.f_curr_x + x_delta
                     f_new_y = self.f_curr_y + y_delta
 
                     if self.options.preview:
-                        self.pt_estimate += move_time
+                        self.plot_status.stats.pt_estimate += move_time
                         if self.options.rendering > 0:  # Generate preview paths
                             if self.vel_data_plot:
-                                velocity_local1 = move_steps1 / float(move_time)
-                                velocity_local2 = move_steps2 / float(move_time)
-                                velocity_local = plot_utils.distance(move_steps1, move_steps2) / float(move_time)
-                                self.update_v_charts(velocity_local1, velocity_local2, velocity_local)
+                                vel_1 = move_steps1 / float(move_time)
+                                vel_2 = move_steps2 / float(move_time)
+                                vel_tot = plot_utils.distance(move_steps1,\
+                                        move_steps2) / float(move_time)
+                                self.update_v_charts(vel_1, vel_2, vel_tot)
                                 self.vel_data_time += move_time
-                                self.update_v_charts(velocity_local1, velocity_local2, velocity_local)
+                                self.update_v_charts(vel_1, vel_2, vel_tot)
                             if self.rotate_page:
                                 if self.params.auto_rotate_ccw: # Rotate counterclockwise 90 degrees
                                     x_new_t = self.svg_width - f_new_y
@@ -2158,29 +2182,31 @@ class AxiDraw(inkex.Effect):
                                 y_new_t = f_new_y
                                 x_old_t = self.f_curr_x
                                 y_old_t = self.f_curr_y
-                            if self.pen_up:
-                                if self.options.rendering > 1:  # rendering is 2 or 3. Show pen-up movement
-                                    if self.path_data_pen_up != 1:
+                            if self.pen.status.pen_up:
+                                if self.options.rendering > 1: # Render pen-up movement
+                                    if self.pen.status.preview_pen_state != 1:
                                         self.path_data_pu.append("M{0:0.3f} {1:0.3f}".format(
                                             x_old_t, y_old_t))
-                                        self.path_data_pen_up = 1  # Reset pen state indicator
+                                        self.pen.status.preview_pen_state = 1
                                     self.path_data_pu.append(" {0:0.3f} {1:0.3f}".format(
                                         x_new_t, y_new_t))
                             else:
-                                if self.options.rendering == 1 or self.options.rendering == 3:  # If 1 or 3, show pen-down movement
-                                    if self.path_data_pen_up != 0:
+                                if self.options.rendering in [1, 3]: # Render pen-down movement
+                                    if self.pen.status.preview_pen_state != 0:
                                         self.path_data_pd.append("M{0:0.3f} {1:0.3f}".format(
                                             x_old_t, y_old_t))
-                                        self.path_data_pen_up = 0  # Reset pen state indicator
+                                        self.pen.status.preview_pen_state = 0
                                     self.path_data_pd.append(" {0:0.3f} {1:0.3f}".format(
                                         x_new_t, y_new_t))
                     else:
-                        ebb_motion.doXYMove(self.serial_port, move_steps2, move_steps1, move_time)
+                        ebb_motion.doXYMove(self.plot_status.port, move_steps2, move_steps1,\
+                            move_time)
+                        self.plot_status.progress.update(self.node_count)
                         if move_time > 50: # Sleep before issuing next command
                             if self.options.mode != "manual":
                                 time.sleep(float(move_time - 30) / 1000.0)
-                    seg_logger.debug('XY move:({0}, {1}), in {2} ms'.format(move_steps1, move_steps2, move_time))
-                    seg_logger.debug('fNew(X,Y) :({0:.2}, {1:.2})'.format(f_new_x, f_new_y))
+                    seg_logger.debug(f'XY move: ({move_steps1}, {move_steps2}), in {move_time} ms')
+                    seg_logger.debug(f'fNew(X,Y): ({f_new_x:.2}, {f_new_y:.2})')
                     if (move_steps1 / move_time) >= self.params.max_step_rate:
                         seg_logger.debug('Motor 1 overspeed error.')
                     if (move_steps2 / move_time) >= self.params.max_step_rate:
@@ -2192,6 +2218,7 @@ class AxiDraw(inkex.Effect):
                     self.svg_last_known_pos_x = self.f_curr_x - self.pt_first[0]
                     self.svg_last_known_pos_y = self.f_curr_y - self.pt_first[1]
 
+
     def pause_res_check(self):
         """ Manage Pause & Resume functionality """
         # First check to see if the pause button has been pressed. Increment the node counter.
@@ -2199,40 +2226,40 @@ class AxiDraw(inkex.Effect):
 
         pause_state = 0
 
-        if self.b_stopped:
+        if self.plot_status.b_stopped:
             return  # We have _already_ halted the plot due to a button press. No need to proceed.
 
         if self.options.preview:
             str_button = 0
         else:
-            str_button = ebb_motion.QueryPRGButton(self.serial_port)  # Query if button pressed
+            str_button = ebb_motion.QueryPRGButton(self.plot_status.port)  # Query if button pressed
 
         # To test corner cases of pause and resume cycles, one may manually force a pause:
         # if (self.options.mode == "plot") and (self.node_count == 24):
-        #     self.force_pause = True
+        #     self.plot_status.force_pause = True
 
-        self.force_pause |= self.receive_pause_request()
+        self.plot_status.force_pause |= self.receive_pause_request()
 
-        if self.force_pause:
+        if self.plot_status.force_pause:
             pause_state = 1
-        elif self.serial_port is not None:
+        elif self.plot_status.port is not None:
             try:
                 pause_state = int(str_button[0])
             except:
                 logger.error('\nUSB connection to AxiDraw lost.')
-                self.connected = False
+                self.connected = False # Python interactive API variable
                 pause_state = 2  # Pause the plot; we appear to have lost connectivity.
                 logger.debug('\n (Node # : ' + str(self.node_count) + ')')
 
-        if pause_state == 1 and not self.delay_between_copies:
-            if self.force_pause:
-                self.user_message_fun('Plot paused programmatically.')
+        if pause_state == 1 and not self.plot_status.delay_between_copies:
+            if self.plot_status.force_pause:
+                self.user_message_fun('Plot paused programmatically.\n')
             else:
                 if self.Secondary or self.options.mode == "interactive":
-                    logger.warning('Plot halted by button press.')
-                    logger.warning('Important: Manually home this AxiDraw before plotting next item.')
+                    logger.warning('Plot halted by button press during interactive session.')
+                    logger.warning('Manually home this AxiDraw before plotting next item.\n')
                 else:
-                    self.user_message_fun('Plot paused by button press.')
+                    self.user_message_fun('Plot paused by button press.\n')
 
             if self.options.mode == "res_plot":
                 if self.node_count < self.node_target:
@@ -2240,68 +2267,74 @@ class AxiDraw(inkex.Effect):
 
             logger.debug('\n (Paused after node number : ' + str(self.node_count) + ')')
 
-        if pause_state == 1 and self.delay_between_copies:
-            self.user_message_fun('Plot sequence ended between copies.')
+        self.plot_status.force_pause = False  # Clear the flag, if set
 
-        if self.force_pause:
-            self.force_pause = False  # Clear the flag
+        if pause_state == 1 and self.plot_status.delay_between_copies:
+            self.user_message_fun('Plot sequence ended between copies.\n')
 
-        if pause_state == 1 or pause_state == 2:  # Stop plot
+        if pause_state in (1, 2):  # Stop plot
             self.svg_node_count = self.node_count
             self.svg_paused_x = self.f_curr_x - self.pt_first[0]
             self.svg_paused_y = self.f_curr_y - self.pt_first[1]
-            self.pen_raise()
-            if not self.delay_between_copies and \
+            v_time = self.pen.pen_raise(self.options, self.params, self.plot_status)
+            self.v_chart_rest(v_time)
+            if not self.plot_status.delay_between_copies and \
                 not self.Secondary and self.options.mode != "interactive":
                 # Only say this if we're not in the delay between copies, nor a "second" unit.
-                self.user_message_fun('Use the resume feature to continue.')
-            self.b_stopped = True
+                self.user_message_fun('Use the resume feature to continue.\n')
+            self.plot_status.b_stopped = True
             return  # Note: This segment is not plotted.
 
         self.node_count += 1  # This whole segment move counts as ONE pause/resume node in our plot
 
-        if self.resume_mode:
+        if self.plot_status.progress.enable and self.options.preview:
+            if self.node_count > self.plot_status.progress.total:
+                self.plot_status.progress.total = self.node_count
+
+        if self.plot_status.resume.resume_mode:
             if self.node_count >= self.node_target:
-                self.resume_mode = False
+                self.plot_status.resume.resume_mode = False
 
                 logger.debug('\nRESUMING PLOT at node : ' + str(self.node_count))
-                logger.debug('\nself.virtual_pen_up : ' + str(self.virtual_pen_up))
-                logger.debug('\nself.pen_up : ' + str(self.pen_up))
+                logger.debug('\nself.virtual_pen_up : ' + str(self.pen.status.virtual_pen_up))
+                logger.debug('\nself.pen.status.pen_up : ' + str(self.pen.status.pen_up))
 
-                if not self.virtual_pen_up:  # Switch from virtual to real pen
-                    self.pen_lower()
+                # Set pen heights, in case it has been changed by layers in resume mode:
+                self.pen.servo_setup(self.options, self.params, self.plot_status)
+                if not self.pen.status.virtual_pen_up:  # Switch from virtual to real pen
+                    v_time = self.pen.pen_lower(self.options, self.params, self.plot_status)
+                    self.v_chart_rest(v_time)
+
 
     def serial_connect(self):
         """ Connect to AxiDraw over USB """
-        named_port = None
-
+        port_name = None
         if self.options.port_config == 1: # port_config value "1": Use first available AxiDraw.
             self.options.port = None
         if not self.options.port: # Try to connect to first available AxiDraw.
-            self.serial_port = ebb_serial.openPort()
+            self.plot_status.port = ebb_serial.openPort()
         elif str(type(self.options.port)) in (
                 "<type 'str'>", "<type 'unicode'>", "<class 'str'>"):
             # This function may be passed a port name to open (and later close).
-            tempstring = str(self.options.port)
-            self.options.port = tempstring.strip('\"')
-            named_port = self.options.port
-            # logger.debug( 'About to test serial port: ' + str(self.options.port) )
+            self.options.port = str(self.options.port).strip('\"')
+            port_name = self.options.port
             the_port = ebb_serial.find_named_ebb(self.options.port)
-            self.serial_port = ebb_serial.testPort(the_port)
+            self.plot_status.port = ebb_serial.testPort(the_port)
             self.options.port = None  # Clear this input, to ensure that we close the port later.
         else:
             # self.options.port may be a serial port object of type serial.serialposix.Serial.
             # In that case, interact with that given port object, and leave it open at the end.
-            self.serial_port = self.options.port
-        if self.serial_port is None:
-            if named_port:
-                logger.error(gettext.gettext('Failed to connect to AxiDraw "' + str(named_port) + '"'))
+            self.plot_status.port = self.options.port
+        if self.plot_status.port is None:
+            if port_name:
+                self.user_message_fun(gettext.gettext('Failed to connect to AxiDraw ') +\
+                    str(port_name))
             else:
-                logger.error(gettext.gettext("Failed to connect to AxiDraw."))
+                self.user_message_fun(gettext.gettext("Failed to connect to AxiDraw."))
             return
-        self.connected = True
-        if named_port:
-            logger.debug(gettext.gettext('Connected successfully to port: ' + str(named_port)))
+        self.connected = True  # Python interactive API variable
+        if port_name:
+            logger.debug(gettext.gettext('Connected successfully to port: ' + str(port_name)))
         else:
             logger.debug(" Connected successfully")
 
@@ -2319,9 +2352,9 @@ class AxiDraw(inkex.Effect):
 
         if self.options.resolution == 1:  # High-resolution ("Super") mode
             if not self.options.preview:
-                res_1, res_2 = ebb_motion.query_enable_motors(self.serial_port)
+                res_1, res_2 = ebb_motion.query_enable_motors(self.plot_status.port)
                 if not (res_1 == 1 and res_2 == 1): # Do not re-enable if already enabled
-                    ebb_motion.sendEnableMotors(self.serial_port, 1)  # 16X microstepping
+                    ebb_motion.sendEnableMotors(self.plot_status.port, 1)  # 16X microstepping
             self.step_scale = 2.0 * self.params.native_res_factor
             self.speed_pendown = local_speed_pendown * self.params.speed_lim_xy_hr / 110.0
             self.speed_penup = self.options.speed_penup * self.params.speed_lim_xy_hr / 110.0
@@ -2329,9 +2362,9 @@ class AxiDraw(inkex.Effect):
                 self.speed_pendown = self.speed_pendown * self.params.const_speed_factor_hr
         else:  # i.e., self.options.resolution == 2; Low-resolution ("Normal") mode
             if not self.options.preview:
-                res_1, res_2 = ebb_motion.query_enable_motors(self.serial_port)
+                res_1, res_2 = ebb_motion.query_enable_motors(self.plot_status.port)
                 if not (res_1 == 2 and res_2 == 2): # Do not re-enable if already enabled
-                    ebb_motion.sendEnableMotors(self.serial_port, 2)  # 8X microstepping
+                    ebb_motion.sendEnableMotors(self.plot_status.port, 2)  # 8X microstepping
             self.step_scale = self.params.native_res_factor
             # Low-res mode: Allow faster pen-up moves. Keep maximum pen-down speed the same.
             self.speed_penup = self.options.speed_penup * self.params.speed_lim_xy_lr / 110.0
@@ -2339,185 +2372,16 @@ class AxiDraw(inkex.Effect):
             if self.options.const_speed:
                 self.speed_pendown = self.speed_pendown * self.params.const_speed_factor_lr
         if self.params.use_b3_out:
-            ebb_motion.PBOutConfig(self.serial_port, 3, 0) # Configure I/O Pin B3 as an output, low
-
-    def pen_raise(self):
-        """ Raise the pen """
-        self.virtual_pen_up = True # Virtual pen keeps track of state for resuming plotting.
-        self.path_data_pen_up = -1 # For preview rendering use
-        self.turtle_pen_up = True  # For interactive Python API
-
-        if self.resume_mode or self.pen_up:  # skip if pen is already up, or if we're resuming.
-            return
-
-        self.pen_lifts += 1
-        if self.use_layer_pen_height:
-            pen_down_pos = self.layer_pen_pos_down
-        else:
-            pen_down_pos = self.options.pen_pos_down
-        v_dist = abs(float(self.options.pen_pos_up - pen_down_pos))
-
-        # Servo travel time is estimated as the 4th power average (a smooth blend between):
-        #   (A) Servo transit time for fast servo sweeps (t = slope * v_dist + min) and
-        #   (B) Sweep time for slow sweeps (t = v_dist * full_scale_sweep_time / sweep_rate)
-        v_time = int(((self.params.servo_move_slope * v_dist + self.params.servo_move_min) ** 4 +
-            (self.params.servo_sweep_time * v_dist / self.options.pen_rate_raise) ** 4) ** 0.25)
-        if v_dist < 0.9:  # If up and down positions are equal, no initial delay
-            v_time = 0
-
-        v_time += self.options.pen_delay_up
-        v_time = max(0, v_time)  # Do not allow negative delay times
-        if self.options.preview:
-            self.update_v_charts(0, 0, 0)
-            self.vel_data_time += v_time
-            self.update_v_charts(0, 0, 0)
-            self.pt_estimate += v_time
-        else:
-            ebb_motion.sendPenUp(self.serial_port, v_time)
-            if self.params.use_b3_out:
-                ebb_motion.PBOutValue( self.serial_port, 3, 0 ) # I/O Pin B3 output: low
-            if (v_time > 50) and (self.options.mode != "manual"):
-                time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
-        self.pen_up = True
-        if not self.ebblv_set:
-            ebb_motion.setEBBLV(self.serial_port, self.options.pen_pos_up + 1)
-            self.ebblv_set = True
-
-    def pen_lower(self):
-        """ Lower the pen """
-        self.virtual_pen_up = False # Virtual pen keeps track of state for resuming plotting.
-        self.path_data_pen_up = -1  # For preview rendering use
-        self.turtle_pen_up = False  # For interactive Python API
-
-        if self.pen_up is not None:
-            if not self.pen_up:
-                return # skip if pen is state is _known_ and is down
-        if self.resume_mode or self.b_stopped:  # skip if resuming or stopped
-            return
-
-        if self.use_layer_pen_height:
-            pen_down_pos = self.layer_pen_pos_down
-        else:
-            pen_down_pos = self.options.pen_pos_down
-        v_dist = abs(float(self.options.pen_pos_up - pen_down_pos))
-
-        # Timing uses the same transit time model detailed in pen_raise():
-        v_time = int(((self.params.servo_move_slope * v_dist + self.params.servo_move_min) ** 4 +
-            (self.params.servo_sweep_time * v_dist / self.options.pen_rate_raise) ** 4) ** 0.25)
-        if v_dist < 0.9:  # If up and down positions are equal, no initial delay
-            v_time = 0
-
-        v_time += self.options.pen_delay_down
-        v_time = max(0, v_time)  # Do not allow negative delay times
-        if self.options.preview:
-            self.update_v_charts(0, 0, 0)
-            self.vel_data_time += v_time
-            self.update_v_charts(0, 0, 0)
-            self.pt_estimate += v_time
-        else:
-            ebb_motion.sendPenDown(self.serial_port, v_time)
-            if self.params.use_b3_out:
-                ebb_motion.PBOutValue( self.serial_port, 3, 1 ) # I/O Pin B3 output: high
-            if (v_time > 50) and (self.options.mode != "manual"):
-                time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
-        self.pen_up = False
-
-    def servo_setup_wrapper(self):
-        """ Utility wrapper for servo_setup()
-            1. Configure servo up & down positions and lifting/lowering speeds.
-            2. Query EBB to learn if we're in the up or down state.
-            This wrapper is used in the manual, setup, and various plot modes,
-              for initial pen raising/lowering.
-        """
-        self.servo_setup()  # Pre-stage the pen up and pen down positions
-
-        if self.pen_up is not None:
-            return
-            # What follows is code to determine if the initial pen state is known.
-
-        if self.options.preview:
-            self.pen_up = True  # A fine assumption when in preview mode
-            self.virtual_pen_up = True  #
-        else:  # Need to figure out if we're in the pen-up or pen-down state... or neither!
-            value = ebb_motion.queryEBBLV(self.serial_port)
-            if int(value) != self.options.pen_pos_up + 1:
-                """
-                When the EBB is reset, it goes to its default "pen up" position. QueryPenUp
-                will tell us that the in the pen-up state. However, its actual position is the
-                default, not the pen-up position that we've requested.
-
-                To fix this, we could manually command the pen to either the pen-up or pen-down
-                position. HOWEVER, that may take as much as five seconds in the very slowest
-                speeds, and we want to skip that delay if the pen is already in the right place,
-                for example if we're plotting after raising the pen, or plotting twice in a row.
-
-                Solution: Use an otherwise unused EBB firmware variable (EBBLV), which is set to
-                zero upon reset. If we set that value to be nonzero, and later find that it's still
-                nonzero, we know that the servo position has been set (at least once) since reset.
-
-                Knowing that the pen is up _does not_ confirm that the pen is at the *requested*
-                pen-up position. We can store (self.options.pen_pos_up + 1), with possible values
-                in the range 1 - 101 in EBBLV, to verify that the current position is correct, and
-                that we can skip extra pen-up/pen-down movements.
-
-                We do not _set_ the current correct pen-up value of EBBLV until the pen is raised.
-                """
-                ebb_motion.setEBBLV(self.serial_port, 0)
-                self.ebblv_set = False
-                self.virtual_pen_up = False
-
-            else:   # EEBLV has already been set; we can trust the value from QueryPenUp:
-                    # Note, however, that this does not ensure that the current
-                    #    Z position matches that in the settings.
-                self.ebblv_set = True
-                if ebb_motion.QueryPenUp(self.serial_port):
-                    self.pen_up = True
-                    self.virtual_pen_up = True
-                else:
-                    self.pen_up = False
-                    self.virtual_pen_up = False
-
-    def servo_setup(self):
-        """ Set servo up/down positions, raising/lowering rates, and power timeout
-        Pen position units range from 0% to 100%, which correspond to a typical timing range of
-        9855 - 27831 in units of 83.3 ns (1/(12 MHz)), giving a timing range of 0.82 - 2.32 ms.
-        """
-        if self.use_layer_pen_height:
-            pen_down_pos = self.layer_pen_pos_down
-        else:
-            pen_down_pos = self.options.pen_pos_down
-
-        if not self.options.preview:
-            servo_range = self.params.servo_max - self.params.servo_min
-            servo_slope = float(servo_range) / 100.0
-            int_temp = int(round(self.params.servo_min + servo_slope * self.options.pen_pos_up))
-            ebb_motion.setPenUpPos(self.serial_port, int_temp)
-            int_temp = int(round(self.params.servo_min + servo_slope * pen_down_pos))
-            ebb_motion.setPenDownPos(self.serial_port, int_temp)
-
-            # Servo rate options (pen_rate_raise, pen_rate_lower) range from 1% to 100%.
-            # The EBB servo rate values are in units of 83.3 ns steps per 24 ms.
-            # Our servo sweep at 100% rate sweeps over 100% range in servo_sweep_time ms.
-
-            servo_rate_scale = float(servo_range) * 0.24 / self.params.servo_sweep_time
-            int_temp = int(round(servo_rate_scale * self.options.pen_rate_raise))
-            ebb_motion.setPenUpRate(self.serial_port, int_temp)
-            int_temp = int(round(servo_rate_scale * self.options.pen_rate_lower))
-            ebb_motion.setPenDownRate(self.serial_port, int_temp)
-
-            ebb_motion.servo_timeout(self.serial_port, self.params.servo_timeout) # Set timeout
+            ebb_motion.PBOutConfig(self.plot_status.port, 3, 0) # Set I/O Pin B3 as an output, low
 
     def query_ebb_voltage(self):
         """ Check that power supply is detected. """
         if self.params.skip_voltage_check:
             return
-        if self.serial_port is not None and not self.options.preview:
-            voltage_o_k = ebb_motion.queryVoltage(self.serial_port)
+        if self.plot_status.port is not None and not self.options.preview:
+            voltage_o_k = ebb_motion.queryVoltage(self.plot_status.port)
             if not voltage_o_k:
-                if 'voltage' not in self.warnings:
-                    self.user_message_fun(gettext.gettext(\
-                    'Warning: Low voltage detected.\nCheck that power supply is plugged in.\n'))
-                    self.warnings['voltage'] = 1
+                self.warnings.add_new('voltage')
 
     def get_doc_props(self):
         """
@@ -2545,246 +2409,12 @@ class AxiDraw(inkex.Effect):
         result = etree.tostring(self.document)
         return result.decode("utf-8")
 
-    def plot_setup(self, svg_input=None, argstrings=None):
-        """Python module plot context: Begin plot context & parse SVG file"""
-        file_ok = False
-        inkex.localize()
-        self.getoptions([] if argstrings is None else argstrings)
-
-        if svg_input is None:
-            svg_input = plot_utils.trivial_svg
-        try: # Parse input file or SVG string
-            stream = open(svg_input, 'r')
-            p = etree.XMLParser(huge_tree=True)
-            self.document = etree.parse(stream, parser=p)
-            self.original_document = copy.deepcopy(self.document)
-            stream.close()
-            file_ok = True
-        except IOError:
-            pass # It wasn't a file...
-        if not file_ok:
-            try:
-                svg_string = svg_input.encode('utf-8') # Need consistent encoding.
-                p = etree.XMLParser(huge_tree=True, encoding='utf-8')
-                self.document = etree.ElementTree(etree.fromstring(svg_string, parser=p))
-                self.original_document = copy.deepcopy(self.document)
-                file_ok = True
-            except:
-                logger.error("Unable to open SVG input file.")
-                quit(1)
-        if file_ok:
-            self.getdocids()
-        # self.suppress_standard_output_stream()
-
-    def plot_run(self, output=False):
-        '''Python module plot context: Plot document'''
-        if self.document is None:
-            logger.error("No SVG input provided.")
-            logger.error("Use plot_setup(svg_input) before plot_run().")
-            quit(1)
-        self.set_defaults()
-        self.effect()
-        if output:
-            return self.get_output()
-        return None
-
-    def interactive(self):
-        '''Python module: Begin interactive context and Initialize options'''
-        inkex.localize()
-        self.getoptions([])
-        self.options.units = 0 # inches, by default
-        self.options.preview = False
-        self.options.mode = "interactive"
-        self.Secondary = False
-
-    def verify_interactive(self):
-        '''Check that we are in interactive API context'''
-        try:
-            if self.options.mode == "interactive":
-                return True
-        except AttributeError:
-            self.user_message_fun(gettext.gettext("Function only available in interactive mode."))
-        return False
-
-    def connect(self):
-        '''Python Interactive context: Open connection to AxiDraw'''
-        if not self.verify_interactive():
-            return None
-
-        self.serial_connect() # Open USB serial session
-        if self.serial_port is None:
-            return False
-
-        self.query_ebb_voltage()
-        self.update_options() # Apply general settings
-
-        if self.start_x is not None:    # Set initial XY Position:
-            self.f_curr_x = self.start_x
-        else:
-            self.f_curr_x = self.params.start_pos_x
-        if self.start_y is not None:
-            self.f_curr_y = self.start_y
-        else:
-            self.f_curr_y = self.params.start_pos_y
-
-        self.pt_first = (self.f_curr_x, self.f_curr_y)
-        self.turtle_x = self.f_curr_x # Set turtle position to (0,0)
-        self.turtle_y = self.f_curr_y
-        self.turtle_pen_up = True
-
-        # Query if button pressed, to clear the result:
-        ebb_motion.QueryPRGButton(self.serial_port)
-        self.servo_setup_wrapper()    # Apply servo settings
-        self.pen_raise()            # Raise pen
-        self.enable_motors()         # Set plot resolution & speed & enable motors
-        return True
-
-    def update(self):
-        '''Python Interactive context: Apply optional parameters'''
-        if not self.verify_interactive():
-            return
-        self.update_options()
-        if self.serial_port:
-            self.servo_setup()
-            self.enable_motors()  # Set plotting resolution & speed
-
-    def _xy_plot_segment(self, relative, x_value, y_value):
-        """
-        Perform movements for interactive context XY movement commands.
-        Internal function; uses inch units.
-        Maintains record of "turtle" position, and directs the carriage to
-        move from the last turtle position to the new turtle position,
-        clipping that movement segment to the allowed bounds of movement.
-        Commands directing movement outside of the bounds are clipped
-        with pen up.
-        """
-        if not self.verify_interactive():
-            return
-
-        if self.options.units == 1 : # If using centimeter units
-            x_value = x_value / 2.54
-            y_value = y_value / 2.54
-        if self.options.units == 2: # If using millimeter units
-            x_value = x_value / 25.4
-            y_value = y_value / 25.4
-        if relative:
-            x_value = self.turtle_x + x_value
-            y_value = self.turtle_y + y_value
-
-        # Snap interactive movement to travel bounds, with modest tolerance:
-        if math.isclose(x_value, self.x_bounds_min, abs_tol=1e-9):
-            x_value = self.x_bounds_min
-        if math.isclose(x_value, self.x_bounds_max, abs_tol=1e-9):
-            x_value = self.x_bounds_max
-        if math.isclose(y_value, self.y_bounds_min, abs_tol=1e-9):
-            y_value = self.y_bounds_min
-        if math.isclose(y_value, self.y_bounds_max, abs_tol=1e-9):
-            y_value = self.y_bounds_max
-
-        turtle = [self.turtle_x, self.turtle_y]
-        target = [x_value, y_value]
-        segment = [turtle, target]
-        accept, seg = plot_utils.clip_segment(segment, self.bounds)
-
-        if accept and self.serial_port: # Segment is at least partially within bounds
-            if self.serial_port:
-                if not plot_utils.points_near(seg[0], turtle, 1e-9): # if intial point clipped
-                    if self.params.auto_clip_lift and not self.turtle_pen_up:
-                        self.pen_raise()           # Pen-up move to initial position
-                        self.turtle_pen_up = False # Keep track of intended state
-                    self.plot_seg_with_v(seg[0][0], seg[0][1], 0, 0) # move to start
-                if not self.turtle_pen_up:
-                    self.pen_lower()
-                self.plot_seg_with_v(seg[1][0], seg[1][1], 0, 0) # Draw clipped segment
-                if not plot_utils.points_near(seg[1], target, 1e-9) and\
-                        self.params.auto_clip_lift and not self.turtle_pen_up:
-                    self.pen_raise() # Segment end was clipped; this end is out of bounds.
-                    self.turtle_pen_up = False # Keep track of intended state
-        self.turtle_x = x_value
-        self.turtle_y = y_value
-
-    def goto(self,x_target,y_target): # Absolute move
-        '''Interactive context: absolute position move'''
-        self._xy_plot_segment(False,x_target, y_target)
-
-    def moveto(self,x_target,y_target):
-        '''Interactive context: absolute position move, pen-up'''
-        if not self.verify_interactive():
-            return
-        self.pen_raise()
-        self._xy_plot_segment(False,x_target, y_target)
-
-    def lineto(self,x_target,y_target):
-        '''Interactive context: absolute position move, pen-down'''
-        self.turtle_pen_up = False
-        self._xy_plot_segment(False,x_target, y_target)
-
-    def go(self,x_delta,y_delta):
-        '''Interactive context: relative position move'''
-        self._xy_plot_segment(True,x_delta, y_delta)
-
-    def move(self,x_delta,y_delta):
-        '''Interactive context: relative position move, pen-up'''
-        if not self.verify_interactive():
-            return
-        self.pen_raise()
-        self._xy_plot_segment(True,x_delta, y_delta)
-
-    def line(self,x_delta,y_delta):
-        '''Interactive context: relative position move, pen-down'''
-        self.turtle_pen_up = False
-        self._xy_plot_segment(True,x_delta, y_delta)
-
-    def penup(self):
-        '''Interactive context: raise pen'''
-        if not self.verify_interactive():
-            return
-        self.pen_raise()
-
-    def pendown(self):
-        '''Interactive context: lower pen'''
-        if not self.verify_interactive():
-            return
-        if self.params.auto_clip_lift and not\
-                plot_utils.point_in_bounds([self.turtle_x, self.turtle_y], self.bounds):
-            self.turtle_pen_up = False
-        else:
-            self.pen_lower()
-
-    def usb_query(self, query):
-        '''Interactive context: Low-level USB query'''
-        if not self.verify_interactive():
-            return None
-        return ebb_serial.query(self.serial_port, query).strip()
-
-    def usb_command(self, command):
-        '''Interactive context: Low-level USB command; use with great care '''
-        if not self.verify_interactive():
-            return
-        ebb_serial.command(self.serial_port, command)
-
-    def turtle_pos(self):
-        '''Interactive context: Report last known "turtle" position'''
-        return plot_utils.position_scale(self.turtle_x, self.turtle_y, self.options.units)
-
-    def turtle_pen(self):
-        '''Interactive context: Report last known "turtle" pen state'''
-        return self.turtle_pen_up
-
-    def current_pos(self):
-        '''Interactive context: Report last known physical position '''
-        return plot_utils.position_scale(self.f_curr_x, self.f_curr_y, self.options.units)
-
-    def current_pen(self):
-        '''Interactive context: Report last known physical pen state '''
-        return self.pen_up
-
     def disconnect(self):
         '''End serial session; disconnect from AxiDraw '''
-        if self.serial_port:
-            ebb_serial.closePort(self.serial_port)
-        self.serial_port = None
-        self.connected = False
+        if self.plot_status.port:
+            ebb_serial.closePort(self.plot_status.port)
+        self.plot_status.port = None
+        self.connected = False  # Python interactive API variable
 
 class SecondaryLoggingHandler(logging.Handler):
     '''To be used for logging to AxiDraw.text_out and AxiDraw.error_out.'''

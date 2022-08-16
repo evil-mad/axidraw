@@ -37,16 +37,16 @@ _gui-text="Pen height: UP (%):">60</param>
 _gui-text="Pen height: DOWN, (%):">30</param>
 
 <param name="setup_type"  indent="1" type="optiongroup" _gui-text="       Action on 'Apply':">
+<_option value="cycle">Cycle pen down then up</_option>	
 <_option value="align">Raise pen, turn off motors</_option>	
-<_option value="toggle">Toggle pen between UP, DOWN</_option>
+<_option value="toggle">Toggle pen between up, down</_option>
 </param>
-<_param indent="4" name="instructions_setup3" type="description" xml:space="preserve">
-
-- Raise pen and turn off stepper motors to manually
-  move carriage to the Home Corner (upper left).
-
-- Raise and lower pen to check the vertical positions
-  of the pen for writing and drawing.
+<spacer />
+<_param indent="4" name="instructions_setup3" type="description">
+- Cycle pen down and up to check the vertical positions of the pen.
+</_param>
+<_param indent="4" name="instructions_setup4" type="description">
+- Raise pen and turn off stepper motors to manually move carriage to the Home Corner (back left).
 </_param>
 </page>
 
@@ -258,7 +258,7 @@ the Return to Home Corner command.
 
 </param>
 <_param name="copyright" type="description" indent="5" xml:space="preserve"
->Version 3.4.0      —      Copyright 2022 Evil Mad Scientist</_param>
+>Version 3.5.0      —      Copyright 2022 Evil Mad Scientist</_param>
 
 
 

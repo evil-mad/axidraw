@@ -1,8 +1,8 @@
 # axidraw_conf.py
 # Part of the AxiDraw driver software
-# 
+#
 # https://github.com/evil-mad/axidraw
-# Version 3.4.0, dated 2022-07-22.
+# Version 3.5.0, dated 2022-07-31.
 #
 # Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -24,7 +24,7 @@ These parameters are used as defaults when using AxiDraw with the command-
 If you are operating the AxiDraw from within Inkscape, please set your
  preferences within Inkscape, using the AxiDraw Control dialog.
  Most values listed here are ignored when running within Inkscape.
- 
+
 Similarly, values set within Inkscape are ignored when using the CLI or
  python library.
 
@@ -63,7 +63,7 @@ model = 1               # AxiDraw Model (1-6)
                             # 1: AxiDraw V2 or V3 (Default). 2: AxiDraw V3/A3 or SE/A3.
                             # 3: AxiDraw V3 XLX. 4: AxiDraw MiniKit.
                             # 5: AxiDraw SE/A1.  6: AxiDraw SE/A2.
-                            
+
 port = None             # Serial port or named AxiDraw to use
                             # None (Default) will plot to first unit located
 
@@ -87,16 +87,19 @@ resolution = 1          # Resolution: (1-2):
                             # 1: High resolution (smoother, slightly slower) (Default)
                             # 2: Low resolution (coarser, slightly faster)
 
-digest = 0              # Plot digest output option. (Do NOT enable if using within Inkscape.)
-                            # 0: Disabled; No change to behavior or output (Default)
-                            # 1: Output "plob" digest, not full SVG, when saving file
-                            # 2: Disable plots and previews; generate digest only
-
-webhook = False         # Enable webhook alerts
+webhook = False         # Enable webhook alerts when True
                             # Default: False
 
 webhook_url = None      # URL for webhook alerts
 
+digest = 0              # Plot digest output option. (NOT supported in Inkscape context.)
+                            # 0: Disabled; No change to behavior or output (Default)
+                            # 1: Output "plob" digest, not full SVG, when saving file
+                            # 2: Disable plots and previews; generate digest only
+
+progress = False        # Enable progress bar display in AxiDraw CLI, when True
+                            # Default: False
+                            # This option has no effect in Inkscape or Python API contexts.
 
 # Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
 # Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),
@@ -108,11 +111,14 @@ Additional user-adjustable control parameters:
 Values below this point are configured only in this file, not through the user interface(s).
 '''
 
-servo_timeout = 60000   # Time, ms, for servo motor to power down 
-                        #   after last movement command  (default: 60000)
-                        #   This feature requires EBB v 2.5 hardware (with USB
-                        #   micro not USB mini connector) and firmware version
-                        #   2.6.0 or newer
+servo_timeout = 60000   # Time, ms, for servo motor to power down after last movement command
+                        #   (default: 60000). This feature requires EBB v 2.5 hardware (with USB
+                        #   micro not USB mini connector), firmware version 2.6.0, and
+                        #   servo_pin set to 1 (only).
+
+servo_pin = 1           # EBB I/O pin number (port B) to control the pen-lift servo motor.
+                        #   Default: 1 (pin RB1). Suggested alternate: 2 (pin RB2, located
+                        #   two positions above the standard servo output pins).
 
 check_updates = True    # If True, allow AxiDraw Control to check online to see
                         #    what the current software version is, when you
@@ -136,7 +142,7 @@ options_message = True  # If True (default), display an advisory message if Appl
 
 report_lifts = False    # Report number of pen lifts when reporting plot duration (Default: False)
 
-auto_clip_lift = True   # Option applicable to the Interactive Python API only.
+auto_clip_lift = True   # Option applicable only to XY movements in the Interactive Python API.
                         #   If True (default), keep pen up when motion is clipped by travel bounds.
 
 # Colors used to represent pen-up and pen-down travel in preview mode:
@@ -161,7 +167,7 @@ And, you can easily change these values such that things will not work as you ex
 That said, proceed with caution, and keep a backup copy.
 '''
 
-# Travel area limits typically do not need to be changed. 
+# Travel area limits typically do not need to be changed.
 # For each model, there is an X travel and Y travel limit, given in inches.
 
 x_travel_default = 11.81 # AxiDraw V2, V3, SE/A4: X.    Default: 11.81 in (300 mm)
@@ -188,8 +194,8 @@ y_travel_V3B6 = 5.51     # AxiDraw V3/B6: Y             Default: 5.51 in (140 mm
 
 native_res_factor = 1016.0  # Motor resolution factor, steps per inch. Default: 1016.0
 # Note that resolution is defined along native (not X or Y) axes.
-# Resolution is native_res_factor * sqrt(2) steps per inch in Low Resolution  (Approx 1437 steps per inch)
-#       and 2 * native_res_factor * sqrt(2) steps per inch in High Resolution (Approx 2874 steps per inch)
+# Resolution is native_res_factor * sqrt(2) steps/inch in Low Resolution  (Approx 1437 steps/in)
+#       and 2 * native_res_factor * sqrt(2) steps/inch in High Resolution (Approx 2874 steps/in)
 
 max_step_rate = 24.995  # Maximum allowed motor step rate, in steps per millisecond.
 # Note that 25 kHz is the absolute maximum step rate for the EBB.
@@ -197,12 +203,12 @@ max_step_rate = 24.995  # Maximum allowed motor step rate, in steps per millisec
 # We use a conservative value, to help prevent errors due to rounding.
 # This value is normally used _for speed limit checking only_.
 
-speed_lim_xy_lr = 15.000  # Maximum XY speed allowed when in Low Resolution mode, inches/second.  Default: 15.000 Max: 17.3958
-speed_lim_xy_hr = 8.6979  # Maximum XY speed allowed when in High Resolution mode, inches/second. Default: 8.6979, Max: 8.6979
+speed_lim_xy_lr = 15.000  # Max XY speed allowed when in Low Resolution mode, in/s.  Default: 15.000 Max: 17.3958
+speed_lim_xy_hr = 8.6979  # Max XY speed allowed when in High Resolution mode, in/s. Default: 8.6979, Max: 8.6979
 # Do not increase these values above Max; they are derived from max_step_rate and the resolution.
 
-max_step_dist_lr = 0.000696  # Maximum distance covered by 1 step in Low Res mode, rounded up, in inches. ~1/(1016 sqrt(2))
-max_step_dist_hr = 0.000348  # Maximum distance covered by 1 step in Hi Res mode, rounded up, in inches.  ~1/(2032 sqrt(2))
+max_step_dist_lr = 0.000696  # Max distance covered by 1 step in Low Res mode, rounded up, in inches. ~1/(1016 sqrt(2))
+max_step_dist_hr = 0.000348  # Max distance covered by 1 step in Hi Res mode, rounded up, in inches.  ~1/(2032 sqrt(2))
 # In planning trajectories, we skip movements shorter than these distances, likely to be < 1 step.
 
 const_speed_factor_lr = 0.25 # In constant-speed mode, multiply pen-down speed by this factor. Default: 0.25 for Low Res mode
@@ -220,15 +226,15 @@ time_slice = 0.025  # Interval, in seconds, of when to update the motors. Defaul
 bounds_tolerance = 0.003  # Suppress warnings if bounds are exceeded by less than this distance (inches).
 
 # Servo motion limits, in units of (1/12 MHz), about 83.3 ns:
-servo_max = 27831  # Highest allowed position; "100%" on the scale.  Default: 27831 units, or 2.32 ms.
-servo_min = 9855   # Lowest allowed position; "0%" on the scale.     Default: 9855 units,  or 0.82 ms.
+servo_max = 27831  # Highest allowed position; "100%" on scale. Default: 27831 units, or 2.32 ms.
+servo_min = 9855   # Lowest allowed position; "0%" on scale.    Default: 9855 units,  or 0.82 ms.
 
 # Time for servo control signal to sweep over full 0-100% range, at 100% pen lift/lower rates:
 servo_sweep_time = 200 # Duration, ms, to sweep servo control signal over 100% range. Default: 200
 
-# Time for pen lift servo to physically move. Time = slope * distance + min, when using a fast sweep.
-servo_move_min = 45      # Minimum time, ms, for pen lift/lower of non-zero distance.    Default: 45
-servo_move_slope = 2.69  # Additional time, ms, per percentage point of vertical travel. Default: 2.69
+# Time (for pen lift servo to physically move) = slope * distance + min, with a full speed sweep.
+servo_move_min = 45      # Minimum time, ms, for pen lift/lower of non-zero distance. Default: 45
+servo_move_slope = 2.69  # Additional time, ms, per percentage of vertical travel.    Default: 2.69
 
 smoothness = 10.0       # Curve smoothing (default: 10.0)
 

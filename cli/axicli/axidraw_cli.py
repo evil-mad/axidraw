@@ -73,7 +73,7 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface 3.4.0"
+cli_version = "AxiDraw Command Line Interface 3.5.0"
 
 quick_help = '''
     Basic syntax to plot a file:      axicli svg_in [OPTIONS]
@@ -102,7 +102,7 @@ def axidraw_CLI(dev = False):
 
     parser.add_argument("-m","--mode", \
              metavar='MODENAME', type=str, \
-             help="Mode. One of: [plot, layers, align, toggle, manual, " \
+             help="Mode. One of: [plot, layers, align, toggle, cycle, manual, " \
              + "sysinfo, version, res_plot, res_home, reorder (deprecated)]. Default: plot.")
 
     parser.add_argument("-s","--speed_pendown", \
@@ -239,6 +239,10 @@ def axidraw_CLI(dev = False):
             action='store_const', const='True',
             help="Output the version of axicli")
 
+    parser.add_argument("-b","--progress", \
+            action="store_const",  const='True', \
+            help='Enable CLI progress bar while plotting')
+
     args = parser.parse_args()
 
     # Handle trivial cases
@@ -251,15 +255,9 @@ def axidraw_CLI(dev = False):
     if args.mode == "options":
         quit()
 
-    if args.mode == "timing":
-        quit()
-
     # Detect certain "trivial" cases that do not require an input file
     use_trivial_file = False
-
-    if args.mode == "align" or args.mode == "toggle" \
-        or args.mode == "version" or args.mode == "sysinfo" \
-         or args.mode == "manual":
+    if args.mode in ["align", "toggle", "cycle", "version", "sysinfo", "manual"]:
         use_trivial_file = True
 
     svg_input = args.svg_in
@@ -281,6 +279,10 @@ def axidraw_CLI(dev = False):
 
         if args.reordering is not None:
             adc.options.reordering = args.reordering
+
+        if args.progress is not None:
+            # Pass through to AxiDraw Control; this option is CLI specific.
+            adc.options.progress = args.progress
 
         print("Re-ordering SVG File.")
         print("This can take a while for large files.")
@@ -329,12 +331,15 @@ def axidraw_CLI(dev = False):
 
     # assign command line options to adc's options.
     # additionally, look inside the config to see if any command line options were set there
-    option_names = ["mode", "speed_pendown", "speed_penup", "accel", "pen_pos_down", "pen_pos_up",
-                    "pen_rate_lower", "pen_rate_raise", "pen_delay_down", "pen_delay_up",
-                    "random_start", "reordering", "no_rotate", "const_speed", "report_time",
-                    "manual_cmd", "walk_dist", "layer", "copies", "page_delay", "preview",
-                    "rendering", "model", "port", "port_config", 'digest', 'webhook', 'webhook_url',]
+    option_names = ['mode', 'speed_pendown', 'speed_penup', 'accel', 'pen_pos_down', 'pen_pos_up',
+                    'pen_rate_lower', 'pen_rate_raise', 'pen_delay_down', 'pen_delay_up',
+                    'random_start', 'reordering', 'no_rotate', 'const_speed', 'report_time',
+                    'manual_cmd', 'walk_dist', 'layer', 'copies', 'page_delay', 'preview',
+                    'rendering', 'model', 'port', 'port_config', 'webhook', 'webhook_url',
+                    'digest', 'progress']
     utils.assign_option_values(adc.options, args, [config_dict], option_names)
+
+    adc.cli_api = True # Set flag that this is being called from the CLI.
 
     exit_status.run(adc.effect)    # Plot the document
     if utils.has_output(adc) and not use_trivial_file:

@@ -25,7 +25,7 @@ formats for easier processing
 Part of the AxiDraw driver for Inkscape
 https://github.com/evil-mad/AxiDraw
 
-Requires Python 3.6 or newer and Pyserial 3.5 or newer.
+Requires Python 3.7 or newer.
 """
 
 import logging
@@ -70,7 +70,6 @@ class DigestSVG:
         self.current_layer = None
         self.current_layer_name = ""
         self.next_id = 0
-        self.warning_text = ""
 
         self.doc_digest = path_objects.DocDigest()
 
@@ -80,7 +79,6 @@ class DigestSVG:
         self.style_dict['fill_rule'] = None
 
         # Variables that will be populated in process_svg():
-        self.warnings = {}
         self.bezier_tolerance = 0
         self.supersample_tolerance = 0
         self.layer_selection = 0
@@ -90,7 +88,7 @@ class DigestSVG:
         self.diagonal_100 = 0
 
 
-    def process_svg(self, node_list, digest_params,  mat_current=None):
+    def process_svg(self, node_list, warnings, digest_params,  mat_current=None):
         """
         Wrapper around routine to recursively traverse an SVG document.
 
@@ -113,12 +111,11 @@ class DigestSVG:
         """
 
         [self.doc_digest.width, self.doc_digest.height, scale_x, scale_y, self.layer_selection,\
-            self.bezier_tolerance, self.supersample_tolerance, _]\
+            self.bezier_tolerance, self.supersample_tolerance]\
             = digest_params
 
         # Store document information in doc_digest
-        self.doc_digest.viewbox = "0 0 {:f} {:f}".format(\
-            self.doc_digest.width, self.doc_digest.height)
+        self.doc_digest.viewbox = f"0 0 {self.doc_digest.width:f} {self.doc_digest.height:f}"
 
         self.doc_width_100 = self.doc_digest.width / scale_x    # Width of a "100% width" object
         self.doc_height_100 = self.doc_digest.height / scale_y  # height of a "100% height" object
@@ -138,11 +135,11 @@ class DigestSVG:
         self.current_layer = root_layer # Layer that graphical elements should be added to
         self.current_layer_name = root_layer.name
 
-        self.traverse(node_list, mat_current)
+        self.traverse(node_list, warnings, mat_current)
         return self.doc_digest
 
 
-    def traverse(self, node_list, mat_current=None,\
+    def traverse(self, node_list, warnings, mat_current=None,\
             parent_visibility='visible'):
         """
         Recursively traverse the SVG file and process all of the paths. Keep
@@ -243,7 +240,7 @@ class DigestSVG:
                     self.current_layer = new_layer
                     self.current_layer_name = str(str_layer_name)
 
-                    self.traverse(node, mat_new, parent_visibility=visibility)
+                    self.traverse(node, warnings, mat_new, parent_visibility=visibility)
 
                     # After parsing a layer, add a new "root layer" for any objects
                     # that may appear in root before the next layer:
@@ -256,26 +253,26 @@ class DigestSVG:
                     self.current_layer = new_layer
                     self.current_layer_name = new_layer.name
                 else: # Regular group or sublayer that we treat as a group.
-                    self.traverse(node, mat_new, parent_visibility=visibility)
+                    self.traverse(node, warnings, mat_new, parent_visibility=visibility)
                 continue
 
             if node.tag == inkex.addNS('symbol', 'svg') or node.tag == 'symbol':
                 # A symbol is much like a group, except that it should only
                 #       be rendered when called within a "use" tag.
                 if self.use_tag_nest_level > 0:
-                    self.traverse(node, mat_new, parent_visibility=visibility)
+                    self.traverse(node, warnings, mat_new, parent_visibility=visibility)
                 continue
 
             if node.tag == inkex.addNS('a', 'svg') or node.tag == 'a':
                 # An 'a' is much like a group, in that it is a generic container element.
-                self.traverse(node, mat_new, parent_visibility=visibility)
+                self.traverse(node, warnings, mat_new, parent_visibility=visibility)
                 continue
 
             if node.tag == inkex.addNS('switch', 'svg') or node.tag == 'switch':
                 # A 'switch' is much like a group, in that it is a generic container element.
                 # We are not presently evaluating conditions on switch elements, but parsing
                 # their contents to the extent possible.
-                self.traverse(node, mat_new, parent_visibility=visibility)
+                self.traverse(node, warnings, mat_new, parent_visibility=visibility)
                 continue
 
             if node.tag == inkex.addNS('use', 'svg') or node.tag == 'use':
@@ -298,7 +295,7 @@ class DigestSVG:
                 refid = node.get(inkex.addNS('href', 'xlink'))
                 if refid is not None:
                     # [1:] to ignore leading '#' in reference
-                    path = '//*[@id="{0}"]'.format(refid[1:])
+                    path = f'//*[@id="{refid[1:]}"]'
                     refnode = node.xpath(path)
                     if refnode is not None:
                         x_val = float(node.get('x', '0'))
@@ -306,13 +303,12 @@ class DigestSVG:
                         # Note: the transform has already been applied
                         if x_val != 0 or y_val != 0:
                             mat_new2 = simpletransform.composeTransform(mat_new,\
-                            simpletransform.parseTransform(\
-                            'translate({0:.6E},{1:.6E})'.format(x_val, y_val)))
+                            simpletransform.parseTransform(f'translate({x_val:.6E},{y_val:.6E})'))
                         else:
                             mat_new2 = mat_new
                         visibility = node.get('visibility', visibility)
                         self.use_tag_nest_level += 1 # Keep track of nested "use" elements.
-                        self.traverse(refnode, mat_new2, parent_visibility=visibility)
+                        self.traverse(refnode, warnings, mat_new2, parent_visibility=visibility)
                         self.use_tag_nest_level -= 1
                 continue
 
@@ -472,11 +468,11 @@ class DigestSVG:
 
                 x_1 = c_x - r_x
                 x_2 = c_x + r_x
-                path_d = 'M {0:f},{1:f} '.format(x_1, c_y) + \
-                         'A {0:f},{1:f} '.format(r_x, r_y) + \
-                         '0 1 0 {0:f},{1:f} '.format(x_2, c_y) + \
-                         'A {0:f},{1:f} '.format(r_x, r_y) + \
-                         '0 1 0 {0:f},{1:f}'.format(x_1, c_y)
+                path_d = f'M {x_1:f},{c_y:f} ' + \
+                         f'A {r_x:f},{r_y:f} ' + \
+                         f'0 1 0 {x_2:f},{c_y:f} ' + \
+                         f'A {r_x:f},{r_y:f} ' + \
+                         f'0 1 0 {x_1:f},{c_y:f}'
                 self.digest_path(path_d, mat_new)
                 continue
             if node.tag == inkex.addNS('metadata', 'svg') or node.tag == 'metadata':
@@ -498,34 +494,10 @@ class DigestSVG:
                 continue
             if node.tag in [inkex.addNS('text', 'svg'), 'text',
                               inkex.addNS('flowRoot', 'svg'), 'flowRoot']:
-                if 'text' not in self.warnings:
-                    if self.current_layer_name == '__digest-root__':
-                        temp_text = ', in the document root.'
-                    else:
-                        temp_text = ', found in a layer named "' +\
-                                        self.current_layer_name + '" .'
-                    text = 'Note: This file contains some plain text' + temp_text
-                    text += '\nPlease convert your text into paths before drawing, '
-                    text += 'using Path > Object to Path.'
-                    text += '\nAlternately use Hershey Text to render the text '
-                    text += 'with stroke-based fonts.\n'
-
-                    self.warning_text += text
-                    self.warnings['text'] = 1
+                warnings.add_new('text', self.current_layer_name)
                 continue
             if node.tag == inkex.addNS('image', 'svg') or node.tag == 'image':
-                if 'image' not in self.warnings:
-
-                    if self.current_layer_name == '__digest-root__':
-                        temp_text = ', in the document root.'
-                    else:
-                        temp_text = ', found in a layer named "' +\
-                                        self.current_layer_name + '" .'
-                    text = 'Note: This file contains a bitmap image' + temp_text
-                    text += 'Please convert images to vectors before drawing. '
-                    text += 'Consider using the Path > Trace bitmap tool.\n'
-                    self.warning_text += text
-                    self.warnings['image'] = 1
+                warnings.add_new('image', self.current_layer_name)
                 continue
             if node.tag == inkex.addNS('pattern', 'svg') or node.tag == 'pattern':
                 continue
@@ -555,17 +527,8 @@ class DigestSVG:
                 # and as such the node tag is likely not a printable string.
                 # Converting it to a printable string likely won't be useful.
                 continue
-            if str(node.tag) not in self.warnings:
-                text = str(node.tag).split('}')
-                if self.current_layer_name == '__digest-root__':
-                    layer_description = "found in file. "
-                else:
-                    layer_description = 'in layer "' + self.current_layer_name + '".'
-                text = 'Warning: unable to plot <' + str(text[-1]) + '> object'
-                text += layer_description + 'Please convert it to a path first.\n'
-                self.warning_text += text
-                self.warnings[str(node.tag)] = 1
-
+            text = str(node.tag).split('}')
+            warnings.add_new(str(text[-1]), self.current_layer_name)
 
     def digest_path(self, path_d, mat_transform):
         """

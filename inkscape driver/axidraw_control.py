@@ -22,7 +22,7 @@ axidraw_control.py
 Part of the AxiDraw driver for Inkscape
 https://github.com/evil-mad/AxiDraw
 
-Requires Python 3.6 or newer
+Requires Python 3.7 or newer
 """
 
 from importlib import import_module
@@ -204,6 +204,9 @@ class AxiDrawWrapperClass( inkex.Effect ):
         prim = "primary" if primary else "secondary"
         logger.info("plot_to_axidraw started, at port %s (%s)", port, prim)
 
+        if not hasattr(self.options, 'progress'): # CLI only option; not part of regular options.
+            self.options.progress = False
+
         # Many plotting parameters to pass through:
 
         selected_options = {item: self.options.__dict__[item] for item in ['mode',
@@ -212,7 +215,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
             'no_rotate', 'const_speed', 'report_time', 'manual_cmd', 'walk_dist',
             'layer', 'copies', 'page_delay', 'preview', 'rendering', 'model',
             'setup_type', 'resume_type', 'auto_rotate', 'resolution', 'reordering',
-            'random_start', 'digest', 'webhook', 'webhook_url',]}
+            'random_start', 'webhook', 'webhook_url', 'digest', 'progress',]}
         ad.options.__dict__.update(selected_options)
 
         ad.options.port = port
@@ -227,6 +230,9 @@ class AxiDrawWrapperClass( inkex.Effect ):
 
         ad.document = self.document
         ad.original_document = self.document
+
+        if hasattr(self, 'cli_api'):
+            ad.plot_status.cli_api = True # Set flag that software called by API
 
         if not primary:
             ad.set_secondary() # Suppress general message reporting; suppress time reporting

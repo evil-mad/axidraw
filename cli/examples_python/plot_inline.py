@@ -73,7 +73,7 @@ SOFTWARE.
 
 
 import random
-from axidrawinternal import axidraw
+from pyaxidraw import axidraw
 
 ad = axidraw.AxiDraw()             # Create class instance
 
