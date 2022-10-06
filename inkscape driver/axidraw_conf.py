@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 #
 # https://github.com/evil-mad/axidraw
-# Version 3.5.0, dated 2022-07-31.
+# Version 3.6.0, dated 2022-10-01.
 #
 # Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -18,48 +18,59 @@ We encourage you to freely tune these values as needed to match the
  behavior and performance of your AxiDraw to your application and taste.
 
 These parameters are used as defaults when using AxiDraw with the command-
- line interface (CLI) or with the python library. With the CLI, you can
- make copies of this configuration file and specify a configuration file.
+ line interface (CLI) or with the python API. With the CLI, you can make
+ copies of this configuration file and specify one as a configuration file.
+ When using the Python API, override individual settings within your script.
 
-If you are operating the AxiDraw from within Inkscape, please set your
- preferences within Inkscape, using the AxiDraw Control dialog.
- Most values listed here are ignored when running within Inkscape.
+ If you are operating the AxiDraw from within Inkscape, please set your
+  preferences within Inkscape, using the AxiDraw Control dialog. Settings
+  that appear both here and in AxiDraw Control will be ignored; those
+  from AxiDraw Control will be used. Other settings can be configured here.
 
-Similarly, values set within Inkscape are ignored when using the CLI or
- python library.
+Settings within Inkscape only affect use within Inkscape, and do not affect
+ the behavior of the AxiDraw CLI or Python APIs.
 
 '''
 
 # DEFAULT VALUES
 
-speed_pendown = 25      # Maximum plotting speed, when pen is down (1-100)
-speed_penup = 75        # Maximum transit speed, when pen is up (1-100)
-accel = 75              # Acceleration rate factor (1-100)
+mode = 'plot'           # Operational mode or GUI tab. Default: 'plot'
 
-pen_pos_up = 60         # Height of pen when raised (0-100)
-pen_pos_down = 30       # Height of pen when lowered (0-100)
+speed_pendown = 25      # Maximum plotting speed, when pen is down (1-100). Default 25
+speed_penup = 75        # Maximum transit speed, when pen is up (1-100). Default 75
+accel = 75              # Acceleration rate factor (1-100). Default 75
 
-pen_rate_raise = 75     # Rate of raising pen (1-100)
-pen_rate_lower = 50     # Rate of lowering pen (1-100)
+pen_pos_up = 60         # Height of pen when raised (0-100). Default 60
+pen_pos_down = 30       # Height of pen when lowered (0-100). Default 30
 
-pen_delay_up = 0        # Optional delay after pen is raised (ms)
-pen_delay_down = 0      # Optional delay after pen is lowered (ms)
+pen_rate_raise = 75     # Rate of raising pen (1-100). Default 75
+pen_rate_lower = 50     # Rate of lowering pen (1-100). Default 50
 
-const_speed = False     # Use constant velocity mode when pen is down
-report_time = False     # Report time elapsed
-default_layer = 1       # Layer(s) selected for layers mode (1-1000)
+pen_delay_up = 0        # Optional delay after pen is raised (ms). Default 0
+pen_delay_down = 0      # Optional delay after pen is lowered (ms). Default 0
+
+const_speed = False     # Use constant velocity mode when pen is down. Default False
+report_time = False     # Report time elapsed. Default False
+
+default_layer = 1       # Layer(s) selected for layers mode (1-1000). Default 1
+
+manual_cmd = 'fw_version'   # Manual command to execute when in manual mode.
+                            # Default 'fw_version'
+
+walk_dist = 1.0         # Distance to walk in "walking" manual commands. Units may be
+                            # selected with the value of manual_cmd. Default 1.0
 
 copies = 1              # Copies to plot, or 0 for continuous plotting. Default: 1
-page_delay = 15         # Optional delay between copies (s).
+page_delay = 15         # Optional delay between copies (s). Default 15
 
-preview = False         # Preview mode; simulate plotting only.
+preview = False         # Preview mode; simulate plotting only. Default False
 rendering = 3           # Preview mode rendering option (0-3):
                             # 0: Do not render previews
                             # 1: Render only pen-down movement
                             # 2: Render only pen-up movement
                             # 3: Render all movement (Default)
 
-model = 1               # AxiDraw Model (1-6)
+model = 1               # AxiDraw Model (1-6). 
                             # 1: AxiDraw V2 or V3 (Default). 2: AxiDraw V3/A3 or SE/A3.
                             # 3: AxiDraw V3 XLX. 4: AxiDraw MiniKit.
                             # 5: AxiDraw SE/A1.  6: AxiDraw SE/A2.
@@ -81,16 +92,12 @@ reordering = 0          # Plot optimization option (0-4; 3 is deprecated)
                             # 2: Full; Also allow path reversal
                             # 4: None; Strictly preserve file order
 
-random_start = False    # Randomize start locations of closed paths. (Default: False)
-
-resolution = 1          # Resolution: (1-2):
-                            # 1: High resolution (smoother, slightly slower) (Default)
-                            # 2: Low resolution (coarser, slightly faster)
+random_start = False    # Randomize start locations of closed paths. Default False
 
 webhook = False         # Enable webhook alerts when True
-                            # Default: False
+                            # Default False
 
-webhook_url = None      # URL for webhook alerts
+webhook_url = None      # URL for webhook alerts. Default None
 
 digest = 0              # Plot digest output option. (NOT supported in Inkscape context.)
                             # 0: Disabled; No change to behavior or output (Default)
@@ -98,8 +105,12 @@ digest = 0              # Plot digest output option. (NOT supported in Inkscape 
                             # 2: Disable plots and previews; generate digest only
 
 progress = False        # Enable progress bar display in AxiDraw CLI, when True
-                            # Default: False
+                            # Default False
                             # This option has no effect in Inkscape or Python API contexts.
+
+resolution = 1          # Resolution: (1-2):
+                            # 1: High resolution (smoother, slightly slower) (Default)
+                            # 2: Low resolution (coarser, slightly faster)
 
 # Effective motor resolution is approx. 1437 or 2874 steps per inch, in the two modes respectively.
 # Note that these resolutions are defined along the native axes of the machine (X+Y) and (X-Y),

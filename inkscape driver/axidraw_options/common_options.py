@@ -127,10 +127,10 @@ def core_options(parser, config):
                         type="int", action="store", dest="reordering",\
                         default=config["reordering"],\
                         help="SVG reordering option (0-4; 3 deprecated)."\
-                        + " 0: Least; Only connect adjoining paths."\
-                        + " 1: Basic; Also reorder paths for speed."\
-                        + " 2: Full; Also allow path reversal."\
-                        + " 4: None; Strictly preserve file order.")
+                        + " 0: Least: Only connect adjoining paths."\
+                        + " 1: Basic: Also reorder paths for speed."\
+                        + " 2: Full: Also allow path reversal."\
+                        + " 4: None: Strictly preserve file order.")
 
     options.add_option("--resolution",\
                         type="int", action="store", dest="resolution",\
@@ -158,11 +158,11 @@ def core_options(parser, config):
     return options
 
 def core_mode_options(parser, config):
-    options = OptionGroup(parser, "Mode Options")    
+    options = OptionGroup(parser, "Mode Options")
 
     options.add_option("--mode",\
                         action="store", type="string", dest="mode",\
-                        default="plot", \
+                        default=config["mode"], \
                         help="Mode or GUI tab. One of: [plot, layers, align, toggle, cycle"\
                         + ", manual, sysinfo, version, res_plot, res_home]. Default: plot.")
 
@@ -173,7 +173,7 @@ def core_mode_options(parser, config):
 
     options.add_option("--manual_cmd",\
                         type="string", action="store", dest="manual_cmd",\
-                        default="fw_version",\
+                        default=config["manual_cmd"],\
                         help="Manual command. One of: [fw_version, raise_pen, lower_pen, "\
                         + "walk_x, walk_y, walk_mmx, walk_mmy, walk_home, enable_xy, "\
                         + "disable_xy, bootload, strip_data, read_name, list_names, "\
@@ -181,8 +181,8 @@ def core_mode_options(parser, config):
 
     options.add_option("--walk_dist",\
                         type="float", action="store", dest="walk_dist",\
-                        default=1,\
-                        help="Distance for manual walk (inches)")
+                        default=config["walk_dist"],\
+                        help="Distance for manual walk")
 
     options.add_option("--layer",\
                         type="int", action="store", dest="layer",\

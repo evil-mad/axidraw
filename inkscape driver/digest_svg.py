@@ -73,11 +73,6 @@ class DigestSVG:
 
         self.doc_digest = path_objects.DocDigest()
 
-        self.style_dict = {}
-        self.style_dict['fill'] = None
-        self.style_dict['stroke'] = None
-        self.style_dict['fill_rule'] = None
-
         # Variables that will be populated in process_svg():
         self.bezier_tolerance = 0
         self.supersample_tolerance = 0
@@ -88,7 +83,7 @@ class DigestSVG:
         self.diagonal_100 = 0
 
 
-    def process_svg(self, node_list, warnings, digest_params,  mat_current=None):
+    def process_svg(self, node_list, warnings, digest_params, mat_current=None):
         """
         Wrapper around routine to recursively traverse an SVG document.
 
@@ -135,12 +130,11 @@ class DigestSVG:
         self.current_layer = root_layer # Layer that graphical elements should be added to
         self.current_layer_name = root_layer.name
 
-        self.traverse(node_list, warnings, mat_current)
+        self.traverse(node_list, None, warnings, mat_current)
         return self.doc_digest
 
 
-    def traverse(self, node_list, warnings, mat_current=None,\
-            parent_visibility='visible'):
+    def traverse(self, node_list, parent_style, warnings, mat_current):
         """
         Recursively traverse the SVG file and process all of the paths. Keep
         track of the composite transformation applied to each path.
@@ -156,33 +150,18 @@ class DigestSVG:
         Inkscape or another vector graphics editor.
         """
 
-        # Future work:
-        #       Ensure that fill and stroke attributes are correctly inherited
-        #       from parents where applicable. E.g., If a group has a stroke.
-        #       Guideline: Match Inkscape's style inheritance behavior
-
         if mat_current is None:
             mat_current = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
 
         for node in node_list:
+            node_visibility = node.get('visibility')
             element_style = simplestyle.parseStyle(node.get('style'))
+            style_dict = inherit_style(parent_style, element_style, node_visibility)
 
-            # Check for "display:none" in the node's style attribute:
-            if 'display' in element_style.keys() and element_style['display'] == 'none':
+            if style_dict['display'] == 'none':
                 continue  # Do not plot this object or its children
-            # The node may have a display="none" attribute as well:
-            if node.get('display') == 'none':
+            if node.get('display') == 'none': # Possible SVG attribute as well
                 continue  # Do not plot this object or its children
-
-            # Visibility attributes control whether a given object will plot.
-            # Children of hidden (not visible) parents may be plotted if
-            # they assert visibility.
-            visibility = node.get('visibility', parent_visibility)
-            if visibility == 'inherit':
-                visibility = parent_visibility
-
-            if 'visibility' in element_style.keys():
-                visibility = element_style['visibility'] # Style may override attribute.
 
             # first apply the current matrix transform to this node's transform
             mat_new = simpletransform.composeTransform(mat_current, \
@@ -240,7 +219,7 @@ class DigestSVG:
                     self.current_layer = new_layer
                     self.current_layer_name = str(str_layer_name)
 
-                    self.traverse(node, warnings, mat_new, parent_visibility=visibility)
+                    self.traverse(node, style_dict, warnings, mat_new)
 
                     # After parsing a layer, add a new "root layer" for any objects
                     # that may appear in root before the next layer:
@@ -253,26 +232,26 @@ class DigestSVG:
                     self.current_layer = new_layer
                     self.current_layer_name = new_layer.name
                 else: # Regular group or sublayer that we treat as a group.
-                    self.traverse(node, warnings, mat_new, parent_visibility=visibility)
+                    self.traverse(node, style_dict, warnings, mat_new)
                 continue
 
             if node.tag == inkex.addNS('symbol', 'svg') or node.tag == 'symbol':
                 # A symbol is much like a group, except that it should only
                 #       be rendered when called within a "use" tag.
                 if self.use_tag_nest_level > 0:
-                    self.traverse(node, warnings, mat_new, parent_visibility=visibility)
+                    self.traverse(node, style_dict, warnings, mat_new)
                 continue
 
             if node.tag == inkex.addNS('a', 'svg') or node.tag == 'a':
                 # An 'a' is much like a group, in that it is a generic container element.
-                self.traverse(node, warnings, mat_new, parent_visibility=visibility)
+                self.traverse(node, style_dict, warnings, mat_new)
                 continue
 
             if node.tag == inkex.addNS('switch', 'svg') or node.tag == 'switch':
                 # A 'switch' is much like a group, in that it is a generic container element.
                 # We are not presently evaluating conditions on switch elements, but parsing
                 # their contents to the extent possible.
-                self.traverse(node, warnings, mat_new, parent_visibility=visibility)
+                self.traverse(node, style_dict, warnings, mat_new)
                 continue
 
             if node.tag == inkex.addNS('use', 'svg') or node.tag == 'use':
@@ -306,9 +285,8 @@ class DigestSVG:
                             simpletransform.parseTransform(f'translate({x_val:.6E},{y_val:.6E})'))
                         else:
                             mat_new2 = mat_new
-                        visibility = node.get('visibility', visibility)
                         self.use_tag_nest_level += 1 # Keep track of nested "use" elements.
-                        self.traverse(refnode, warnings, mat_new2, parent_visibility=visibility)
+                        self.traverse(refnode, style_dict, warnings, mat_new2)
                         self.use_tag_nest_level -= 1
                 continue
 
@@ -318,33 +296,14 @@ class DigestSVG:
                 if self.current_layer_name == '__digest-root__':
                     continue # Do not print root elements if layer_selection >= 0
 
-            if visibility in ('hidden', 'collapse'):
-                # Do not plot this node if it is not visible.
-                # This comes after use, a, and group tags because
-                # items within a hidden item may be visible.
+            if style_dict['visibility'] in ('hidden', 'collapse'):
+                # Not visible; Do not plot. (This comes after the container tags;
+                # visible children of hidden elements can still plot.)
                 continue
-
-            element_style = simplestyle.parseStyle(node.get('style'))
-
-            if 'fill' in element_style.keys():
-                self.style_dict['fill'] = element_style['fill']
-            else:
-                self.style_dict['fill'] = None
-
-            if 'stroke' in element_style.keys():
-                self.style_dict['stroke'] = element_style['stroke']
-            else:
-                self.style_dict['stroke'] = None
-
-            fill_rule = node.get('fill-rule')
-            if fill_rule:
-                self.style_dict['fill_rule'] = fill_rule
-            else:
-                self.style_dict['fill_rule'] = None
 
             if node.tag == inkex.addNS('path', 'svg'):
                 path_d = node.get('d')
-                self.digest_path(path_d, mat_new)
+                self.digest_path(path_d, style_dict, mat_new)
                 continue
             if node.tag == inkex.addNS('rect', 'svg') or node.tag == 'rect':
                 """
@@ -355,10 +314,13 @@ class DigestSVG:
                 https://www.w3.org/TR/SVG11/shapes.html#RectElement
                 """
 
-                x, r_x, width = [plot_utils.unitsToUserUnits(node.get(attr),
-                    self.doc_width_100) for attr in ['x', 'rx', 'width']]
-                y, r_y, height = [plot_utils.unitsToUserUnits(node.get(attr),
-                    self.doc_height_100) for attr in ['y', 'ry', 'height']]
+                x = plot_utils.unitsToUserUnits(node.get('x', '0'), self.doc_width_100)
+                y = plot_utils.unitsToUserUnits(node.get('y', '0'), self.doc_height_100)
+
+                r_x, width = [plot_utils.unitsToUserUnits(node.get(attr),
+                    self.doc_width_100) for attr in ['rx', 'width']]
+                r_y, height = [plot_utils.unitsToUserUnits(node.get(attr),
+                    self.doc_height_100) for attr in ['ry', 'height']]
 
                 def calc_r_attr(attr, other_attr, twice_maximum):
                     value = (attr if attr is not None else
@@ -387,7 +349,7 @@ class DigestSVG:
                     instr.append([' L ', [x, y + height]])
                     instr.append([' L ', [x, y]])
 
-                self.digest_path(simplepath.formatPath(instr), mat_new)
+                self.digest_path(simplepath.formatPath(instr), style_dict, mat_new)
                 continue
             if node.tag == inkex.addNS('line', 'svg') or node.tag == 'line':
                 """
@@ -402,7 +364,7 @@ class DigestSVG:
                 path_a = []
                 path_a.append(['M ', [x_1, y_1]])
                 path_a.append([' L ', [x_2, y_2]])
-                self.digest_path(simplepath.formatPath(path_a), mat_new)
+                self.digest_path(simplepath.formatPath(path_a), style_dict, mat_new)
                 continue
 
             if node.tag in [inkex.addNS('polyline', 'svg'), 'polyline',
@@ -438,7 +400,7 @@ class DigestSVG:
                 if node.tag in [inkex.addNS('polygon', 'svg'), 'polygon']:
                     path_d += " Z"
 
-                self.digest_path(path_d, mat_new) # Vertices are already in user coordinate system
+                self.digest_path(path_d, style_dict, mat_new) # Vertices are already in user coordinate system
                 continue
             if node.tag in [inkex.addNS('ellipse', 'svg'), 'ellipse',
                               inkex.addNS('circle', 'svg'), 'circle']:
@@ -473,7 +435,7 @@ class DigestSVG:
                          f'0 1 0 {x_2:f},{c_y:f} ' + \
                          f'A {r_x:f},{r_y:f} ' + \
                          f'0 1 0 {x_1:f},{c_y:f}'
-                self.digest_path(path_d, mat_new)
+                self.digest_path(path_d, style_dict, mat_new)
                 continue
             if node.tag == inkex.addNS('metadata', 'svg') or node.tag == 'metadata':
                 self.doc_digest.metadata.update(dict(node.attrib))
@@ -530,7 +492,7 @@ class DigestSVG:
             text = str(node.tag).split('}')
             warnings.add_new(str(text[-1]), self.current_layer_name)
 
-    def digest_path(self, path_d, mat_transform):
+    def digest_path(self, path_d, style_dict, mat_transform):
         """
         Parse the path while applying the matrix transformation mat_transform.
         - Input is the "d" string attribute from an SVG path.
@@ -577,9 +539,9 @@ class DigestSVG:
             return # At least one sub-path required
 
         new_path = path_objects.PathItem()
-        new_path.fill = self.style_dict['fill']
-        new_path.stroke = self.style_dict['stroke']
-        new_path.fill_rule = self.style_dict['fill_rule']
+        new_path.fill = style_dict['fill']
+        new_path.stroke = style_dict['stroke']
+        new_path.fill_rule = style_dict['fill-rule']
         new_path.item_id = str(self.next_id)
         self.next_id += 1
 
@@ -589,6 +551,46 @@ class DigestSVG:
         self.current_layer.paths.append(new_path)
 
         logger.debug('End of digest_path()\n')
+
+
+def inherit_style(parent_style, node_style, visibility):
+    '''
+    Parse style dict of node for fill and stroke information only.
+    Inherit style from parent, but supersede it when a local style is defined.
+    Also handle precedence of SVG "visibility" attribute, separate from the style.
+    Note that children of hidden parents may be plotted if they assert visibility.
+    '''
+
+    default_style = dict()
+    default_style['fill'] = None
+    default_style['stroke'] = None
+    default_style['fill-rule'] = None # Future work: Add support for 'nonzero' and 'evenodd'
+    default_style['visibility'] = 'visible'
+    default_style['display'] = None # A null value; not "display:none".
+
+    if parent_style is None: # Use default values when there is no parent
+        parent_style = default_style
+
+    # Use copy, not assignment, so that new_style represents an independent dict:
+    new_style = parent_style.copy()
+
+    if visibility: # Update first, allowing it to be overruled by style attributes
+        new_style['visibility'] = visibility
+
+    if node_style is None: # No additional new style information provided.
+        return new_style
+
+    for attrib in ['fill', 'stroke', 'fill-rule', 'visibility', 'display',]:
+        # Valid for "string" attributes that DO NOT have units that need scaling;
+        # Do not extend this to other style attributes without accounting for that.
+        value = node_style.get(attrib) # Defaults to None, preventing KeyError
+        if value:
+            if value in ['inherit']:
+                new_style[attrib] = parent_style[attrib]
+            else:
+                new_style[attrib] = value
+
+    return new_style
 
 
 def verify_plob(svg, model):

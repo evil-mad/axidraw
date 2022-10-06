@@ -13,11 +13,12 @@ This is a minimal example to show how one can import the AxiDraw module
 and use it to call a utility command for the AxiDraw.
 
 
+---------------------------------------------------------------------
+
 AxiDraw python API documentation is hosted at: https://axidraw.com/doc/py_api/
 
-'''
+---------------------------------------------------------------------
 
-'''
 About this software:
 
 The AxiDraw writing and drawing machine is a product of Evil Mad Scientist
@@ -32,13 +33,14 @@ AxiDraw software development is hosted at https://github.com/evil-mad/axidraw
 
 Additional AxiDraw documentation is available at http://axidraw.com/docs
 
-AxiDraw owners may request technical support for this software through our 
+AxiDraw owners may request technical support for this software through our
 github issues page, support forums, or by contacting us directly at:
 https://shop.evilmadscientist.com/contact
 
 
+---------------------------------------------------------------------
 
-Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -61,7 +63,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 '''
-
 
 
 

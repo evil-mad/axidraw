@@ -37,23 +37,23 @@ text_utils = from_dependency_import('plotink.text_utils')
 #     """
 #     PlotData: Class for data items stored in plotdata elements within the SVG file
 #     Not in use yet
-# 
+#
 #     """
-# 
+#
 #     ITEM_NAMES = ['layer', 'node', 'last_path', 'node_after_path', 'last_known_x',
 #                     'last_known_y', 'paused_x', 'paused_y', 'application',
 #                     'plob_version', 'row', 'randseed']
-# 
+#
 #     def __init__(self):
 #         for key in self.ITEM_NAMES: # Create instance variables in __init__
 #             setattr(self, key, None)
 #         self.reset() # Set defaults via reset function
-# 
+#
 #     def reset(self):
 #         '''Set default values'''
 #         for key in self.ITEM_NAMES: # Set all to 0 except those specified below.
 #             setattr(self, key, 0)
-# 
+#
 #         self.svg_layer = -2
 #         self.svg_rand_seed = 1
 #         self.svg_application = None
@@ -63,9 +63,9 @@ text_utils = from_dependency_import('plotink.text_utils')
 #     """
 #     PlotData: Class for managing plotdata elements
 #     Not in use yet
-# 
+#
 #     """
-# 
+#
 #     def __init__(self):
 #         self.svg_data_read = False
 #         self.svg_data_written = False
@@ -79,9 +79,53 @@ class PlotStats: # pylint: disable=too-few-public-methods
     """
 
     def __init__(self):
-        # self.pen_up_travel_inches = 0 # not yet implemented
-        # self.pen_down_travel_inches = 0 # not yet implemented
+        self.up_travel_inch = 0 # Pen-up travel distance, inches
+        self.down_travel_inch = 0 # Pen-down travel distance, inches
         self.pt_estimate = 0 # Plot time estimate, ms
+        self.page_delays = 0 # Delays between pages, ms
+
+    def reset(self):
+        ''' Reset attributes to defaults '''
+        self.up_travel_inch = 0
+        self.down_travel_inch = 0
+        self.pt_estimate = 0
+        self.page_delays = 0
+
+
+    def add_dist(self, pen_up, distance_inch):
+        """ add_dist: Add distance of the current plot segment to total distances """
+        if pen_up:
+            self.up_travel_inch += distance_inch
+        else:
+            self.down_travel_inch += distance_inch
+
+    def report(self, options, message_fun, elapsed_time):
+        """ report: Format and print time and distance statistics """
+
+        if not options.report_time:
+            return
+
+        d_dist = 0.0254 * self.down_travel_inch
+        u_dist = 0.0254 * self.up_travel_inch
+        t_dist = d_dist + u_dist # Total distance
+
+        delay_text = ""
+        elapsed_text = text_utils.format_hms(elapsed_time)
+        if self.page_delays > 0:
+            delay_text = ",\nincluding page delays of: " +\
+                text_utils.format_hms(self.page_delays, True)
+
+        if options.preview:
+            message_fun("Estimated print time: " +\
+                text_utils.format_hms(self.pt_estimate, True) + delay_text)
+            message_fun(f"Length of path to draw: {d_dist:1.2f} m")
+            message_fun(f"Pen-up travel distance: {u_dist:1.2f} m")
+            message_fun(f"Total movement distance: {t_dist:1.2f} m")
+            message_fun("This estimate took " + elapsed_text + "\n")
+        else:
+            message_fun("Elapsed time: " + elapsed_text + delay_text)
+            message_fun(f"Length of path drawn: {d_dist:1.2f} m")
+            message_fun(f"Total distance moved: {t_dist:1.2f} m\n")
 
 
 class ProgressBar:
@@ -152,7 +196,7 @@ class ProgressBar:
 
         self.last = 0
 
-        if total_in== None:
+        if total_in is None:
             total_val = self.total
         else:
             total_val = total_in
@@ -224,16 +268,13 @@ class PlotStatus:
     PlotStatus: Data storage class for plot status variables
     """
 
-    CONFIG_ITEMS = ['secondary', 'called_externally', 'cli_api']
-    PAUSE_ITEMS = ['force_pause', 'delay_between_copies']
+    CONFIG_ITEMS = ['secondary', 'called_externally', 'cli_api', 'delay_between_copies']
 
     def __init__(self):
         self.port = None
         self.copies_to_plot = 1
-        self.b_stopped = False
+        self.stopped = 0 # Status code. If a plot is stopped, record why.
         for key in self.CONFIG_ITEMS: # Create instance variables in __init__
-            setattr(self, key, False)
-        for key in self.PAUSE_ITEMS: # Create instance variables in __init__
             setattr(self, key, False)
         self.apply_defaults() # Apply default values of the above attributes
         self.resume = ResumeStatus()
@@ -243,9 +284,8 @@ class PlotStatus:
     def apply_defaults(self):
         ''' Reset attributes to defaults '''
         self.port = None
-        self.b_stopped = False
-        for key in self.PAUSE_ITEMS:
-            setattr(self, key, False)
+        self.stopped = 0 # Default value 0 ("not stopped")
+        self.delay_between_copies = False
 
     def reset(self):
         ''' Reset attributes and resume attributes to defaults '''

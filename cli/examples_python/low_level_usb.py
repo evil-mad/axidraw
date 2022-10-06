@@ -2,13 +2,36 @@
 # -*- encoding: utf-8 -#-
 
 '''
-interactive_penheights.py
+low_level_usb.py
 
-Demonstrate use of axidraw module in "interactive" mode.
-Set pen to different heights.
+Demonstrate advanced features of axidraw python module in "interactive" mode.
 
-Run this demo by calling: python interactive_penheights.py
 
+This demo file shows off the "usb_command" and "usb_query" features of
+the interactive API. Interaction through these two commands essentially bypass
+all software counters, speed, position, and limit checks that otherwise
+ensure safe operations.
+
+While these two "low-level USB" serial interface functions are very direct, they are also
+powerful and potentially dangerous. They should be used with reluctance and caution,
+since improper use is capable of causing damage of an unpredictable nature.
+
+The serial protocol is documented at:
+http://evil-mad.github.io/EggBot/ebb.html
+
+
+This particular example file demonstrates:
+* Moving the carriage away from the home position via moveto
+* Querying and printing the firmware version via usb_query
+* Querying and printing the step position via usb_query
+* Returning to the home position via usb_command
+
+
+The functions demonstrated here require that the AxiDraw has at least
+firmware version 2.6.2. Visit http://axidraw.com/fw for information
+about firmware updates.
+
+Run this demo by calling: python low_level_usb.py
 
 
 ---------------------------------------------------------------------
@@ -72,8 +95,9 @@ SOFTWARE.
 
 '''
 
+
+
 import sys
-import time
 
 from pyaxidraw import axidraw
 
@@ -85,26 +109,14 @@ connected = ad.connect()    # Open serial port to AxiDraw
 if not connected:
     sys.exit() # end script
 
-ad.penup()
+ad.moveto(2,1)                  # Absolute pen-up move, to (2 inch, 1 inch)
 
-# Change some options, just to show how we do so:
+version = ad.usb_query("V\r") # Query firmware version
+print("Firmware version data: " + version)
 
-ad.options.pen_pos_down = 40
-ad.options.pen_pos_up = 60
-ad.update()                 # Process changes to options
+step_pos = ad.usb_query("QS\r") # Query step position
+print("Step pos: " + step_pos)
 
-ad.pendown()
-time.sleep(1.0)
-ad.penup()
-time.sleep(1.0)
-
-ad.options.pen_pos_down = 0
-ad.options.pen_pos_up = 100
-
-ad.update()                 # Process changes to options
-
-ad.pendown()
-time.sleep(1.0)
-ad.penup()
+ad.usb_command("HM,3200\r")    # Return home at a rate of 3200 steps per second
 
 ad.disconnect()             # Close serial port to AxiDraw

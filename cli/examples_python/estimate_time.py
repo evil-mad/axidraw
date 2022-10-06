@@ -9,11 +9,23 @@ that it will take to plot an SVG file.
 
 Run this demo by calling: python estimate_time.py
 
+
+---------------------------------------------------------------------
+
+About the interactive API:
+
+Interactive mode is a mode of use, designed for plotting individual motion
+segments upon request, using direct XY control. It is a complement to the
+usual plotting modes, which take an SVG document as input.
+
+So long as the AxiDraw is started in the home corner, moves are limit checked,
+and constrained to be within the safe travel range of the AxiDraw.
+
+
 AxiDraw python API documentation is hosted at: https://axidraw.com/doc/py_api/
 
-'''
+---------------------------------------------------------------------
 
-'''
 About this software:
 
 The AxiDraw writing and drawing machine is a product of Evil Mad Scientist
@@ -28,13 +40,14 @@ AxiDraw software development is hosted at https://github.com/evil-mad/axidraw
 
 Additional AxiDraw documentation is available at http://axidraw.com/docs
 
-AxiDraw owners may request technical support for this software through our 
+AxiDraw owners may request technical support for this software through our
 github issues page, support forums, or by contacting us directly at:
 https://shop.evilmadscientist.com/contact
 
 
+---------------------------------------------------------------------
 
-Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -58,7 +71,7 @@ SOFTWARE.
 
 '''
 
-
+import sys
 import os.path
 from pyaxidraw import axidraw
 
@@ -70,37 +83,33 @@ called from either the root or examples_python directory, or if you're
 in the same directory with the test file.
 '''
 
-location1 = "test/assets/AxiDraw_trivial.svg"
-location2 = "../test/assets/AxiDraw_trivial.svg"
-location3 = "AxiDraw_trivial.svg"
+LOCATION1 = "test/assets/AxiDraw_trivial.svg"
+LOCATION2 = "../test/assets/AxiDraw_trivial.svg"
+LOCATION3 = "AxiDraw_trivial.svg"
 
-file = None
+FILE = None
 
-if os.path.exists(location1):
-    file = location1
-if os.path.exists(location2):
-    file = location2
-if os.path.exists(location3):
-    file = location3
+if os.path.exists(LOCATION1):
+    FILE = LOCATION1
+if os.path.exists(LOCATION2):
+    FILE = LOCATION2
+if os.path.exists(LOCATION3):
+    FILE = LOCATION3
 
-if file:
-    print("Example file located at: " + file)
-    ad.plot_setup(file)    # Parse the input file
+if FILE:
+    print("Example file located at: " + FILE)
+    ad.plot_setup(FILE)    # Parse the input file
 else:
     print("Unable to locate example file; exiting.")
-    exit()
+    sys.exit() # end script
 
-'''
-The above code, starting with "location1" can all be replaced by a single line
-if you already know where the file is. This can be as simple as:
-
-ad.plot_setup("AxiDraw_trivial.svg")
-'''
+# The above code, starting with "LOCATION1" can all be replaced by a single line
+# if you already know where the file is. This can be as simple as:
+# ad.plot_setup("AxiDraw_trivial.svg")
 
 ad.options.preview  = True
 ad.options.report_time = True # Enable time estimates
 
 ad.plot_run()   # plot the document
 print_time_seconds = ad.time_estimate
-print("Estimated print time: {0} s".format(print_time_seconds))
-
+print(f"Estimated print time: {print_time_seconds} s")

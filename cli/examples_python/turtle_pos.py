@@ -11,6 +11,10 @@ current_pos, turtle_pos, current_pen, turtle_pen
 Run this demo by calling: python turtle_pos.py
 
 
+---------------------------------------------------------------------
+
+About the interactive API:
+
 Interactive mode is a mode of use, designed for plotting individual motion
 segments upon request, using direct XY control. It is a complement to the
 usual plotting modes, which take an SVG document as input.
