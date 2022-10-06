@@ -79,16 +79,16 @@ class PlotWarnings:
                 )
             self.warning_dict.pop('voltage')
 
-            if 'bounds' in self.warning_dict:
-                if 'bounds' not in self.suppress_list:
-                    warning_text_list.append(
-                        "Warning (bounds): " +
-                        "AxiDraw movement was limited by its physical range of motion." +
-                        "\nIf everything else looks correct, you may have an issue with" +
-                        "your document size, or you may have the wrong AxiDraw model selected." +
-                        "\nPlease contact technical support if you need assistance.\n"
-                    )
-                self.warning_dict.pop('bounds')
+        if 'bounds' in self.warning_dict:
+            if 'bounds' not in self.suppress_list:
+                warning_text_list.append(
+                    "Warning (bounds): AxiDraw movement was limited by its" +
+                    "\nphysical range of motion. If everything else looks" +
+                    "\ncorrect, there may be an issue with the document size," +
+                    "\nor the wrong model of AxiDraw may be selected." +
+                    "\nPlease contact technical support if you need assistance.\n"
+                )
+            self.warning_dict.pop('bounds')
 
         if 'image' in self.warning_dict:
             if 'image' not in self.suppress_list:
@@ -103,12 +103,12 @@ class PlotWarnings:
         if 'text' in self.warning_dict:
             if 'text' not in self.suppress_list:
                 warning_text_list.append(
-                    'Note (plain-text): This file contains some plain text' +
+                    'Note (plain-text): This file contains some plain text\n' +
                     layer_name_text(self.warning_dict['text']) +
-                    "\nPlease convert text into paths vectors before plotting." +
+                    "\nPlease convert text into vector paths before plotting." +
                     "\nConsider using the Inkscape Path > Object to Path tool." +
-                    "\nAlternately, consider using Hershey Text to render your text " +
-                    "with stroke-based fonts.\n"
+                    "\nAlternately, consider using Hershey Text to render your" +
+                    "\ntext with stroke-based fonts.\n"
                 )
             self.warning_dict.pop('text')
 

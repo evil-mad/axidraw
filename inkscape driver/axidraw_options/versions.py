@@ -45,10 +45,12 @@ def get_versions_online():
     url = "https://evilmadscience.s3.amazonaws.com/sites/axidraw/versions.txt"
     text = None
     try:
-        text = requests.get(url).text
+        text = requests.get(url, timeout=15).text
+    except requests.exceptions.Timeout as err:
+        raise RuntimeError("Unable to check for updates online; connection timed out.\n") from err
     except (RuntimeError, requests.exceptions.ConnectionError) as err_info:
         raise RuntimeError("Could not contact server to check for updates. " +
-                    f"Are you connected to the internet?\n\n(Error details: {err_info})\n")
+            f"Are you connected to the internet?\n\n(Error details: {err_info})\n") from err_info
 
     if text:
         try:
@@ -76,8 +78,8 @@ def get_fw_version(serial_port):
         fw_version_string = fw_version_string.strip() # For number comparisons
         return fw_version_string
     except RuntimeError as err_info:
-        raise RuntimeError(f"Error retrieving the EBB firmware version.\n\n(Error: {err_info})\n")
-
+        raise RuntimeError(f"Error retrieving the EBB firmware version.\n\n(Error: {err_info})\n")\
+            from err_info
 
 def get_current(serial_port):
     '''
@@ -104,8 +106,6 @@ def log_axidraw_control_version(online_versions, current_version_string, log_fun
     `online_versions` is a Versions namedtuple or False,
     e.g. the return value of get_versions_online
     '''
-    log_fun(f"This is AxiDraw Control version {current_version_string}.")
-
     if online_versions:
         if parse(online_versions.axidraw_control) > parse(current_version_string):
             log_fun("An update is available to a newer version, " +
@@ -128,7 +128,6 @@ def log_ebb_version(fw_version_string, online_versions, log_fun):
     '''
     `online_versions` is False if we failed or didn't try to get the online versions
     '''
-    # log_fun("\nYour AxiDraw has firmware version {}.".format(fw_version_string))
     log_fun(f"\nYour AxiDraw has firmware version {fw_version_string}.")
 
     if online_versions:
@@ -144,6 +143,7 @@ def log_version_info(serial_port, check_updates, current_version_string, preview
     works whether or not `check_updates` is True, online versions were successfully retrieved,
     or `serial_port` is None (i.e. not connected AxiDraw)
     '''
+    message_fun(f"This is AxiDraw Control version {current_version_string}.")
     online_versions = False
     if check_updates:
         try:

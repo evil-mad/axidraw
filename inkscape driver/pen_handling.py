@@ -34,7 +34,6 @@ The classes defined by this module are:
 
 * PenStatus: Data storage class for pen lift status variables
 
-
 """
 
 import time
@@ -45,7 +44,6 @@ ebb_motion = from_dependency_import('plotink.ebb_motion')
 # inkex = from_dependency_import('ink_extensions.inkex')
 
 
-
 class PenHeight:
     """
     PenHeight: Class to manage pen-down height settings.
@@ -54,8 +52,7 @@ class PenHeight:
 
     def __init__(self):
         self.pen_pos_down = None # Initial values must be set by update().
-        self.pen_pos_down_default = None
-        self.use_temp_pen_height = None # Boolean set true while using temporary value
+        self.use_temp_pen_height = False # Boolean set true while using temporary value
         self.times = PenLiftTiming()
 
     def update(self, options, params):
@@ -63,9 +60,8 @@ class PenHeight:
         Set initial/default values of options, after __init__.
         Call this function after changing option values to update pen height settings.
         '''
-        self.pen_pos_down = options.pen_pos_down
-        self.pen_pos_down_default = options.pen_pos_down
-        self.use_temp_pen_height = False
+        if not self.use_temp_pen_height:
+            self.pen_pos_down = options.pen_pos_down
         self.times.update(options, params, self.pen_pos_down)
 
     def set_temp_height(self, options, params, temp_height):
@@ -76,6 +72,7 @@ class PenHeight:
         if self.pen_pos_down == temp_height:
             return False
         self.pen_pos_down = temp_height
+
         self.times.update(options, params, temp_height)
         return True
 
@@ -84,9 +81,9 @@ class PenHeight:
         End using temporary pen height position. Return True if the position has changed.
         '''
         self.use_temp_pen_height = False
-        if self.pen_pos_down == self.pen_pos_down_default:
+        if self.pen_pos_down == options.pen_pos_down:
             return False
-        self.pen_pos_down = self.pen_pos_down_default
+        self.pen_pos_down = options.pen_pos_down
         self.times.update(options, params, self.pen_pos_down)
         return True
 
@@ -156,6 +153,12 @@ class PenStatus: # pylint: disable=too-few-public-methods
         self.virtual_pen_up = False
         self.lifts = 0
 
+    def report(self, params, message_fun):
+        """ report: Print pen lift statistics """
+        if not params.report_lifts:
+            return
+        message_fun(f"Number of pen lifts: {self.lifts}\n")
+
 class PenHandler:
     """
     PenHandler: Main class for managing pen lifting, lowering, and status
@@ -191,22 +194,15 @@ class PenHandler:
         self.status.lifts += 1
 
         v_time = self.heights.times.raise_time
-        if options.preview:
-            pass
-            # Old functionality in axidraw.py:
-            # self.update_v_charts(0, 0, 0)
-            # self.vel_data_time += v_time
-            # self.update_v_charts(0, 0, 0)
-            # self.pt_estimate += v_time
-        else:
-            ebb_motion.sendPenUp(plot_status.port, v_time, params.servo_pin)
-            if params.use_b3_out:
-                ebb_motion.PBOutValue( plot_status.port, 3, 0 ) # I/O Pin B3 output: low
+        if not options.preview:
+            ebb_motion.sendPenUp(plot_status.port, v_time, params.servo_pin, False)
             if (v_time > 50) and (options.mode not in ["manual", "align", "toggle", "cycle"]):
                 time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
+            if params.use_b3_out:
+                ebb_motion.PBOutValue( plot_status.port, 3, 0, False) # I/O Pin B3 output: low
         self.status.pen_up = True
         if not self.status.ebblv_set:
-            ebb_motion.setEBBLV(plot_status.port, options.pen_pos_up + 1)
+            ebb_motion.setEBBLV(plot_status.port, options.pen_pos_up + 1, False)
             self.status.ebblv_set = True
         return v_time
 
@@ -221,24 +217,17 @@ class PenHandler:
                 return 0 # skip if pen is state is _known_ and is down
 
         # Skip if stopped, or if resuming:
-        if plot_status.resume.resume_mode or plot_status.b_stopped:
+        if plot_status.resume.resume_mode or plot_status.stopped:
             return 0
 
         v_time = self.heights.times.lower_time
 
-        if options.preview:
-            pass
-        # URGENT TODO: Replace this functionality in axidraw.py
-            # self.update_v_charts(0, 0, 0)
-            # self.vel_data_time += v_time
-            # self.update_v_charts(0, 0, 0)
-            # self.pt_estimate += v_time
-        else:
-            ebb_motion.sendPenDown(plot_status.port, v_time, params.servo_pin)
-            if params.use_b3_out:
-                ebb_motion.PBOutValue( plot_status.port, 3, 1 ) # I/O Pin B3 output: high
+        if not options.preview:
+            ebb_motion.sendPenDown(plot_status.port, v_time, params.servo_pin, False)
             if (v_time > 50) and (options.mode not in ["manual", "align", "toggle", "cycle"]):
                 time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
+            if params.use_b3_out:
+                ebb_motion.PBOutValue( plot_status.port, 3, 1, False) # I/O Pin B3 output: high
         self.status.pen_up = False
         return v_time
 
@@ -262,8 +251,8 @@ class PenHandler:
         Call only after servo_setup_wrapper().
         This function should only be used as a setup utility.
         """
-        v_time = self.pen_lower(options, params, plot_status)
-        time.sleep((v_time + 500.0) / 1000.0)
+        self.pen_lower(options, params, plot_status)
+        ebb_serial.command(plot_status.port, 'SM,500,0,0\r')
         self.pen_raise(options, params, plot_status)
 
 
@@ -326,10 +315,12 @@ class PenHandler:
             return
 
         # Need to figure out if we're in the pen-up or pen-down state, or indeterminate:
-        value = ebb_motion.queryEBBLV(status.port)
+        value = ebb_motion.queryEBBLV(status.port, False)
+        if value is None:
+            return
         if int(value) != options.pen_pos_up + 1:
             # See "Methods" above for what's going on here.
-            ebb_motion.setEBBLV(status.port, 0)
+            ebb_motion.setEBBLV(status.port, 0, False)
             self.status.ebblv_set = False
             self.status.virtual_pen_up = False
 
@@ -337,7 +328,7 @@ class PenHandler:
                 # Note, however, that this does not ensure that the current
                 #    Z position matches that in the settings.
             self.status.ebblv_set = True
-            if ebb_motion.QueryPenUp(status.port):
+            if ebb_motion.QueryPenUp(status.port, False):
                 self.status.pen_up = True
                 self.status.virtual_pen_up = True
             else:
@@ -361,18 +352,18 @@ class PenHandler:
             return
 
         self.heights.update(options, params) # Ensure heights and transit times are known
-
         servo_range = params.servo_max - params.servo_min
         servo_slope = float(servo_range) / 100.0
+
         int_temp = int(round(params.servo_min + servo_slope * options.pen_pos_up))
-        ebb_motion.setPenUpPos(status.port, int_temp)
+        ebb_motion.setPenUpPos(status.port, int_temp, False)
         int_temp = int(round(params.servo_min + servo_slope * self.heights.pen_pos_down))
-        ebb_motion.setPenDownPos(status.port, int_temp)
+        ebb_motion.setPenDownPos(status.port, int_temp, False)
 
         servo_rate_scale = float(servo_range) * 0.24 / params.servo_sweep_time
         int_temp = int(round(servo_rate_scale * options.pen_rate_raise))
-        ebb_motion.setPenUpRate(status.port, int_temp)
-        int_temp = int(round(servo_rate_scale * options.pen_rate_lower))
-        ebb_motion.setPenDownRate(status.port, int_temp)
+        ebb_motion.setPenUpRate(status.port, int_temp, False)
 
-        ebb_motion.servo_timeout(status.port, params.servo_timeout) # Set servo power timeout
+        int_temp = int(round(servo_rate_scale * options.pen_rate_lower))
+        ebb_motion.setPenDownRate(status.port, int_temp, False)
+        ebb_motion.servo_timeout(status.port, params.servo_timeout, None, False)

@@ -73,7 +73,7 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface 3.5.0"
+cli_version = "AxiDraw Command Line Interface 3.6.0"
 
 quick_help = '''
     Basic syntax to plot a file:      axicli svg_in [OPTIONS]
@@ -162,7 +162,7 @@ def axidraw_CLI(dev = False):
 
     parser.add_argument("-w","--walk_dist", \
             metavar='DISTANCE', type=float, \
-            help="Distance for manual walk (inches)")
+            help="Distance for manual walk")
 
     parser.add_argument("-l","--layer", \
             type=int, \
@@ -344,5 +344,8 @@ def axidraw_CLI(dev = False):
     exit_status.run(adc.effect)    # Plot the document
     if utils.has_output(adc) and not use_trivial_file:
         utils.output_result(args.output_file, adc.outdoc)
+
+    if adc.status_code >= 100: # Give non-zero exit code.
+        sys.exit(1) # No need to be more verbose; we have already printed error messages.
 
     return adc if dev else None # returning adc is useful for tests

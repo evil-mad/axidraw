@@ -62,6 +62,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
             # use default configuration file
             params = import_module("axidrawinternal.axidraw_conf") # Configuration file
         self.params = params
+        self.status_code = 0
 
         inkex.Effect.__init__( self )
 
@@ -188,7 +189,6 @@ class AxiDrawWrapperClass( inkex.Effect ):
                 self.options.port = None
             self.plot_to_axidraw(self.options.port, True)
 
-
     def plot_to_axidraw( self, port, primary):
         """ Delegate the plot to a particular AxiDraw """
 #         if primary:
@@ -242,6 +242,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
         if primary:
             self.document = ad.document
             self.outdoc =  ad.get_output() # Collect output from axidraw.py
+            self.status_code = ad.plot_status.stopped
         else:
             if ad.error_out:
                 if port is not None:
