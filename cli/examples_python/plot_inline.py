@@ -15,18 +15,12 @@ This is a short example to show how one can:
 * Compose a string containing SVG -- what would be an SVG file *if* we saved it.
 * Plot that SVG string with the AxiDraw.
 
+---------------------------------------------------------------------
 
 AxiDraw python API documentation is hosted at: https://axidraw.com/doc/py_api/
 
-'''
+---------------------------------------------------------------------
 
-
-
-
-
-
-
-'''
 About this software:
 
 The AxiDraw writing and drawing machine is a product of Evil Mad Scientist
@@ -41,13 +35,14 @@ AxiDraw software development is hosted at https://github.com/evil-mad/axidraw
 
 Additional AxiDraw documentation is available at http://axidraw.com/docs
 
-AxiDraw owners may request technical support for this software through our 
+AxiDraw owners may request technical support for this software through our
 github issues page, support forums, or by contacting us directly at:
 https://shop.evilmadscientist.com/contact
 
 
+---------------------------------------------------------------------
 
-Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -90,7 +85,7 @@ you run the script
 
 """
 
-svg_head = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+SVG_HEAD = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
     <svg
         xmlns:dc="http://purl.org/dc/elements/1.1/"
         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
@@ -103,10 +98,10 @@ svg_head = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
         width="297mm">
     """
 
-svg_tail = "</svg>"
+SVG_TAIL = "</svg>"
 
 # Add a circle at X = 40 mm, Y = 30 mm, r = 10 mm
-svg_body = """<circle
+SVG_BODY = """<circle
         r="10"
         cy="30"
         cx="40"
@@ -114,28 +109,28 @@ svg_body = """<circle
         """
 
 # Add a rectangle at X = 10 mm, Y = 10 mm, width = 50 mm, height = 10 mm
-svg_body += """<rect
+SVG_BODY += """<rect
         x="10"
         y="10"
         width="50"
         height="10"
         id="rect1" />
-        """ 
+        """
 
 # Add a path starting at 70,40, using absolute Moveto (M) and absolute Lineto (L) commands.
 #   Additional coordinate pairs following L X,Y are additional lineto coordinates.
-svg_body += """<path
+SVG_BODY += """<path
         d="M 70,40 L 70,30 80,30 80,40 90,40 90,30 100,30 100,40 M 110,40 L 110,30 120,30 120,40 130,40 130,30 140,30 140,40"
         id="path1" />
-        """ 
+        """
 
 # Add a similar path starting at 70,70, using relative moveto (m) and relative lineto (l) commands.
 #   (except for the first absolute move)
 
-svg_body += """<path
+SVG_BODY += """<path
         d="M 70,70 l0,-10 10,0 0,10 10,0 0,-10 10,0 0,10 m10,0 l0,-10 10,0 0,10 10,0 0,-10 10,0 0,10"
         id="path2" />
-        """ 
+        """
 
 # Add a programatic ellipse, with randomly generated size and position.
 # This will be different every time that you run this script.
@@ -145,15 +140,15 @@ cy = 20 + 80 * random.random()
 rx = 20 * random.random()
 ry = 20 * random.random()
 
-random_ellipse = '<ellipse rx="{:f}" ry="{:f}" cx="{:f}" cy="{:f}" id="rand" />'
-random_ellipse = random_ellipse.format( rx, ry, cx, cy)
+RANDOM_ELLIPSE = '<ellipse rx="{:f}" ry="{:f}" cx="{:f}" cy="{:f}" id="rand" />'
+RANDOM_ELLIPSE = RANDOM_ELLIPSE.format( rx, ry, cx, cy)
 
-svg_body += random_ellipse
+SVG_BODY += RANDOM_ELLIPSE
 
 
-svg = svg_head + svg_body + svg_tail
+SVG = SVG_HEAD + SVG_BODY + SVG_TAIL
 
-ad.plot_setup(svg)    # Parse the SVG 
+ad.plot_setup(SVG)    # Parse the SVG
 
 ad.options.speed_pendown = 50 # Set maximum pen-down speed to 50%
 
@@ -165,4 +160,3 @@ https://axidraw.com/doc/py_api/
 '''
 
 ad.plot_run()   # plot the document
-

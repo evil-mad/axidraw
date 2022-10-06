@@ -5,15 +5,28 @@
 interactive_penheights.py
 
 Demonstrate use of axidraw module in "interactive" mode.
-
 Set pen to different heights.
 
 Run this demo by calling: python interactive_penheights.py
 
-'''
 
 
-'''
+---------------------------------------------------------------------
+
+About the interactive API:
+
+Interactive mode is a mode of use, designed for plotting individual motion
+segments upon request, using direct XY control. It is a complement to the
+usual plotting modes, which take an SVG document as input.
+
+So long as the AxiDraw is started in the home corner, moves are limit checked,
+and constrained to be within the safe travel range of the AxiDraw.
+
+
+AxiDraw python API documentation is hosted at: https://axidraw.com/doc/py_api/
+
+---------------------------------------------------------------------
+
 About this software:
 
 The AxiDraw writing and drawing machine is a product of Evil Mad Scientist
@@ -28,13 +41,14 @@ AxiDraw software development is hosted at https://github.com/evil-mad/axidraw
 
 Additional AxiDraw documentation is available at http://axidraw.com/docs
 
-AxiDraw owners may request technical support for this software through our 
+AxiDraw owners may request technical support for this software through our
 github issues page, support forums, or by contacting us directly at:
 https://shop.evilmadscientist.com/contact
 
 
+---------------------------------------------------------------------
 
-Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -66,31 +80,31 @@ from pyaxidraw import axidraw
 ad = axidraw.AxiDraw() # Initialize class
 
 ad.interactive()            # Enter interactive mode
-connected = ad.connect()    # Open serial port to AxiDraw 
+connected = ad.connect()    # Open serial port to AxiDraw
 
 if not connected:
     sys.exit() # end script
-    
+
 ad.penup()
 
 # Change some options, just to show how we do so:
 
 ad.options.pen_pos_down = 40
 ad.options.pen_pos_up = 60
-ad.update()                 # Process changes to options 
+ad.update()                 # Process changes to options
 
 ad.pendown()
-time.sleep(1.0) 
+time.sleep(1.0)
 ad.penup()
-time.sleep(1.0) 
+time.sleep(1.0)
 
 ad.options.pen_pos_down = 0
 ad.options.pen_pos_up = 100
 
-ad.update()                 # Process changes to options 
+ad.update()                 # Process changes to options
 
 ad.pendown()
-time.sleep(1.0) 
+time.sleep(1.0)
 ad.penup()
 
 ad.disconnect()             # Close serial port to AxiDraw

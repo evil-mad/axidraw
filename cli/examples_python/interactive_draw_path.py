@@ -10,6 +10,9 @@ paths using the draw_path function.
 Run this demo by calling: python interactive_draw_path.py
 
 
+---------------------------------------------------------------------
+
+About the interactive API:
 
 Interactive mode is a mode of use, designed for plotting individual motion
 segments upon request, using direct XY control. It is a complement to the
@@ -43,8 +46,7 @@ https://shop.evilmadscientist.com/contact
 
 ---------------------------------------------------------------------
 
-
-Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -74,8 +76,6 @@ import time
 from pyaxidraw import axidraw
 
 ad = axidraw.AxiDraw() # Initialize class
-
-
 
 def print_position():
     '''
@@ -120,7 +120,6 @@ ad.options.units = 2 # Switch to cm units
 ad.update() # Process changes to options
 ad.draw_path(vertex_list_1) # Plot the path
 print_position()
-
 
 
 ad.options.units = 0 # Switch to inch units

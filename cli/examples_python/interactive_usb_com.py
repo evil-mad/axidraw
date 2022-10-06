@@ -4,7 +4,8 @@
 '''
 interactive_usb_com.py
 
-This demonstration toggles a hobby servo motor, connected to I/O B3.
+This demonstration toggles a hobby servo motor, connected to I/O B3,
+using advanced features of the AxiDraw Python API.
 
 In doing so, it demonstrates the following "advanced" topics:
 * Issuing a "low level" direct EBB USB command
@@ -22,17 +23,30 @@ Hardware setup:
 
 The pen-lift servo on an AxiDraw V3 is normally connected to output B1,
 the *lowest* set of three pins on the AxiDraw's EBB control board, with the
-black wire (ground) towards the back of the machine. 
+black wire (ground) towards the back of the machine.
 
-To try this demo, connect a hobby servo motor to pins B3, which is the 
+To try this demo, connect a hobby servo motor to pins B3, which is the
 *highest* set of three pins on the AxiDraw's EBB control board, three positions
 above the standard servo motor position. You can disconnect the servo motor
 connection from the lowest three pins and moving it to the highest three pins,
 keeping the black wire towards the back of the machine.
 
-'''
+---------------------------------------------------------------------
 
-'''
+About the interactive API:
+
+Interactive mode is a mode of use, designed for plotting individual motion
+segments upon request, using direct XY control. It is a complement to the
+usual plotting modes, which take an SVG document as input.
+
+So long as the AxiDraw is started in the home corner, moves are limit checked,
+and constrained to be within the safe travel range of the AxiDraw.
+
+
+AxiDraw python API documentation is hosted at: https://axidraw.com/doc/py_api/
+
+---------------------------------------------------------------------
+
 About this software:
 
 The AxiDraw writing and drawing machine is a product of Evil Mad Scientist
@@ -47,13 +61,14 @@ AxiDraw software development is hosted at https://github.com/evil-mad/axidraw
 
 Additional AxiDraw documentation is available at http://axidraw.com/docs
 
-AxiDraw owners may request technical support for this software through our 
+AxiDraw owners may request technical support for this software through our
 github issues page, support forums, or by contacting us directly at:
 https://shop.evilmadscientist.com/contact
 
 
+---------------------------------------------------------------------
 
-Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -77,35 +92,34 @@ SOFTWARE.
 
 '''
 
+
 import sys
 import time
 
 from pyaxidraw import axidraw
 
-
-pen_up_percent = 75         # Percent height that we will use for pen up
-pen_down_percent = 25       # Percent height that we will use for pen down
-wait_time_s = 3             # Time, in seconds, before switching to next position
-port_pin = 6                # Logical pin RP6 drives the output labeled "B3", from
+PEN_UP_PERCENT = 75         # Percent height that we will use for pen up
+PEN_DOWN_PERCENT = 25       # Percent height that we will use for pen down
+WAIT_TIME_S = 3             # Time, in seconds, before switching to next position
+PORT_PIN = 6                # Logical pin RP6 drives the output labeled "B3", from
                             #    docs at: http://evil-mad.github.io/EggBot/ebb.html#S2
-
 
 ad = axidraw.AxiDraw() # Initialize class
 
 ad.interactive()            # Enter interactive mode
-connected = ad.connect()    # Open serial port to AxiDraw 
+connected = ad.connect()    # Open serial port to AxiDraw
 
 if not connected:
     sys.exit() # end script
 
-pen_is_up = False       # Initial value of pen state
+PEN_IS_UP = False       # Initial value of pen state
 
 
 # Lowest allowed position; "0%" on the scale. Default value: 10800 units, or 0.818 ms.
 servo_min = ad.params.servo_min
 
 # Highest allowed position; "100%" on the scale. Default value: 25200 units, or 2.31 ms.
-servo_max = ad.params.servo_max  
+servo_max = ad.params.servo_max
 
 # Optional debug statements:
 print("servo_min: " + str(servo_min))
@@ -114,33 +128,32 @@ print("servo_max: " + str(servo_max))
 
 servo_range = servo_max - servo_min
 
-pen_up_pos = int (pen_up_percent * servo_range / 100 + servo_min)
-pen_down_pos = int (pen_down_percent * servo_range / 100 + servo_min)
+pen_up_pos = int (PEN_UP_PERCENT * servo_range / 100 + servo_min)
+pen_down_pos = int (PEN_DOWN_PERCENT * servo_range / 100 + servo_min)
 
 try:
     while True: # Repeat until interrupted
 
-        if pen_is_up:
+        if PEN_IS_UP:
             position = pen_down_pos
-            pen_is_up = False
+            PEN_IS_UP = False
         else:
             position = pen_up_pos
-            pen_is_up = True
-    
-        command = "S2," + str(position) + ',' + str(port_pin) + "\r"
-    
+            PEN_IS_UP = True
+
+        COMMAND = "S2," + str(position) + ',' + str(PORT_PIN) + "\r"
+
         # Optional debug statements:
-        if pen_is_up:
+        if PEN_IS_UP:
             print("Raising pen")
         else:
             print("Lowering pen")
         print("New servo position: " + str(position))
-        print("command: " + command)
-    
-        ad.usb_command(command + "\r") 
-    
-        time.sleep(wait_time_s) 
+        print("command: " + COMMAND)
+
+        ad.usb_command(COMMAND + "\r")
+
+        time.sleep(WAIT_TIME_S)
 
 except KeyboardInterrupt:
     ad.disconnect()             # Close serial port to AxiDraw
-

@@ -10,12 +10,21 @@ Prints X.XXX, Y.YYY, where
 X.XXX is the current AxiDraw X position and
 Y.YYY is the current AxiDraw Y position, in mm units.
 
-Requires Python 3.6 or newer and the AxiDraw python API, version 3.2 or newer.
+---------------------------------------------------------------------
+
+About the interactive API:
+
+Interactive mode is a mode of use, designed for plotting individual motion
+segments upon request, using direct XY control. It is a complement to the
+usual plotting modes, which take an SVG document as input.
+
+So long as the AxiDraw is started in the home corner, moves are limit checked,
+and constrained to be within the safe travel range of the AxiDraw.
+
 
 AxiDraw python API documentation is hosted at: https://axidraw.com/doc/py_api/
 
-
-
+---------------------------------------------------------------------
 
 About this software:
 
@@ -36,8 +45,7 @@ github issues page, support forums, or by contacting us directly at:
 https://shop.evilmadscientist.com/contact
 
 
-
-
+---------------------------------------------------------------------
 
 Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 
@@ -63,15 +71,14 @@ SOFTWARE.
 
 '''
 
-
-
+import sys
 from pyaxidraw import axidraw
 
 ad = axidraw.AxiDraw() # Initialize class
 ad.interactive()
 ad.connect()  # Open USB serial session
 if not ad.connected:
-    exit()
+    sys.exit() # end script
 
 result = ad.usb_query('QS\r') # Query global step position
 result_list = result.strip().split(",")
@@ -86,6 +93,6 @@ if ad.options.resolution == 2:  # Low-resolution mode
 x_pos_mm = x_pos_inch * 25.4
 y_pos_mm = y_pos_inch * 25.4
 
-print("{0:0.3f}, {1:0.3f}".format(x_pos_mm, y_pos_mm))
+print(f"{x_pos_mm:0.3f}, {y_pos_mm:0.3f}")
 
 ad.disconnect()             # Close serial port to AxiDraw
