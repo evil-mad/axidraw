@@ -196,10 +196,10 @@ class PenHandler:
         v_time = self.heights.times.raise_time
         if not options.preview:
             ebb_motion.sendPenUp(plot_status.port, v_time, params.servo_pin, False)
-            if (v_time > 50) and (options.mode not in ["manual", "align", "toggle", "cycle"]):
-                time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
             if params.use_b3_out:
                 ebb_motion.PBOutValue( plot_status.port, 3, 0, False) # I/O Pin B3 output: low
+            if (v_time > 50) and (options.mode not in ["manual", "align", "toggle", "cycle"]):
+                time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
         self.status.pen_up = True
         if not self.status.ebblv_set:
             ebb_motion.setEBBLV(plot_status.port, options.pen_pos_up + 1, False)
@@ -224,10 +224,10 @@ class PenHandler:
 
         if not options.preview:
             ebb_motion.sendPenDown(plot_status.port, v_time, params.servo_pin, False)
-            if (v_time > 50) and (options.mode not in ["manual", "align", "toggle", "cycle"]):
-                time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
             if params.use_b3_out:
                 ebb_motion.PBOutValue( plot_status.port, 3, 1, False) # I/O Pin B3 output: high
+            if (v_time > 50) and (options.mode not in ["manual", "align", "toggle", "cycle"]):
+                time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
         self.status.pen_up = False
         return v_time
 

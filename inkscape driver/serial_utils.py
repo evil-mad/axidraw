@@ -58,6 +58,12 @@ def connect(options, plot_status, message_fun, logger):
         else:
             message_fun("Failed to connect to AxiDraw.")
         return False
+
+    fw_version_string = ebb_serial.queryVersion(plot_status.port) # Full string, human readable
+    fw_version_string = fw_version_string.split("Firmware Version ", 1)
+    fw_version_string = fw_version_string[1]
+    plot_status.fw_version = fw_version_string.strip() # For number comparisons
+
     if port_name:
         logger.debug('Connected successfully to port: ' + str(port_name))
     else:

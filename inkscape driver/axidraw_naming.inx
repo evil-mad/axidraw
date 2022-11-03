@@ -36,6 +36,9 @@ reboot to its power-on state. (If more than one AxiDraw is
 connected, only the first one found will be updated.)
 
 Names should be 3-16 characters long.
+
+Assigned Nicknames are semi-permanent; they can be changed
+by this utility and are erased by firmware updates.
 </_param>
 
 
@@ -45,7 +48,7 @@ Names should be 3-16 characters long.
 <page name="about" _gui-text="About">
 
 <_param name="aboutpage" type="description" indent="2" xml:space="preserve">
-This extension allows you to assign a "nickname" (a digital
+This extension allows you to assign a "Nickname" (a digital
 name tag) to a given AxiDraw, or to read out that name. 
 
 Nicknames are not required, but can be helpful if you have
@@ -57,7 +60,10 @@ You can use the "Config" tab in AxiDraw Control to check
 which firmware version is currently installed.
 
 Firmware update instructions may be found in the
-AxiDraw documentation online at axidraw.com/docs 
+AxiDraw documentation online at axidraw.com/docs
+
+Please be aware that updating your firmware will remove any
+existing Nickname; resetting the configuration to default.
 </_param>
 
 
