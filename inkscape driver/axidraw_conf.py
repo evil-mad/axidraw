@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 #
 # https://github.com/evil-mad/axidraw
-# Version 3.6.0, dated 2022-10-01.
+# Version 3.7.0, dated 2022-10-20.
 #
 # Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -247,14 +247,12 @@ servo_sweep_time = 200 # Duration, ms, to sweep servo control signal over 100% r
 servo_move_min = 45      # Minimum time, ms, for pen lift/lower of non-zero distance. Default: 45
 servo_move_slope = 2.69  # Additional time, ms, per percentage of vertical travel.    Default: 2.69
 
-smoothness = 10.0       # Curve smoothing (default: 10.0)
-
 cornering = 10.0        # Cornering speed factor (default: 10.0)
 
-# the tolerance for determining when the bezier has been segmented enough to plot:
-bezier_segmentation_tolerance = 0.02 / smoothness
+# Maximum allowed deviation of path segments from that given by the original Bezier curves
+curve_tolerance = 0.002 # Curve representation tolerance, inches. Default: 0.002 (0.05 mm)
 
 # Tolerance for merging nearby vertices:
 #  Larger values of segment_supersample_tolerance give smoother plotting along paths that
 #  were created with too many vertices. A value of 0 will disable supersampling.
-segment_supersample_tolerance = bezier_segmentation_tolerance / 16
+segment_supersample_tolerance = curve_tolerance / 16

@@ -22,15 +22,16 @@ pyaxidraw/axidraw.py
 Part of the AxiDraw driver for Inkscape
 https://github.com/evil-mad/AxiDraw
 
-See version_string below for current version and date.
-
 Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
 
+import sys
 import math
 import gettext
 import copy
 import logging
+import threading
+import signal
 
 from lxml import etree
 
@@ -47,7 +48,7 @@ path_objects = from_dependency_import('axidrawinternal.path_objects')
 logger = logging.getLogger(__name__)
 
 class AxiDraw(axidraw.AxiDraw):
-    """ Extened AxiDraw class with Python API functions """
+    """ Extend AxiDraw class with Python API functions """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -59,9 +60,30 @@ class AxiDraw(axidraw.AxiDraw):
         self.document = None
         self.original_document = None
 
+        self.time_estimate = 0
+        self.distance_pendown = 0
+        self.distance_total = 0
+        self.pen_lifts = 0
+        self.software_initiated_pause_event = None
+        self.fw_version_string = None
+        self.set_up_pause_transmitter()
+
+    def set_up_pause_transmitter(self):
+        """ intercept ctrl-C (keyboard interrupt) and redefine as "pause" command """
+        signal.signal(signal.SIGINT, self.transmit_pause_request)
+        self.software_initiated_pause_event = threading.Event()
+
+    def transmit_pause_request(self, *args):
+        """ Transmit a software-requested pause event """
+        self.software_initiated_pause_event.set()
+
+    def clear_pause_request(self):
+        """ Clear a software-requested pause event """
+        self.software_initiated_pause_event.clear()
+
     def connect(self):
         '''Python Interactive context: Open connection to AxiDraw'''
-        if not self.verify_interactive():
+        if not self._verify_interactive():
             return None
 
         self.serial_connect() # Open USB serial session
@@ -101,24 +123,24 @@ class AxiDraw(axidraw.AxiDraw):
         if svg_input is None:
             svg_input = plot_utils.trivial_svg
         try: # Parse input file or SVG string
-            stream = open(svg_input, 'r')
-            p = etree.XMLParser(huge_tree=True)
-            self.document = etree.parse(stream, parser=p)
+            file_ref = open(svg_input, encoding='utf8')
+            parse_ref = etree.XMLParser(huge_tree=True)
+            self.document = etree.parse(file_ref, parser=parse_ref)
             self.original_document = copy.deepcopy(self.document)
-            stream.close()
+            file_ref.close()
             file_ok = True
         except IOError:
-            pass # It wasn't a file...
+            pass # It wasn't a file; was it a string?
         if not file_ok:
             try:
-                svg_string = svg_input.encode('utf-8') # Need consistent encoding.
-                p = etree.XMLParser(huge_tree=True, encoding='utf-8')
-                self.document = etree.ElementTree(etree.fromstring(svg_string, parser=p))
+                svg_string = svg_input.encode('utf8') # Need consistent encoding.
+                parse_ref = etree.XMLParser(huge_tree=True, encoding='utf8')
+                self.document = etree.ElementTree(etree.fromstring(svg_string, parser=parse_ref))
                 self.original_document = copy.deepcopy(self.document)
                 file_ok = True
             except:
                 logger.error("Unable to open SVG input file.")
-                quit(1)
+                sys.exit(1)
         if file_ok:
             self.getdocids()
         # self.suppress_standard_output_stream()
@@ -128,9 +150,29 @@ class AxiDraw(axidraw.AxiDraw):
         if self.document is None:
             logger.error("No SVG input provided.")
             logger.error("Use plot_setup(svg_input) before plot_run().")
-            quit(1)
+            sys.exit(1)
         self.set_defaults() # Re-initialize some items normally set at __init__
+        self.set_up_pause_receiver(self.software_initiated_pause_event)
         self.effect()
+        self.clear_pause_request()
+        #self.fw_version_string is a public string made available to Python API:
+        self.fw_version_string = self.plot_status.fw_version
+
+        if self.plot_status.stopped == 101:
+            raise RuntimeError("Failed to connected to AxiDraw")
+        if self.plot_status.stopped == 102:
+            raise RuntimeError("Stopped by pause button press")
+        if self.plot_status.stopped == 103:
+            raise RuntimeError("Stopped by keyboard interrupt")
+        if self.plot_status.stopped == 104:
+            raise RuntimeError("Lost USB connectivity")
+
+        self.time_estimate = self.plot_status.stats.pt_estimate / 1000.0
+        self.distance_pendown = 0.0254 * self.plot_status.stats.down_travel_inch
+        self.distance_total = self.distance_pendown +\
+            0.0254 * self.plot_status.stats.up_travel_inch
+        self.pen_lifts = self.pen.status.lifts
+
         for warning_message in self.warnings.return_text_list():
             self.user_message_fun(warning_message)
         if output:
@@ -147,23 +189,47 @@ class AxiDraw(axidraw.AxiDraw):
         self.Secondary = False
         self.pen.update(self.options, self.params)
 
-    def verify_interactive(self):
-        '''Check that we are in interactive API context'''
+    def _verify_interactive(self, verify_connection=False):
+        '''
+            Check that we are in interactive API context.
+            Optionally, check if we are connected as well, and throw an error if not.
+        '''
+        interactive = False
         try:
             if self.options.mode == "interactive":
-                return True
+                interactive = True
         except AttributeError:
             self.user_message_fun(gettext.gettext("Function only available in interactive mode.\n"))
-        return False
+        if not interactive:
+            return False
+        if verify_connection:
+            try:
+                if self.connected:
+                    return True
+            except AttributeError:
+                pass
+            raise RuntimeError("Not connected to AxiDraw")
+        return True
 
     def update(self):
         '''Python Interactive context: Apply optional parameters'''
-        if not self.verify_interactive():
+        if not self._verify_interactive(True):
             return
         self.update_options()
         self.pen.servo_setup(self.options, self.params, self.plot_status)
         if self.plot_status.port:
             self.enable_motors()  # Set plotting resolution & speed
+
+    def delay(self, time_ms):
+        '''Interactive context: Execute timed delay'''
+        if not self._verify_interactive(True):
+            return
+        if time_ms is None:
+            self.user_message_fun(gettext.gettext("No delay time given.\n"))
+            return
+        time_ms = int(time_ms)
+        if time_ms > 0:
+            ebb_serial.command(self.plot_status.port, f'SM,{time_ms},0,0\r')
 
     def _xy_plot_segment(self, relative, x_value, y_value):
         """
@@ -175,7 +241,7 @@ class AxiDraw(axidraw.AxiDraw):
         Commands directing movement outside of the bounds are clipped
         with pen up.
         """
-        if not self.verify_interactive():
+        if not self._verify_interactive(True):
             return
 
         if self.options.units == 1 : # If using centimeter units
@@ -204,21 +270,20 @@ class AxiDraw(axidraw.AxiDraw):
         accept, seg = plot_utils.clip_segment(segment, self.bounds)
 
         if accept and self.plot_status.port: # Segment is at least partially within bounds
-            if self.plot_status.port:
-                if not plot_utils.points_near(seg[0], turtle, 1e-9): # if intial point clipped
-                    if self.params.auto_clip_lift and not self.turtle_pen_up:
-                        self.pen.pen_raise(self.options, self.params, self.plot_status)
-                        # Pen-up move to initial position
-                        self.turtle_pen_up = False # Keep track of intended state
-                    self.plot_seg_with_v(seg[0][0], seg[0][1], 0, 0) # move to start
-                if not self.turtle_pen_up:
-                    self.pen.pen_lower(self.options, self.params, self.plot_status)
-                self.plot_seg_with_v(seg[1][0], seg[1][1], 0, 0) # Draw clipped segment
-                if not plot_utils.points_near(seg[1], target, 1e-9) and\
-                        self.params.auto_clip_lift and not self.turtle_pen_up:
+            if not plot_utils.points_near(seg[0], turtle, 1e-9): # if intial point clipped
+                if self.params.auto_clip_lift and not self.turtle_pen_up:
                     self.pen.pen_raise(self.options, self.params, self.plot_status)
-                    # Segment end was clipped; this end is out of bounds.
+                    # Pen-up move to initial position
                     self.turtle_pen_up = False # Keep track of intended state
+                self.plot_seg_with_v(seg[0][0], seg[0][1], 0, 0) # move to start
+            if not self.turtle_pen_up:
+                self.pen.pen_lower(self.options, self.params, self.plot_status)
+            self.plot_seg_with_v(seg[1][0], seg[1][1], 0, 0) # Draw clipped segment
+            if not plot_utils.points_near(seg[1], target, 1e-9) and\
+                    self.params.auto_clip_lift and not self.turtle_pen_up:
+                self.pen.pen_raise(self.options, self.params, self.plot_status)
+                # Segment end was clipped; this end is out of bounds.
+                self.turtle_pen_up = False # Keep track of intended state
         self.turtle_x = x_value
         self.turtle_y = y_value
 
@@ -235,11 +300,11 @@ class AxiDraw(axidraw.AxiDraw):
             defined in interactive context. The auto_clip_lift parameter is
             ignored; draw_path always raises the pen at the edges of travel.
         '''
-        if not self.verify_interactive():
+        if not self._verify_interactive(True):
             return
         if len(vertex_list) < 2:
             return # At least two vertices are required.
-        if self.plot_status.b_stopped: # If this plot is already stopped
+        if self.plot_status.stopped: # If this plot is already stopped
             return
         if self.options.units == 1 : # Centimeter units
             scaled_vertices = [[vertex[0] / 2.54, vertex[1] / 2.54] for vertex in vertex_list]
@@ -263,14 +328,13 @@ class AxiDraw(axidraw.AxiDraw):
         boundsclip.clip_at_bounds(digest, self.bounds, self.bounds,\
             self.params.bounds_tolerance, doc_clip=False)
 
-        self.plot_status.b_stopped = False
         for path_item in digest.layers[0].paths:
-            if self.plot_status.b_stopped:
+            if self.plot_status.stopped:
                 break
             self.plot_polyline(path_item.subpaths[0])
             self.penup()
 
-        if self.plot_status.b_stopped:
+        if self.plot_status.stopped:
             new_turtle = self.f_curr_x, self.f_curr_y
         self.turtle_x, self.turtle_y = new_turtle
         self.turtle_pen_up = True
@@ -281,7 +345,7 @@ class AxiDraw(axidraw.AxiDraw):
 
     def moveto(self,x_target,y_target):
         '''Interactive context: absolute position move, pen-up'''
-        if not self.verify_interactive():
+        if not self._verify_interactive(True):
             return
         self.pen.pen_raise(self.options, self.params, self.plot_status)
         self._xy_plot_segment(False,x_target, y_target)
@@ -297,7 +361,7 @@ class AxiDraw(axidraw.AxiDraw):
 
     def move(self,x_delta,y_delta):
         '''Interactive context: relative position move, pen-up'''
-        if not self.verify_interactive():
+        if not self._verify_interactive(True):
             return
         self.pen.pen_raise(self.options, self.params, self.plot_status)
         self._xy_plot_segment(True,x_delta, y_delta)
@@ -309,14 +373,14 @@ class AxiDraw(axidraw.AxiDraw):
 
     def penup(self):
         '''Interactive context: raise pen'''
-        if not self.verify_interactive():
+        if not self._verify_interactive(True):
             return
         self.pen.pen_raise(self.options, self.params, self.plot_status)
         self.turtle_pen_up = True
 
     def pendown(self):
         '''Interactive context: lower pen'''
-        if not self.verify_interactive():
+        if not self._verify_interactive(True):
             return
         self.turtle_pen_up = False
         if self.params.auto_clip_lift and not\
@@ -326,13 +390,13 @@ class AxiDraw(axidraw.AxiDraw):
 
     def usb_query(self, query):
         '''Interactive context: Low-level USB query'''
-        if not self.verify_interactive():
+        if not self._verify_interactive(True):
             return None
         return ebb_serial.query(self.plot_status.port, query).strip()
 
     def usb_command(self, command):
         '''Interactive context: Low-level USB command; use with great care '''
-        if not self.verify_interactive():
+        if not self._verify_interactive(True):
             return
         ebb_serial.command(self.plot_status.port, command)
 
@@ -346,6 +410,7 @@ class AxiDraw(axidraw.AxiDraw):
 
     def current_pos(self):
         '''Interactive context: Report last known physical position '''
+        self._verify_interactive(True)
         return plot_utils.position_scale(self.f_curr_x, self.f_curr_y, self.options.units)
 
     def current_pen(self):

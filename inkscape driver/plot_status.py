@@ -269,6 +269,8 @@ class PlotStatus:
     """
 
     CONFIG_ITEMS = ['secondary', 'called_externally', 'cli_api', 'delay_between_copies']
+    VERSION_ITEMS = ['fw_version']
+
 
     def __init__(self):
         self.port = None
@@ -276,6 +278,8 @@ class PlotStatus:
         self.stopped = 0 # Status code. If a plot is stopped, record why.
         for key in self.CONFIG_ITEMS: # Create instance variables in __init__
             setattr(self, key, False)
+        for key in self.VERSION_ITEMS: # Create instance variables in __init__
+            setattr(self, key, None)
         self.apply_defaults() # Apply default values of the above attributes
         self.resume = ResumeStatus()
         self.progress = ProgressBar()

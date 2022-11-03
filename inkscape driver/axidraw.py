@@ -83,7 +83,7 @@ class AxiDraw(inkex.Effect):
         self.OptionParser.add_option_group(
             common_options.core_mode_options(self.OptionParser, params.__dict__))
 
-        self.version_string = "3.6.0" # Dated 2022-10-01
+        self.version_string = "3.7.0" # Dated 2022-10-20
 
         self.plot_status = plot_status.PlotStatus()
         self.pen = pen_handling.PenHandler()
@@ -614,9 +614,7 @@ class AxiDraw(inkex.Effect):
             return
 
         if self.options.manual_cmd == "fw_version":
-            # Note: self.fw_version_string is for python API
-            self.fw_version_string = ebb_serial.queryVersion(self.plot_status.port)
-            self.user_message_fun(self.fw_version_string)
+            self.user_message_fun(self.plot_status.fw_version)
             return
 
         if self.options.manual_cmd == "bootload":
@@ -787,8 +785,7 @@ class AxiDraw(inkex.Effect):
         else: # Process the input SVG into a simplified, restricted-format DocDigest object:
             digester = digest_svg.DigestSVG() # Initialize class
             digest_params = [self.svg_width, self.svg_height, s_x, s_y, self.svg_layer,\
-                self.params.bezier_segmentation_tolerance,\
-                self.params.segment_supersample_tolerance]
+                self.params.curve_tolerance, self.params.segment_supersample_tolerance]
 
             digest = digester.process_svg(self.svg, self.warnings,
                 digest_params, self.svg_transform,)
@@ -1224,6 +1221,7 @@ class AxiDraw(inkex.Effect):
             return
 
         # Raise pen for travel to first vertex:
+        # TODO: Remove this once motion.py is up and running
         v_time = self.pen.pen_raise(self.options, self.params, self.plot_status)
         self.v_chart_rest(v_time)
 
@@ -1294,7 +1292,7 @@ class AxiDraw(inkex.Effect):
 
         speed_limit = self.speed_pendown  # Maximum travel rate (in/s), in XY plane.
         if self.pen.status.pen_up:
-            speed_limit = self.speed_penup  # Unlikely case, but handle it anyway...
+            speed_limit = self.speed_penup  # For pen-up manual moves
 
         traj_logger.debug('\nspeed_limit (plan_trajectory) ' + str(speed_limit) + ' in/s')
 

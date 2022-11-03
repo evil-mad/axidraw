@@ -19,7 +19,7 @@
 """
 plot_optimizations.py
 
-Version 1.1.0   -   2022-01-03
+Version 1.2.0   -   2022-10-25
 
 This module provides some plot optimization tools.
 
@@ -58,6 +58,16 @@ plot_utils = from_dependency_import('plotink.plot_utils')
 rtree = from_dependency_import('plotink.rtree')
 spatial_grid = from_dependency_import('plotink.spatial_grid')
 
+def concatenate_paths(first_path, second_path):
+    """
+    Concatenate two path_item paths, removing common vertex if they are redundant
+    """
+    if plot_utils.points_equal(first_path.last_point(), second_path.first_point()):
+        first_path.subpaths[0] = first_path.subpaths[0][:-1] + second_path.subpaths[0]
+    else:
+        first_path.subpaths[0] = first_path.subpaths[0] + second_path.subpaths[0]
+    return first_path
+
 
 def connect_nearby_ends(digest, reverse, min_gap):
     """
@@ -75,14 +85,15 @@ def connect_nearby_ends(digest, reverse, min_gap):
     if min_gap < 0:  # Do not connect gaps
         return
 
+    def point_bounds(x_in, y_in):
+        '''Inflate point by min_gap to xmin, ymin, xmax, ymax rectangular bounds'''
+        return (x_in - min_gap, y_in - min_gap, x_in + min_gap, y_in + min_gap)
+
     for layer_item in digest.layers:
 
         path_count = len(layer_item.paths)
         if path_count < 2:
             continue # Move on to next layer
-
-        # Inflate point by min_gap to xmin, ymin, xmax, ymax rectangular bounds
-        point_bounds = lambda x, y: (x - min_gap, y - min_gap, x + min_gap, y + min_gap)
 
         spatial_index = rtree.Index(
             [
@@ -94,69 +105,107 @@ def connect_nearby_ends(digest, reverse, min_gap):
             ]
         )
 
-        paths_done = []
+        consumed_paths = set() # Set of paths that we have examined or combined
+        new_paths = []      # List of new paths for the layer
 
-        index_i = 0
-        while index_i < (path_count - 1):
+        path_index = 0
+        while len(consumed_paths) < path_count:
 
-            path_i = layer_item.paths[index_i]
-            i_end = path_i.last_point()
-            i_matches = list(spatial_index.intersection(point_bounds(*i_end)))
-            if reverse:
-                i_start = path_i.first_point()
-                i_matches += list(spatial_index.intersection(point_bounds(*i_start)))
+            if path_index in consumed_paths:
+                path_index += 1
+                continue
 
-            for index_maybe in i_matches:
-                match_found = False
-                index_j = index_maybe % path_count
+            consumed_paths.add(path_index) # mark THIS path as consumed, now.
+            this_path = layer_item.paths[path_index]
 
-                if index_j <= index_i:
-                    continue
-                j_start = layer_item.paths[index_j].first_point()
-                if reverse:
-                    j_end = layer_item.paths[index_j].last_point()
+            # Follow end of path. See if we can attach another (as yet not consumed)
+            #   path to the tail end of the current path, growing it.
 
-                join_ij = plot_utils.points_near(i_end, j_start, square_gap)
+            path_end = this_path.last_point()
+            end_intersection_list = list(spatial_index.intersection(point_bounds(*path_end)))
+            path_start = this_path.first_point()
+            start_intersection_list = list(spatial_index.intersection(point_bounds(*path_start)))
 
-                # Additional local variables to keep track of matches:
-                rev_i, rev_j, rev_ij = False, False, False
+            continue_tracing = True
+            while continue_tracing:
 
-                if reverse and not join_ij:
-                    rev_i = plot_utils.points_near(i_start, j_start, square_gap)
-                    rev_j = plot_utils.points_near(i_end, j_end, square_gap)
-                    rev_ij = plot_utils.points_near(i_start, j_end, square_gap)
+                continue_tracing = False
 
-                if join_ij or rev_i or rev_j or rev_ij:
-                    path_j = layer_item.paths[index_j]
+                for intersection_index in end_intersection_list:
+                    index_next = intersection_index % path_count
+                    if index_next in consumed_paths:
+                        continue
 
-                    if rev_i:
-                        path_i.reverse()
-                        i_end = i_start
-                    elif rev_j:
-                        path_j.reverse()
-                        j_start = j_end
-                    elif rev_ij:
-                        path_i.reverse()
-                        i_end = i_start
-                        path_j.reverse()
-                        j_start = j_end
+                    path_next = layer_item.paths[index_next]
+                    next_start = path_next.first_point()
 
-                    if plot_utils.points_equal(i_end, j_start): # Remove redundant vertex
-                        path_j.subpaths[0] = path_i.subpaths[0][:-1] + path_j.subpaths[0]
-                    else:
-                        path_j.subpaths[0] = path_i.subpaths[0] + path_j.subpaths[0]
+                    if plot_utils.points_near(path_end, next_start, square_gap):
+                        this_path = concatenate_paths(this_path, path_next)
+                        # New path end and neighborhood around it:
+                        path_end = path_next.last_point()
+                        end_intersection_list = list(\
+                            spatial_index.intersection(point_bounds(*path_end)))
+                        consumed_paths.add(index_next) # mark next path as consumed
+                        continue_tracing = True
+                        break # Exit "for intersection_index" loop; continue tracing path
 
-                    match_found = True
-                    break # End loop over index_j
+                    if not reverse:
+                        continue
 
-                index_j += 1 # No paths to join
+                    next_end = path_next.last_point()
+                    if plot_utils.points_near(path_end, next_end, square_gap):
+                        path_end = path_next.first_point()
+                        end_intersection_list = list(\
+                            spatial_index.intersection(point_bounds(*path_end)))
 
-            if not match_found:
-                paths_done.append(path_i) # We are done processing this path
-            index_i += 1
+                        path_next.reverse()
+                        this_path = concatenate_paths(this_path, path_next)
+                        consumed_paths.add(index_next) # mark next path as consumed
+                        continue_tracing = True
+                        break # Exit "for intersection_index" loop; continue tracing path
 
-        paths_done.append(layer_item.paths[path_count - 1]) # Add final path to our list
-        layer_item.paths = paths_done
+            # Follow start of path. See if we can attach another (as yet not consumed)
+            #   path to the head end of the current path, growing it.
+
+            continue_tracing = True
+            while continue_tracing:
+                continue_tracing = False
+
+                for intersection_index in start_intersection_list:
+                    index_next = intersection_index % path_count
+                    if index_next in consumed_paths:
+                        continue
+
+                    path_next = layer_item.paths[index_next]
+                    next_end = path_next.last_point()
+
+                    if plot_utils.points_near(path_start, next_end, square_gap):
+
+                        this_path = concatenate_paths(path_next, this_path)
+                        path_start = path_next.first_point()
+                        start_intersection_list = list(\
+                            spatial_index.intersection(point_bounds(*path_start)))
+                        consumed_paths.add(index_next) # mark next path as consumed
+                        continue_tracing = True
+                        break # Exit "for intersection_index" loop; continue tracing path
+
+                    if not reverse:
+                        continue
+
+                    next_start = path_next.first_point()
+                    if plot_utils.points_near(path_start, next_start, square_gap):
+                        path_start = path_next.last_point()
+                        start_intersection_list = list(\
+                            spatial_index.intersection(point_bounds(*path_start)))
+
+                        path_next.reverse()
+                        this_path = concatenate_paths(path_next, this_path)
+                        consumed_paths.add(index_next) # mark next path as consumed
+                        continue_tracing = True
+                        break # Exit "for intersection_index" loop; continue tracing path
+
+            new_paths.append(this_path)
+        layer_item.paths = new_paths
 
 
 def randomize_start(digest, seed=None):
