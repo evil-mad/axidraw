@@ -348,6 +348,7 @@ class AxiDraw(axidraw.AxiDraw):
         if not self._verify_interactive(True):
             return
         self.pen.pen_raise(self.options, self.params, self.plot_status)
+        self.turtle_pen_up = True
         self._xy_plot_segment(False,x_target, y_target)
 
     def lineto(self,x_target,y_target):
