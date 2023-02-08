@@ -6,6 +6,32 @@ not cover all internal changes nor bug fixes.
 Please see https://axidraw.com/doc/cli_api/ for current CLI API documentation and
 and https://axidraw.com/doc/py_api/ for current Python API documentation.
 
+Additional release notes about the AxiDraw software in general (not just API changes)
+are at: https://github.com/evil-mad/axidraw/releases
+
+
+=========================================
+v 3.8 (January 2023)
+
+Significant performance improvements for initial processing of large SVG files
+    before plotting. Also speed gains in res_home mode, and in time between plots
+    when plotting multiple copies.
+
+CLI progress bar now shows progress as *mm travel* (rather than an overall "node" count).
+
+Added new penlift option, to enable brushless servo option.
+
+Changed walk_dist option in configuration file and Python/CLI APIs to dist.
+- The old option name walk_dist is now deprecated, but still functional in
+    config files and python scripts that specify walk_dist but not dist.
+
+Added new `button_interval` parameter; specifies interval for polling pause button
+
+Added 6 new parameters in configuration file to support new brushless servo option.
+
+Supersampling to smooth paths with overly-high vertex density is now dramatically faster
+    and now happens *after* path joining. Supersampling tolerance is now slightly higher.
+
 
 =========================================
 v 3.7.2 (November 2022)
@@ -584,4 +610,4 @@ The --fileOutput option was removed in favor of being able to directly specify
 the output file name on the command line argument.
 
 
-~~~ Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories ~~~
+~~~ Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories ~~~

@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -16,15 +16,18 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-"""
+'''
 pen_handling.py
 
-Classes for managing AxiDraw pen vertical motion and status
+Classes for managing AxiDraw pen vertical motion and status, plus keeping track
+of overall XYZ pen position.
 
 Part of the AxiDraw driver for Inkscape
 https://github.com/evil-mad/AxiDraw
 
 The classes defined by this module are:
+
+* PenPosition: Data storage class to hold XYZ pen position
 
 * PenHandler: Main class for managing pen lifting, lowering, and status
 
@@ -34,8 +37,7 @@ The classes defined by this module are:
 
 * PenStatus: Data storage class for pen lift status variables
 
-"""
-
+'''
 import time
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
 plot_utils = from_dependency_import('plotink.plot_utils')
@@ -44,27 +46,47 @@ ebb_motion = from_dependency_import('plotink.ebb_motion')
 # inkex = from_dependency_import('ink_extensions.inkex')
 
 
+class PenPosition:
+    ''' PenPosition: Class to store XYZ position of pen '''
+
+    def __init__(self):
+        self.xpos = 0 # X coordinate
+        self.ypos = 0 # Y coordinate
+        self.z_up = None # Initialize as None: state unknown.
+
+    def reset(self):
+        ''' Reset XYZ positions to default. '''
+        self.xpos = 0
+        self.ypos = 0
+        self.z_up = None
+
+    def reset_z(self):
+        ''' Reset Z position only. '''
+        self.z_up = None
+
+
 class PenHeight:
-    """
+    '''
     PenHeight: Class to manage pen-down height settings.
     Calculate timing for transiting between pen-up and pen-down states.
-    """
+    '''
 
     def __init__(self):
         self.pen_pos_down = None # Initial values must be set by update().
         self.use_temp_pen_height = False # Boolean set true while using temporary value
+        self.narrow_band = False    # If true, use narrow band servo configuration.
         self.times = PenLiftTiming()
 
-    def update(self, options, params):
+    def update(self, ad_ref):
         '''
         Set initial/default values of options, after __init__.
         Call this function after changing option values to update pen height settings.
         '''
         if not self.use_temp_pen_height:
-            self.pen_pos_down = options.pen_pos_down
-        self.times.update(options, params, self.pen_pos_down)
+            self.pen_pos_down = ad_ref.options.pen_pos_down
+        self.times.update(ad_ref, self.narrow_band, self.pen_pos_down)
 
-    def set_temp_height(self, options, params, temp_height):
+    def set_temp_height(self, ad_ref, temp_height):
         '''
         Begin using temporary pen height position. Return True if the position has changed.
         '''
@@ -73,31 +95,31 @@ class PenHeight:
             return False
         self.pen_pos_down = temp_height
 
-        self.times.update(options, params, temp_height)
+        self.times.update(ad_ref, self.narrow_band, temp_height)
         return True
 
-    def end_temp_height(self, options, params):
+    def end_temp_height(self, ad_ref):
         '''
         End using temporary pen height position. Return True if the position has changed.
         '''
         self.use_temp_pen_height = False
-        if self.pen_pos_down == options.pen_pos_down:
+        if self.pen_pos_down == ad_ref.options.pen_pos_down:
             return False
-        self.pen_pos_down = options.pen_pos_down
-        self.times.update(options, params, self.pen_pos_down)
+        self.pen_pos_down = ad_ref.options.pen_pos_down
+        self.times.update(ad_ref, self.narrow_band, self.pen_pos_down)
         return True
 
 
 class PenLiftTiming: # pylint: disable=too-few-public-methods
-    """
+    '''
     PenTiming: Class to calculate and store time required for pen to lift and lower
-    """
+    '''
 
     def __init__(self):
         self.raise_time = None
         self.lower_time = None
 
-    def update(self, options, params, pen_down_pos):
+    def update(self, ad_ref, narrow_band, pen_down_pos):
         '''
         Compute travel time needed for raising and lowering the pen.
 
@@ -107,171 +129,195 @@ class PenLiftTiming: # pylint: disable=too-few-public-methods
           (A) Servo transit time for fast servo sweeps (t = slope * v_dist + min) and
           (B) Sweep time for slow sweeps (t = v_dist * full_scale_sweep_time / sweep_rate)
         '''
-        v_dist = abs(float(options.pen_pos_up - pen_down_pos))
+        v_dist = abs(float(ad_ref.options.pen_pos_up - pen_down_pos))
+
+        if narrow_band:
+            servo_move_slope = ad_ref.params.nb_servo_move_slope
+            servo_move_min = ad_ref.params.nb_servo_move_min
+            servo_sweep_time = ad_ref.params.nb_servo_sweep_time
+        else:
+            servo_move_slope = ad_ref.params.servo_move_slope
+            servo_move_min = ad_ref.params.servo_move_min
+            servo_sweep_time = ad_ref.params.servo_sweep_time
 
         # Raising time:
-        v_time = int(((params.servo_move_slope * v_dist + params.servo_move_min) ** 4 +
-            (params.servo_sweep_time * v_dist / options.pen_rate_raise) ** 4) ** 0.25)
+        v_time = int(((servo_move_slope * v_dist + servo_move_min) ** 4 +
+            (servo_sweep_time * v_dist / ad_ref.options.pen_rate_raise) ** 4) ** 0.25)
         if v_dist < 0.9:  # If up and down positions are equal, no initial delay
             v_time = 0
 
-        v_time += options.pen_delay_up
+        v_time += ad_ref.options.pen_delay_up
         v_time = max(0, v_time)  # Do not allow negative total delay time
         self.raise_time = v_time
 
         # Lowering time:
-        v_time = int(((params.servo_move_slope * v_dist + params.servo_move_min) ** 4 +
-            (params.servo_sweep_time * v_dist / options.pen_rate_raise) ** 4) ** 0.25)
+        v_time = int(((servo_move_slope * v_dist + servo_move_min) ** 4 +
+            (servo_sweep_time * v_dist / ad_ref.options.pen_rate_lower) ** 4) ** 0.25)
         if v_dist < 0.9:  # If up and down positions are equal, no initial delay
             v_time = 0
-        v_time += options.pen_delay_down
+        v_time += ad_ref.options.pen_delay_down
         v_time = max(0, v_time)  # Do not allow negative total delay time
         self.lower_time = v_time
 
 
-class PenStatus: # pylint: disable=too-few-public-methods
-    """
+class PenStatus:
+    '''
     PenTiming: Data storage class for pen lift status variables
 
     pen_up: physical pen up/down state (boolean)
     preview_pen_state: pen state for preview rendering. 0: down, 1: up, -1: changed
-    virtual_pen_up: Theoretical state while stepping through a plot to resume
     ebblv_set: Boolean; set to True after the pen is physically raised once
     lifts: Counter; keeps track of the number of times the pen is lifted
-    """
+    '''
 
     def __init__(self):
-        self.pen_up = None # Initial state: Pen status is unknown.
-        self.preview_pen_state = -1
-        self.virtual_pen_up = False
+        # self.pen_up = None # Initial state: Pen status is unknown.
+        self.preview_pen_state = -1 # Will be moved to preview.py in the future
         self.ebblv_set = False
         self.lifts = 0
 
     def reset(self):
-        """ Clear virtual state and lift count; Resetting them for a new plot. """
-        self.preview_pen_state = -1
-        self.virtual_pen_up = False
+        ''' Clear preview pen state and lift count; Resetting them for a new plot. '''
+        self.preview_pen_state = -1  # Will be moved to preview.py in the future
         self.lifts = 0
 
-    def report(self, params, message_fun):
-        """ report: Print pen lift statistics """
-        if not params.report_lifts:
+    def report(self, ad_ref, message_fun):
+        ''' report: Print pen lift statistics '''
+        if not (ad_ref.options.report_time and ad_ref.params.report_lifts):
             return
         message_fun(f"Number of pen lifts: {self.lifts}\n")
 
+
 class PenHandler:
-    """
-    PenHandler: Main class for managing pen lifting, lowering, and status
-    """
+    '''
+    PenHandler: Main class for managing pen lifting, lowering, and status,
+    plus keeping track of XYZ pen position.
+    '''
 
     def __init__(self):
         self.heights = PenHeight()
-        self.status = PenStatus()
+        self.status  = PenStatus()
+        self.phys    = PenPosition() # Physical XYZ pen position
+        self.turtle  = PenPosition() # turtle XYZ pen position, for interactive control
 
-    def update(self, options, params):
-        """ Function to apply new settings after changing options directly """
-        self.heights.update(options, params)
+    def update(self, ad_ref):
+        ''' Function to apply new settings after changing options directly '''
+        self.heights.update(ad_ref)
 
     def reset(self):
-        """
+        '''
         Reset certain defaults for a new plot:
-        Clear virtual states and lift count; clear temporary pen height flag.
+        Clear pen height and lift count; clear temporary pen height flag.
         These are the defaults that can be set even before options are set.
-        """
+        '''
         self.status.reset()
         self.heights.use_temp_pen_height = False
 
+    def pen_raise(self, ad_ref):
+        ''' Raise the pen '''
 
-    def pen_raise(self, options, params, plot_status):
-        """ Raise the pen; return duration in ms """
-        self.status.virtual_pen_up = True # Virtual pen tracks state for resuming plotting.
         self.status.preview_pen_state = -1 # For preview rendering use
 
-        # Skip if pen is already up, or if resuming:
-        if plot_status.resume.resume_mode or self.status.pen_up:
-            return 0
+        # Skip if physical pen is already up:
+        if self.phys.z_up:
+            return
 
         self.status.lifts += 1
 
         v_time = self.heights.times.raise_time
-        if not options.preview:
-            ebb_motion.sendPenUp(plot_status.port, v_time, params.servo_pin, False)
-            if params.use_b3_out:
-                ebb_motion.PBOutValue( plot_status.port, 3, 0, False) # I/O Pin B3 output: low
-            if (v_time > 50) and (options.mode not in ["manual", "align", "toggle", "cycle"]):
+        if self.heights.narrow_band:
+            servo_pin = ad_ref.params.nb_servo_pin
+        else:
+            servo_pin = ad_ref.params.servo_pin
+
+        if ad_ref.options.preview:
+            ad_ref.preview.v_chart.rest(ad_ref, v_time)
+        else:
+            ebb_motion.sendPenUp(ad_ref.plot_status.port, v_time, servo_pin, False)
+            if (v_time > 50) and (ad_ref.options.mode not in\
+                ["manual", "align", "toggle", "cycle"]):
                 time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
-        self.status.pen_up = True
+            if ad_ref.params.use_b3_out: # I/O Pin B3 output: low
+                ebb_motion.PBOutValue( ad_ref.plot_status.port, 3, 0, False)
+        self.phys.z_up = True
         if not self.status.ebblv_set:
-            ebb_motion.setEBBLV(plot_status.port, options.pen_pos_up + 1, False)
+            layer_code = 1 + ad_ref.options.pen_pos_up // 2
+            if self.heights.narrow_band:
+                layer_code += 70
+            ebb_motion.setEBBLV(ad_ref.plot_status.port, layer_code, False)
             self.status.ebblv_set = True
-        return v_time
 
 
-    def pen_lower(self, options, params, plot_status):
-        """ Lower the pen; return duration in ms """
-        self.status.virtual_pen_up = False # Virtual pen keeps track of state for resuming plotting.
+    def pen_lower(self, ad_ref):
+        ''' Lower the pen '''
+
         self.status.preview_pen_state = -1  # For preview rendering use
 
-        if self.status.pen_up is not None:
-            if not self.status.pen_up:
-                return 0 # skip if pen is state is _known_ and is down
+        if self.phys.z_up is not None:
+            if not self.phys.z_up:
+                return # skip if pen is state is _known_ and is down
 
-        # Skip if stopped, or if resuming:
-        if plot_status.resume.resume_mode or plot_status.stopped:
-            return 0
+        # Skip if stopped:
+        if ad_ref.plot_status.stopped:
+            return
 
         v_time = self.heights.times.lower_time
 
-        if not options.preview:
-            ebb_motion.sendPenDown(plot_status.port, v_time, params.servo_pin, False)
-            if params.use_b3_out:
-                ebb_motion.PBOutValue( plot_status.port, 3, 1, False) # I/O Pin B3 output: high
-            if (v_time > 50) and (options.mode not in ["manual", "align", "toggle", "cycle"]):
+        if self.heights.narrow_band:
+            servo_pin = ad_ref.params.nb_servo_pin
+        else:
+            servo_pin = ad_ref.params.servo_pin
+
+        if ad_ref.options.preview:
+            ad_ref.preview.v_chart.rest(ad_ref, v_time)
+        else:
+            ebb_motion.sendPenDown(ad_ref.plot_status.port, v_time, servo_pin, False)
+            if (v_time > 50) and (ad_ref.options.mode not in\
+                ["manual", "align", "toggle", "cycle"]):
                 time.sleep(float(v_time - 30) / 1000.0) # pause before issuing next command
-        self.status.pen_up = False
-        return v_time
+            if ad_ref.params.use_b3_out: # I/O Pin B3 output: high
+                ebb_motion.PBOutValue( ad_ref.plot_status.port, 3, 1, False)
+        self.phys.z_up = False
 
 
-    def toggle(self, options, params, plot_status):
-        """
+    def toggle(self, ad_ref):
+        '''
         Toggle the pen from up to down or vice versa, after determining which state it
         is initially in. Call only after servo_setup_wrapper().
         This function should only be used as a setup utility.
-        """
-
-        if self.status.pen_up:
-            self.pen_lower(options, params, plot_status)
+        '''
+        if self.phys.z_up:
+            self.pen_lower(ad_ref)
         else:
-            self.pen_raise(options, params, plot_status)
+            self.pen_raise(ad_ref)
 
 
-    def cycle(self, options, params, plot_status):
-        """
+    def cycle(self, ad_ref):
+        '''
         Toggle the pen down and then up, with a 1/2 second delay.
         Call only after servo_setup_wrapper().
         This function should only be used as a setup utility.
-        """
-        self.pen_lower(options, params, plot_status)
-        ebb_serial.command(plot_status.port, 'SM,500,0,0\r')
-        self.pen_raise(options, params, plot_status)
+        '''
+        self.pen_lower(ad_ref)
+        ebb_motion.doTimedPause(ad_ref.plot_status.port, 500)
+        self.pen_raise(ad_ref)
 
-
-    def set_temp_height(self, options, params, temp_height, status):
+    def set_temp_height(self, ad_ref, temp_height):
         '''Begin using temporary pen height position'''
-        if self.heights.set_temp_height(options, params, temp_height):
-            self.servo_setup(options, params, status)
+        if self.heights.set_temp_height(ad_ref, temp_height):
+            self.servo_setup(ad_ref)
 
-    def end_temp_height(self, options, params, status):
+    def end_temp_height(self, ad_ref):
         '''End use of temporary pen height position'''
-        if self.heights.end_temp_height(options, params):
-            self.servo_setup(options, params, status)
+        if self.heights.end_temp_height(ad_ref):
+            self.servo_setup(ad_ref)
 
 
-    def servo_setup_wrapper(self, options, params, status):
+    def servo_setup_wrapper(self, ad_ref):
         '''
         Utility wrapper for servo_setup(), used for the first time that we address the
         pen-lift servo motor. It is used in manual and setup modes, as well as in various
-        ploting modes for initial pen raising/lowering.
+        plotting modes for initial pen raising/lowering.
 
         Actions:
         1. Configure servo up & down positions and lifting/lowering speeds.
@@ -293,50 +339,52 @@ class PenHandler:
         nonzero, we know that the servo position has been set (at least once) since reset.
 
         Knowing that the pen is up _does not_ confirm that the pen is at the *requested*
-        pen-up position. We can store (options.pen_pos_up + 1), with possible values
-        in the range 1 - 101 in EBBLV, to verify that the current position is correct, and
-        that we can skip extra pen-up/pen-down movements.
+        pen-up position, or that it was set to the correct output pin. We encode the
+        approximate pen-up height floor(options.pen_pos_up / 2) and whether or not we're
+        set for narrow-band servo and store the result in EBBLV, to verify that the current
+        position is correct, and that we can skip extra pen-up/pen-down movements.
 
         We do not _set_ the current correct pen-up value of EBBLV until the pen is raised.
         '''
 
-        self.servo_setup(options, params, status) # Set pen-up/down heights
+        self.servo_setup(ad_ref) # Set pen-up/down heights
 
-        if self.status.pen_up is not None:
+        if self.phys.z_up is not None:
             return # Pen status is already known; no need to proceed.
 
         # What follows is code to determine if the initial pen state is known.
-        if options.preview:
-            self.status.pen_up = True  # A fine assumption when in preview mode
-            self.status.virtual_pen_up = True
+        if ad_ref.options.preview:
+            self.phys.z_up = True
             return
 
-        if status.port is None:
+        if ad_ref.plot_status.port is None:
             return
 
         # Need to figure out if we're in the pen-up or pen-down state, or indeterminate:
-        value = ebb_motion.queryEBBLV(status.port, False)
+        value = ebb_motion.queryEBBLV(ad_ref.plot_status.port, False)
         if value is None:
             return
-        if int(value) != options.pen_pos_up + 1:
+
+        layer_code = 1 + ad_ref.options.pen_pos_up // 2 # Possible range 1 - 51.
+        if self.heights.narrow_band: # Possible range for narrow band: 71-121
+            layer_code += 70
+
+        if int(value) != layer_code:
             # See "Methods" above for what's going on here.
-            ebb_motion.setEBBLV(status.port, 0, False)
+            ebb_motion.setEBBLV(ad_ref.plot_status.port, 0, False)
             self.status.ebblv_set = False
-            self.status.virtual_pen_up = False
 
         else:   # EEBLV has already been set; we can trust the value from QueryPenUp:
                 # Note, however, that this does not ensure that the current
                 #    Z position matches that in the settings.
             self.status.ebblv_set = True
-            if ebb_motion.QueryPenUp(status.port, False):
-                self.status.pen_up = True
-                self.status.virtual_pen_up = True
+            if ebb_motion.QueryPenUp(ad_ref.plot_status.port, False):
+                self.phys.z_up = True
             else:
-                self.status.pen_up = False
-                self.status.virtual_pen_up = False
+                self.phys.z_up = False
 
 
-    def servo_setup(self, options, params, status):
+    def servo_setup(self, ad_ref):
         '''
         Set servo up/down positions, raising/lowering rates, and power timeout.
 
@@ -348,22 +396,45 @@ class PenHandler:
         Our servo sweep at 100% rate sweeps over 100% range in servo_sweep_time ms.
         '''
 
-        if options.preview or status.resume.resume_mode or status.port is None:
+        if ad_ref.options.penlift == 3: # (No current models have narrow_band servos by default)
+            self.heights.narrow_band = True
+        else:
+            self.heights.narrow_band = False
+
+        self.heights.update(ad_ref) # Ensure heights and transit times are known
+        if ad_ref.options.preview or ad_ref.plot_status.port is None:
             return
 
-        self.heights.update(options, params) # Ensure heights and transit times are known
-        servo_range = params.servo_max - params.servo_min
+        if self.heights.narrow_band:
+            servo_max = ad_ref.params.nb_servo_max
+            servo_min = ad_ref.params.nb_servo_min
+            servo_sweep_time = ad_ref.params.nb_servo_sweep_time
+            ebb_serial.command(ad_ref.plot_status.port, 'SC,8,1\r') # 1 channel of servo PWM
+            pwm_period = 0.03 # Units are "ms / 100", since pen_rate_raise is a %.
+        else:
+            servo_max = ad_ref.params.servo_max
+            servo_min = ad_ref.params.servo_min
+            servo_sweep_time = ad_ref.params.servo_sweep_time
+            ebb_serial.command(ad_ref.plot_status.port, 'SC,8,8\r') # 8 channels of servo PWM
+            pwm_period = 0.24 # 24 ms: 8 channels at 3 ms each (divided by 100 as above)
+
+        servo_range = servo_max - servo_min
         servo_slope = float(servo_range) / 100.0
 
-        int_temp = int(round(params.servo_min + servo_slope * options.pen_pos_up))
-        ebb_motion.setPenUpPos(status.port, int_temp, False)
-        int_temp = int(round(params.servo_min + servo_slope * self.heights.pen_pos_down))
-        ebb_motion.setPenDownPos(status.port, int_temp, False)
+        int_temp = int(round(servo_min + servo_slope * ad_ref.options.pen_pos_up))
+        ebb_motion.setPenUpPos(ad_ref.plot_status.port, int_temp, False)
+        int_temp = int(round(servo_min + servo_slope * self.heights.pen_pos_down))
+        ebb_motion.setPenDownPos(ad_ref.plot_status.port, int_temp, False)
 
-        servo_rate_scale = float(servo_range) * 0.24 / params.servo_sweep_time
-        int_temp = int(round(servo_rate_scale * options.pen_rate_raise))
-        ebb_motion.setPenUpRate(status.port, int_temp, False)
+        servo_rate_scale = float(servo_range) * pwm_period / servo_sweep_time
 
-        int_temp = int(round(servo_rate_scale * options.pen_rate_lower))
-        ebb_motion.setPenDownRate(status.port, int_temp, False)
-        ebb_motion.servo_timeout(status.port, params.servo_timeout, None, False)
+        int_temp = int(round(servo_rate_scale * ad_ref.options.pen_rate_raise))
+        ebb_motion.setPenUpRate(ad_ref.plot_status.port, int_temp, False)
+
+        int_temp = int(round(servo_rate_scale * ad_ref.options.pen_rate_lower))
+        ebb_motion.setPenDownRate(ad_ref.plot_status.port, int_temp, False)
+
+        ebb_motion.servo_timeout(ad_ref.plot_status.port, ad_ref.params.servo_timeout, None, False)
+
+        if ad_ref.params.use_b3_out:  # Configure I/O Pin B3 for use
+            ebb_motion.PBOutConfig(ad_ref.plot_status.port, 3, 0, False) # output, low

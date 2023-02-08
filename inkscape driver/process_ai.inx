@@ -32,7 +32,7 @@ Then, open the SVG file in Inkscape and Apply this extension.
       <effect needs-live-preview="false">
         <object-type>all</object-type>
         <effects-menu>
-        <submenu _name="AxiDraw Utilities"/>
+        <submenu name="AxiDraw Utilities"/>
         </effects-menu>
     </effect>
       <script>

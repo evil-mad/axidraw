@@ -68,8 +68,9 @@ def get_versions_online():
 def get_fw_version(serial_port):
     '''
     `serial_port` is the serial port to the AxiDraw (which must already be connected)
-
     returns an ebb version string
+
+    Possible future change: Get fw_version from plot_status.fw_version, rather than querying
     '''
     try:
         fw_version_string = ebb_serial.queryVersion(serial_port)
@@ -142,6 +143,8 @@ def log_version_info(serial_port, check_updates, current_version_string, preview
     '''
     works whether or not `check_updates` is True, online versions were successfully retrieved,
     or `serial_port` is None (i.e. not connected AxiDraw)
+
+    Possible future change: Get fw_version from plot_status.fw_version, rather than querying
     '''
     message_fun(f"This is AxiDraw Control version {current_version_string}.")
     online_versions = False

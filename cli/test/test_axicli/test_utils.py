@@ -13,7 +13,6 @@ from axicli.utils import get_configured_value, assign_option_values, load_config
 
 class UtilsTestCase(unittest.TestCase):
 
-    config_filename = "test/assets/hta_custom_config.py"
     
     def test_get_configured_value_no_configs(self):
         """ If no configs are provided, raise an error """
@@ -70,18 +69,25 @@ class UtilsTestCase(unittest.TestCase):
         self.assertEqual(resulting_options.overridden, command_line_values.overridden)
 
     def test_load_config(self):
-        result = load_config(self.config_filename)
+        config_filenames = ["test/assets/hta_custom_config.py", "test/assets/conf_without_suffix"]
 
-        self.assertIsInstance(result, dict)
-        self.assertIn("font_option", result.keys())
-        self.assertEqual(result["font_option"], "EMSAllure")
+        for filename in config_filenames:
+            with self.subTest(filename=filename):
+                result = load_config(filename)
+
+                self.assertIsInstance(result, dict)
+                self.assertIn("font_option", result.keys())
+                self.assertEqual(result["font_option"], "EMSAllure")
 
     def test_load_config_bad_filename(self):
-        with self.assertRaises(SystemExit) as se:
-            load_config("a_nonexistent_file.py")
+        config_filenames = ["a_nonexistent_file.py", "another_nonexistent_file"]
+        for filename in config_filenames:
+            with self.subTest(filename=filename):
+                with self.assertRaises(SystemExit) as se:
+                    load_config(filename)
 
-        self.assertNotEqual(se.exception.args, (None, ), "program will exit with a zero exit code")
-        self.assertNotEqual(se.exception.args, (), "program will exit with a zero exit code")
+                self.assertNotEqual(se.exception.args, (None, ), "program will exit with a zero exit code")
+                self.assertNotEqual(se.exception.args, (), "program will exit with a zero exit code")
 
     @patch.object(utils.runpy, "run_path", side_effect=SyntaxError("bad syntax"))
     def test_load_config_bad_syntax(self, m_run_path):

@@ -1,34 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-<_name>Disable XY Motors</_name>
+<name>Disable XY Motors</name>
 <id>command.evilmadscientist.axidraw_disable</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw_control.py</dependency>
 
-<param name="mode" type="notebook" gui-hidden="true">
-<page name="manual" _gui-text="AxiDraw Custom Manual Control">
-
-
-<_param name="splashpage" type="description" appearance="header">
-AxiDraw - Disable XY Motors
-</_param>
-
-<param name="manual_cmd" type="optiongroup" gui-hidden="true">
-<_option value="disable_xy" >Disable Motors</_option>
-</param>
-
-</page>
-</param>
+<param name="mode" type="string" gui-hidden="true" gui-text="mode ">manual</param>
+<param name="manual_cmd" type="string" gui-hidden="true" gui-text="mode ">disable_xy</param>
 
 <effect needs-live-preview="false">
-<object-type>all</object-type>
-<effects-menu>
-<submenu _name="AxiDraw Utilities"/>
-</effects-menu>
+    <object-type>all</object-type>
+    <effects-menu>
+        <submenu name="AxiDraw Utilities"/>
+    </effects-menu>
 </effect>
 
 <script>
-<command reldir="extensions" interpreter="python">axidraw_control.py</command>
+<command location="extensions" interpreter="python">axidraw_control.py</command>
 </script>
 
 </inkscape-extension>

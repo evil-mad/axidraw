@@ -1,266 +1,436 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-<_name>AxiDraw Control</_name>
+<name>AxiDraw Control</name>
 <id>command.evilmadscientist.axidraw-manager</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw_control.py</dependency>
 <param name="mode" type="notebook">
 
-<page name="plot" _gui-text="Plot">
-<_param indent="0" name="splashpage" type="description" appearance="header">AxiDraw Control</_param>
-<_param indent="2" name="splashpage3" type="description"
-xml:space="preserve" >Press 'Apply' to begin plotting. Use other tabs to adjust
-settings or access additional AxiDraw functions.
+<page name="plot" gui-text="Plot">
+<label indent="0" appearance="header">AxiDraw Control</label>
 
-AxiDraw documentation is online at: http://axidraw.com/docs
-
-For technical support or other assistance, please write to
-             contact@evilmadscientist.com </_param>
+<hbox >
+<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+<label>Press "Apply" to begin plotting. Use other tabs to adjust
+settings and access additional AxiDraw functions.</label>
 <spacer />
-<_param name="splashpage4" type="description" appearance="header">Multiple Copies:</_param>
+<label>
+AxiDraw documentation is online at: http://axidraw.com/docs . For technical support or other assistance, please write to contact@evilmadscientist.com 
+</label>
+</vbox>
+<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
 
-<param indent="2" name="copies" type="int" min="0" max="9999"  _gui-text="Copies to Plot:">1</param>	
-<param indent="2" name="page_delay" type="int" min="0" max="3600" _gui-text="Seconds of delay between copies:">15</param>	
 
-<_param name="splashpage5" type="description" indent="6" >Tip: Select 0 copies to plot continuously until paused.</_param>
+<spacer />
+<label appearance="header">Multiple Copies:</label>
+<hbox >
+<image width="80" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+<param name="copies" type="int" min="0" max="9999"  gui-text="Copies to Plot:">1</param>	
+<param name="page_delay" type="int" min="0" max="3600" gui-text="Delay between Copies (seconds):">15</param>	
+</vbox>
+</hbox>
 
+<spacer />
+
+<label indent="4" >Tip: Select 0 copies to plot continuously until paused.</label>
 </page>
 
 
-<page name='setup' _gui-text='Setup'>
+<page name='setup' gui-text='Setup'>
 
-<_param name="instructions_setup" type="description" appearance="header">Basic Setup</_param>
+<label appearance="header">Basic Setup</label>
 
+<hbox >
+<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
 <param name="pen_pos_up" type="int" min="0" max="100" appearance="full" 
-_gui-text="Pen height: UP (%):">60</param>
+gui-text="Pen height: UP (%):">60</param>
 <param name="pen_pos_down" type="int" min="0" max="100" appearance="full"
-_gui-text="Pen height: DOWN, (%):">30</param>
+gui-text="Pen height: DOWN, (%):">30</param>
+</vbox>
+<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
 
-<param name="setup_type"  indent="1" type="optiongroup" _gui-text="       Action on 'Apply':">
-<_option value="cycle">Cycle pen down then up</_option>	
-<_option value="align">Raise pen, turn off motors</_option>	
-<_option value="toggle">Toggle pen between up, down</_option>
-</param>
 <spacer />
-<_param indent="4" name="instructions_setup3" type="description">
-- Cycle pen down and up to check the vertical positions of the pen.
-</_param>
-<_param indent="4" name="instructions_setup4" type="description">
+
+<hbox>
+<vbox indent="8">
+<param name="setup_type" type="optiongroup"
+appearance="radio" gui-text='Action on "Apply": '>
+<option value="cycle">Cycle pen down then up</option>
+<option value="align">Raise pen, turn off motors</option>
+<option value="toggle">Toggle pen between up, down</option>
+</param>
+</vbox>
+</hbox>
+
+
+<spacer />
+<label indent="3">
+- Cycle pen down then up to check the vertical positions of the pen.
+</label>
+<label indent="3">
 - Raise pen and turn off stepper motors to manually move carriage to the Home Corner (back left).
-</_param>
+</label>
 </page>
 
-
-<page name='options' _gui-text='Options'>
+<page name='options' gui-text='Options'>
 <param name="submode" type="notebook">
 
-<page name='Speed' _gui-text='Speed'>
-<_param name="instructions_timing1" type="description" appearance="header">Movement speeds:</_param>
-<param indent="1" name="speed_pendown" type="int" min="1" max="110" _gui-text="Writing/Drawing speed (%):">25</param>	
-<param indent="1" name="speed_penup" type="int" min="1" max="110" _gui-text="Pen-up movement speed (%):">75</param>
+<page name='Speed' gui-text='Speed'>
+<label appearance="header">Movement speeds:</label>
 
-<param indent="1" name="accel" type="optiongroup" appearance="minimal" _gui-text="Acceleration :">
-<_option value="50">Standard</_option>
-<_option value="100">Maximum</_option>
-<_option value="75">High</_option>
-<_option value="35">Slow</_option>
-<_option value="10">Very slow</_option>
-</param>
 
-<param indent="1" name="const_speed" type="boolean" _gui-text="Use constant speed when pen is down">false</param>	
+<hbox >
+<image width="80" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
 
-</page>
+<param name="speed_pendown" type="int" min="1" max="110" 
+gui-text="Writing/Drawing speed (%):   ">25</param>	
+<param name="speed_penup" type="int" min="1" max="110" 
+gui-text="Pen-up movement speed (%):   ">75</param>
 
-<page name='pen_timing' _gui-text='Pen timing'>
-
-<_param name="instructions_timing3" type="description" appearance="header">Pen raising and lowering rates:</_param>
-
-<param indent="1" name="pen_rate_raise" type="optiongroup" appearance="minimal" _gui-text="Pen raising speed :">
-<_option value="100">Maximum</_option>
-<_option value="38">Standard</_option>
-<_option value="25">Slow</_option>
-<_option value="12">Very slow</_option>
-</param>
-
-<param indent="1" name="pen_rate_lower" type="optiongroup" appearance="minimal" _gui-text="Pen lowering speed :">
-<_option value="50">Standard</_option>
-<_option value="100">Maximum</_option>
-<_option value="25">Slow</_option>
-<_option value="12">Very slow</_option>
+<param name="accel" type="optiongroup" appearance="combo" gui-text="Acceleration :">
+<option value="50">Standard</option>
+<option value="100">Maximum</option>
+<option value="75">High</option>
+<option value="35">Slow</option>
+<option value="10">Very slow</option>
 </param>
 <spacer />
-<param indent="1" name="pen_delay_up" type="int" min="-500" max="500" _gui-text="Optional delay after raising pen (ms):">0</param>
-<param indent="1" name="pen_delay_down" type="int" min="-500" max="500" _gui-text="Optional delay after lowering pen (ms):">0</param>
+<param name="const_speed" type="bool" gui-text="Use constant speed when pen is down">false</param>	
+
+</vbox>
+<image width="10" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
+
+</page>
+<page name='pen_timing' gui-text='Pen timing'>
+
+<label appearance="header">Pen raising and lowering rates:</label>
+
+
+
+<hbox >
+<image width="70" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+
+<param name="pen_rate_raise" type="optiongroup" appearance="combo" gui-text="Pen raising speed :">
+<option value="100">Maximum</option>
+<option value="38">Standard</option>
+<option value="25">Slow</option>
+<option value="12">Very slow</option>
+<option value="6">Dead slow</option>
+</param>
+
+<param name="pen_rate_lower" type="optiongroup" appearance="combo" gui-text="Pen lowering speed :">
+<option value="50">Standard</option>
+<option value="100">Maximum</option>
+<option value="25">Slow</option>
+<option value="12">Very slow</option>
+<option value="6">Dead slow</option>
+</param>
+<spacer />
+<param name="pen_delay_up" type="int" min="-500" max="500" gui-text="Optional delay after raising pen (ms):">0</param>
+<param name="pen_delay_down" type="int" min="-500" max="500" gui-text="Optional delay after lowering pen (ms):">0</param>
+</vbox>
+<image width="10" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
 
 </page>
 
 
-<page name='preview' _gui-text='Preview &amp; Alerts'>
+<page name='preview' gui-text='Preview &amp; Alerts'>
 
-<_param name="instructions_preview" type="description" appearance="header">Preview mode:</_param>
+<label appearance="header">Preview mode:</label>
 
-<param indent="1" name="preview" type="boolean" _gui-text="Enable offline preview mode; Simulate plotting only">false</param> 
-<param indent="5" name="rendering" type="optiongroup" appearance="minimal" _gui-text="Preview mode rendering:">
-<_option value="3">All movement</_option>
-<_option value="1">Pen-down movement</_option>
-<_option value="2">Pen-up movement</_option>
-<_option value="0">None</_option>
+
+<hbox >
+<image width="50" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+<param name="preview" type="bool" gui-text="Enable offline preview mode; Simulate plotting only">false</param> 
+<param name="rendering" type="optiongroup" appearance="combo" gui-text="Preview mode rendering:">
+<option value="3">All movement</option>
+<option value="1">Pen-down movement</option>
+<option value="2">Pen-up movement</option>
+<option value="0">None</option>
 </param>
+</vbox>
+<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
 
-<_param name="instructions_preview" type="description" appearance="header">Webhook notifications:</_param>
-<param indent="1" name="webhook" type="boolean" _gui-text="Post to webhook when a plot finishes">false</param> 
-<param indent="3" name="webhook_url" type="string" _gui-text="Webhook URL: "></param>
+<spacer />
+
+<label appearance="header">Webhook notifications:</label>
+
+
+
+<hbox >
+<image width="50" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+<param name="webhook" type="bool" gui-text="Post to webhook when a plot finishes">false</param> 
+</vbox>
+</hbox>
+<param name="webhook_url" indent="4" type="string" gui-text="Webhook URL: "></param>
+
 
 </page>
 
 
-<page name='advanced' _gui-text='Advanced'>
-<_param name="instructions_options6" type="description" appearance="header">Advanced Options:</_param>
+<page name='advanced' gui-text='Advanced'>
+<label appearance="header">Advanced Options:</label>
 
-<param indent="1" name="auto_rotate" type="boolean" _gui-text="Auto-rotate page when printing">true</param>	
-<param indent="1" name="random_start" type="boolean" _gui-text="Randomize starts of closed paths">false</param>
-<param indent="1" name="report_time" type="boolean" _gui-text="Report time elapsed">false</param> 
+<hbox >
+<image width="50" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
 
-<param indent="1" name="reordering" type="optiongroup" appearance="minimal" _gui-text="Plot optimization:">
-<_option value="0">Least; Only connect adjoining paths</_option>
-<_option value="1">Basic; Also reorder paths for speed</_option>
-<_option value="2">Full; Also allow path reversal</_option>
-<_option value="4">None; Strictly preserve file order</_option>
+<param name="auto_rotate" type="bool" gui-text="Auto-rotate page when printing">true</param>	
+<param name="random_start" type="bool" gui-text="Randomize starts of closed paths">false</param>
+<param name="report_time" type="bool" gui-text="Report time elapsed">false</param> 
+
+<spacer />
+
+<param name="reordering" type="optiongroup" appearance="combo" gui-text="Plot optimization:">
+<option value="0">Least; Only connect adjoining paths</option>
+<option value="1">Basic; Also reorder paths for speed</option>
+<option value="2">Full; Also allow path reversal</option>
+<option value="4">None; Strictly preserve file order</option>
 </param>
 
-<param indent="1" name="resolution" type="optiongroup" appearance="minimal" _gui-text="Motor Resolution:">
-<_option value="1">~2870 DPI (Slightly smoother)</_option>
-<_option value="2">~1435 DPI (Slightly faster)</_option>
-</param>
+<param name="resolution" type="optiongroup" appearance="combo" gui-text="Motor Resolution:">
+<option value="1">~2870 DPI (Slightly smoother)</option>
+<option value="2">~1435 DPI (Slightly faster)</option>
+</param></vbox>
+<image width="10" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
 
 </page>
 
-<page name="sysinfo" _gui-text="Config">
-<_param name="instructions_config1" type="description" appearance="header">Hardware configuration</_param>
-<param name="model" type="optiongroup" appearance="minimal" indent="1" _gui-text="AxiDraw model:">
-<_option value="1">AxiDraw V2, V3, or SE/A4</_option>
-<_option value="2">AxiDraw V3/A3 or SE/A3</_option>
-<_option value="7">AxiDraw V3/B6</_option>
-<_option value="4">AxiDraw MiniKit</_option>
-<_option value="5">AxiDraw SE/A1</_option>
-<_option value="6">AxiDraw SE/A2</_option>
-<_option value="3">AxiDraw V3 XLX</_option>
-</param>
-<param name="port_config" type="optiongroup" appearance="minimal" indent="1" _gui-text="Machine selection:">
-<_option value="1">Use First AxiDraw located</_option>
-<_option value="2">Use AxiDraw named below</_option>
-<_option value="3">Plot to all AxiDraw units</_option>
-</param>
-<param indent="3" name="port" type="string" _gui-text="AxiDraw name or port: "></param>
+<page name="sysinfo" gui-text="Config">
 
-<_param name="instructions_config2" type="description" appearance="header">
-Check for updates</_param>
+<label appearance="header">Hardware configuration</label>
 
-<_param name="instructions_config3" type="description" indent="2" xml:space="preserve"
->Press 'Apply' with this tab selected to query the software and
-firmware versions, and check online for available updates.</_param>
+<hbox >
+<image width="60" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+<param name="model" type="optiongroup" appearance="combo" gui-text="AxiDraw model:">
+<option value="1">AxiDraw V2, V3, or SE/A4</option>
+<option value="2">AxiDraw V3/A3 or SE/A3</option>
+<option value="7">AxiDraw V3/B6</option>
+<option value="4">AxiDraw MiniKit</option>
+<option value="5">AxiDraw SE/A1</option>
+<option value="6">AxiDraw SE/A2</option>
+<option value="3">AxiDraw V3 XLX</option>
+</param>
+
+<param name="penlift" type="optiongroup" appearance="combo" gui-text="Pen-lift servo:">
+<option value="1">Default</option>
+<option value="2">Standard (lowest position)</option>
+<option value="3">Brushless (3rd position)</option>
+</param>
+
+<param name="port_config" type="optiongroup" appearance="combo" gui-text="Machine selection:">
+<option value="1">Use First AxiDraw located</option>
+<option value="2">Use AxiDraw named below</option>
+<option value="3">Plot to all AxiDraw units</option>
+</param>
+
+<param name="port" type="string" gui-text="AxiDraw name or port: "></param>
+
+</vbox>
+</hbox>
+<image width="50" height="2">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+
+<label appearance="header" indent="2">
+Press "Apply" with this tab selected to check online for updates.</label>
+
+
 
 </page>
-
 </param>
 </page>
 
+<page name="manual" gui-text="Manual">
+<label appearance="header">Manual Control</label>
 
-
-<page name="manual" _gui-text="Manual">
-<_param name="instructions_manual" type="description" appearance="header">Manual Control</_param>
-<_param indent="1" name="instructions_manual" type="description" xml:space="preserve">
-Press 'Apply' with this tab selected to execute various "manual"
+<hbox >
+<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+<label>
+Press "Apply" with this tab selected to execute various "manual"
 AxiDraw commands. For example, you can walk (move) the carriage,
-raise or lower the pen, or enable or disable the motors.
-</_param>
+raise or lower the pen, enable or disable the motors, or adjust
+the position where a paused plot will be resumed.
+</label>
+</vbox>
+<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
 
-<param name="manual_cmd" type="optiongroup" appearance="minimal"
-_gui-text="               Command: ">
-<_option value="none"       >- Select -</_option>
-<_option value="walk_x"     >Walk Carriage (X, inches)</_option>
-<_option value="walk_y"     >Walk Carriage (Y, inches)</_option>
-<_option value="walk_mmx"   >Walk Carriage (X, mm)</_option>
-<_option value="walk_mmy"   >Walk Carriage (Y, mm)</_option>
-<_option value="walk_home"  >Walk Home</_option>
-<_option value="raise_pen"  >Raise the Pen</_option>
-<_option value="lower_pen"  >Lower the Pen</_option>
-<_option value="enable_xy"  >Enable XY Motors</_option>
-<_option value="disable_xy" >Disable XY Motors</_option> 
-<_option value="bootload"   >Enter Bootloader mode</_option>
-<_option value="strip_data" >Strip plotter data from file</_option>
+<spacer />
+
+<hbox >
+<image width="80" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+<param name="manual_cmd" type="optiongroup" appearance="combo"
+gui-text="Command: ">
+<option value="none"       >- Select -</option>
+<option value="walk_x"     >Walk Carriage (X, inches)</option>
+<option value="walk_y"     >Walk Carriage (Y, inches)</option>
+<option value="walk_mmx"   >Walk Carriage (X, mm)</option>
+<option value="walk_mmy"   >Walk Carriage (Y, mm)</option>
+<option value="walk_home"  >Walk Home</option>
+<option value="raise_pen"  >Raise the Pen</option>
+<option value="lower_pen"  >Lower the Pen</option>
+<option value="enable_xy"  >Enable XY Motors</option>
+<option value="disable_xy" >Disable XY Motors</option>
+<option value="bootload"   >Enter Bootloader mode</option>
+<option value="strip_data" >Strip plotter data from file</option>
 </param>
+<param name="dist" indent="1" type="float" precision="3" min="-100000" max="100000"
+    gui-text="Walk or adjustment distance:">1.000</param>
+</vbox>
+<image width="10" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
 
-<param name="walk_dist" indent="1" type="float" precision="3" min="-300" max="300" _gui-text="Walk distance (+ or -):">1.000</param>
+<spacer />
 
-<_param  indent="1" name="instructions_manual2" type="description" xml:space="preserve">
 
+<hbox >
+<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+<label>
 Caution: The manual "walk" commands will move the carriage as
 requested, without regard to the current position. Moving too
 far or in the wrong direction may cause AxiDraw to try and
 move beyond its physical limits of travel.
-</_param>
+</label>
+</vbox>
+<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
+
+
 </page>
 
 
-<page name="layers" _gui-text="Layers">
-<_param name="instructions_layer" type="description"  appearance="header">Plot Individual Layers </_param>
-<_param indent="2" name="instructions_layer2" type="description">
+
+
+
+
+
+
+<page name="layers" gui-text="Layers">
+<label appearance="header">Plot Individual Layers </label>
+
+<hbox >
+<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+
+<label>
 Normally, all paths, from all visible layers will be plotted.
-</_param><_param indent="2" name="instructions_layer3" type="description">
+</label><label>
 You can also choose to plot a single layer or group of layers,
 for example to plot only a single color of ink.
-</_param><spacer /><_param indent="2" name="instructions_layer4" type="description">
-Press 'Apply' with this tab selected to plot only the visible
+</label>
+<spacer />
+<label>
+Press "Apply" with this tab selected to plot only the visible
 layers whose names begin with the selected number, which can
 be in the range 0 to 1000.
-</_param><_param indent="2" name="instructions_layer5" type="description">
+</label><label>
 For example, a layer named "5-red" will be plotted if the
 number 5 is selected, but layers named "guide lines", "55",
 or "2-black" will be skipped.
-</_param>
-<param indent="4" name="layer" type="int" min="0" max="1000"
-_gui-text="Plot only layers beginning with: ">1</param>
+</label>
+
+</vbox>
+<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
+
+
+
+
+
 <spacer />
-<_param name="instructions_layer1" type="description" indent="2">
+<hbox>
+<vbox indent="7">
+<param name="layer" type="int" min="0" max="1000"
+gui-text="Plot only layers beginning with: ">1</param>
+</vbox>
+</hbox>
+<spacer />
+
+
+<hbox >
+<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+<label>
 Tip: Number of copies to plot and the time delay between them
-are given by parameters in the "Plot" tab.</_param>
+are given by parameters in the "Plot" tab.
+</label>
+</vbox>
+<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
+
+
+
 </page>
 
 
-<page name="resume" _gui-text="Resume">
+<page name="resume" gui-text="Resume">
 
-<_param name="instructions_resume1" type="description"  appearance="header">Pause and Resume</_param>
+<label appearance="header">Pause and Resume</label>
 
-<_param indent="2" name="instructions_resume2" type="description"> 
+<hbox >
+<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<vbox >
+<label> 
 To pause a plot in progress, press the pause button on the
 left side of the AxiDraw. After pausing, you can change
 settings or perform any manual adjustments that are needed.
-</_param><_param indent="2" name="instructions_resume3" type="description">
+</label>
+<label>
 To resume plotting, or to simply cancel and return the
-carriage to the Home Corner, press 'Apply' with this tab
+carriage to the Home Corner, press "Apply" with this tab
 selected.
-</_param><spacer /><_param indent="2" name="instructions_resume4" type="description">
+</label>
+<spacer />
+<label>
 Plot progress is stored in the SVG file itself. If you plan
 to quit Inkscape and resume later, save the document first.
-</_param><_param indent="2" name="instructions_resume5" type="description">
+</label>
+<label>
 You can resume directly where you paused, or after using
 the Return to Home Corner command.
-</_param>
+</label>
+</vbox>
+<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+</hbox>
 
-<param name="resume_type" type="optiongroup" indent="4" _gui-text="Action on 'Apply':">
-<_option value="ResumeNow" >Resume (From Home or where paused)</_option>
-<_option value="home">Return to Home Corner (only)</_option>	
+
+
+<spacer />
+
+<hbox>
+<vbox indent="3">
+<param name="resume_type" type="optiongroup" appearance="radio"
+indent="2" gui-text='Action on "Apply": '>
+
+<option value="ResumeNow" >Resume (From Home or where paused)</option>
+<option value="home">Return to Home Corner (only)</option>
 </param>
+</vbox>
+</hbox>
+
 
 </page>
 
 
 </param>
-<_param name="copyright" type="description" indent="5" xml:space="preserve"
->Version 3.7.2      —      Copyright 2022 Evil Mad Scientist</_param>
-
-
+<label indent="5" xml:space="preserve"
+>Version 3.8.0      —      Copyright 2023 Evil Mad Science LLC</label>
 
 <effect needs-live-preview="false">
 <object-type>all</object-type>
@@ -269,8 +439,7 @@ the Return to Home Corner command.
 </effect>
 
 <script>
-<command reldir="extensions" interpreter="python">axidraw_control.py</command>
+<command location="extensions" interpreter="python">axidraw_control.py</command>
 </script>
 
 </inkscape-extension>
-

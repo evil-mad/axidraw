@@ -15,11 +15,7 @@ https://axidraw.com/doc/py_api/#usb_command-usb_query
 http://evil-mad.github.io/EggBot/ebb.html
 https://axidraw.com/doc/py_api/#additional-parameters
 
-
-* This script will run continuously until interrupted. *
-
-
-Hardware setup:
+Hardware setup (important!):
 
 The pen-lift servo on an AxiDraw V3 is normally connected to output B1,
 the *lowest* set of three pins on the AxiDraw's EBB control board, with the
@@ -30,6 +26,11 @@ To try this demo, connect a hobby servo motor to pins B3, which is the
 above the standard servo motor position. You can disconnect the servo motor
 connection from the lowest three pins and moving it to the highest three pins,
 keeping the black wire towards the back of the machine.
+
+
+Note that this example file assumes that a *standard* servo, not a
+narrow-band servo is being used for the servo control signal values.
+
 
 ---------------------------------------------------------------------
 
@@ -68,7 +69,7 @@ https://shop.evilmadscientist.com/contact
 
 ---------------------------------------------------------------------
 
-Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -131,8 +132,10 @@ servo_range = servo_max - servo_min
 pen_up_pos = int (PEN_UP_PERCENT * servo_range / 100 + servo_min)
 pen_down_pos = int (PEN_DOWN_PERCENT * servo_range / 100 + servo_min)
 
+index = 0
+
 try:
-    while True: # Repeat until interrupted
+    while index < 20: # Repeat many times (unless interrupted)
 
         if PEN_IS_UP:
             position = pen_down_pos
@@ -154,6 +157,9 @@ try:
         ad.usb_command(COMMAND + "\r")
 
         time.sleep(WAIT_TIME_S)
+        index += 1
 
 except KeyboardInterrupt:
     ad.disconnect()             # Close serial port to AxiDraw
+
+ad.disconnect()             # Close serial port to AxiDraw in any case.

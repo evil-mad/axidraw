@@ -86,14 +86,22 @@ def core_options(parser, config):
                         type="int", action="store", dest="model",\
                         default=config["model"],\
                         help="AxiDraw Model (1-6). 1: AxiDraw V2 or V3. " \
-                        + "2:AxiDraw V3/A3 or SE/A3. 3: AxiDraw V3 XLX. " \
-                        + "4:AxiDraw MiniKit. 5:AxiDraw SE/A1. 6: AxiDraw SE/A2.")
+                        + "2: AxiDraw V3/A3 or SE/A3. 3: AxiDraw V3 XLX. " \
+                        + "4: AxiDraw MiniKit. 5: AxiDraw SE/A1. 6: AxiDraw SE/A2.")
+
+    options.add_option("--penlift",\
+                        type="int", action="store", dest="penlift",\
+                        default=config["penlift"],\
+                        help="pen lift servo configuration (1-3). " \
+                        + "1: Default for AxiDraw model. " \
+                        + "2: Standard servo (lowest connector position). " \
+                        + "3: Narrow-band brushless servo (3rd position up).")
 
     options.add_option("--port_config",\
                         type="int", action="store", dest="port_config",\
                         default=config["port_config"],\
                         help="Port use code (0-3)."\
-                        +" 0: Plot to first unit found, unless port is specified"\
+                        +" 0: Plot to first unit found, unless port is specified."\
                         + "1: Plot to first AxiDraw Found. "\
                         + "2: Plot to specified AxiDraw. "\
                         + "3: Plot to all AxiDraw units. ")
@@ -155,6 +163,11 @@ def core_options(parser, config):
                         default=config["webhook_url"],\
                         help="Webhook URL to be used if webhook is enabled")
 
+    options.add_option("--submode",\
+                        action="store", type="string", dest="submode",\
+                        default="none", \
+                        help="Secondary GUI tab.")
+
     return options
 
 def core_mode_options(parser, config):
@@ -166,23 +179,19 @@ def core_mode_options(parser, config):
                         help="Mode or GUI tab. One of: [plot, layers, align, toggle, cycle"\
                         + ", manual, sysinfo, version, res_plot, res_home]. Default: plot.")
 
-    options.add_option("--submode",\
-                        action="store", type="string", dest="submode",\
-                        default="none", \
-                        help="Secondary GUI tab.")
-
     options.add_option("--manual_cmd",\
                         type="string", action="store", dest="manual_cmd",\
                         default=config["manual_cmd"],\
                         help="Manual command. One of: [fw_version, raise_pen, lower_pen, "\
                         + "walk_x, walk_y, walk_mmx, walk_mmy, walk_home, enable_xy, "\
-                        + "disable_xy, bootload, strip_data, read_name, list_names, "\
-                        + "write_name]. Default: fw_version")
+                        + "disable_xy, bootload, "\
+                        + "strip_data, read_name, list_names, write_name]. Default: fw_version")
 
-    options.add_option("--walk_dist",\
-                        type="float", action="store", dest="walk_dist",\
-                        default=config["walk_dist"],\
-                        help="Distance for manual walk")
+    options.add_option("--dist", "--walk_dist",\
+                        type="float", action="store", dest="dist",\
+                        default=config["dist"],\
+                        help="Distance for manual walk or changing resume position. "\
+                            + "(The argument name walk_dist is deprecated.)")
 
     options.add_option("--layer",\
                         type="int", action="store", dest="layer",\

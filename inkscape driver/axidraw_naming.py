@@ -2,11 +2,10 @@
 # Part of the AxiDraw driver for Inkscape
 # https://github.com/evil-mad/AxiDraw
 #
-# See versionString below for detailed version number.
+# See version_string below for detailed version number.
 
 '''
-Copyright 2020 Windell H. Oskay, Evil Mad Scientist Laboratories
-
+Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -30,54 +29,52 @@ SOFTWARE.
 
 '''
 
-# Requires Pyserial 2.7.0 or newer. Pyserial 3.0 recommended.
-
-from lxml import etree
-
-from axidrawinternal import axidraw	# https://github.com/evil-mad/axidraw
+from axidrawinternal import axidraw    # https://github.com/evil-mad/axidraw
 
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
 inkex = from_dependency_import('ink_extensions.inkex')
 
-class AxiDrawNamingClass( inkex.Effect ):
+class AxiDrawNamingClass( inkex.Effect ): # pylint: disable=too-few-public-methods
+    ''' Main class for AxiDraw Naming function '''
 
-	def __init__( self ):
-		inkex.Effect.__init__( self )
+    def __init__( self ):
+        inkex.Effect.__init__( self )
 
-		self.OptionParser.add_option( "--mode",	action="store", type="string", dest="mode", default="plot", help="Mode (or GUI tab) selected" )
-		self.OptionParser.add_option( "--nickname", action="store", type="string", dest="nickname", default="AxiDraw 1", help="The nickname to assign" )
+        self.version_string = "2.2.0" # Dated 2023-01-01
 
-	def effect( self ):
-		'''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
+        self.OptionParser.add_option( "--mode", action="store", type="string",
+                dest="mode", default="plot", help="Mode (or GUI tab) selected" )
+        self.OptionParser.add_option( "--nickname", action="store", type="string",
+                dest="nickname", default="", help="The nickname to assign" )
 
-		self.versionString = "AxiDraw Naming - Version 2.1.0 dated 2019-05-15"
-		
-		# Input sanitization:
-		self.options.mode = self.options.mode.strip("\"")
-		self.options.nickname = self.options.nickname.strip("\"")
+    def effect( self ):
+        '''Main entry point: check to see which mode/tab is selected, and act accordingly.'''
 
-		if (self.options.mode == "about"):
-			return
+        # Input sanitization:
+        self.options.mode = self.options.mode.strip("\"")
+        self.options.nickname = self.options.nickname.strip("\"")
+        self.options.nickname = self.options.nickname.strip()
 
-		ad = axidraw.AxiDraw()
-						
-		ad.getoptions([])
+        if self.options.mode == "about":
+            return
 
-		ad.called_externally = True
+        ad_ref = axidraw.AxiDraw()
 
-		# Pass the document off for plotting
-		ad.document = self.document 
-		
-		ad.options.mode = "manual"
-		
-		if (self.options.mode == "list_names"):
-			ad.options.manual_cmd = "list_names"
-		if (self.options.mode == "write_name"):
-			ad.options.manual_cmd = "write_name" + self.options.nickname
+        ad_ref.getoptions([])
 
-		ad.effect()	
+        ad_ref.called_externally = True
 
+        # Pass the document off for plotting
+        ad_ref.document = self.document
+
+        ad_ref.options.mode = "manual"
+        if self.options.mode == "list_names":
+            ad_ref.options.manual_cmd = "list_names"
+        if self.options.mode == "write_name":
+            ad_ref.options.manual_cmd = "write_name" + self.options.nickname
+
+        ad_ref.effect()
 
 if __name__ == '__main__':
-	e = AxiDrawNamingClass()
-	e.affect()
+    e = AxiDrawNamingClass()
+    e.affect()

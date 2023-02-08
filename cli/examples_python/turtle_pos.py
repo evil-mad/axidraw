@@ -50,7 +50,7 @@ https://shop.evilmadscientist.com/contact
 ---------------------------------------------------------------------
 
 
-Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -91,7 +91,7 @@ def print_position():
     turtle_pen_state = ad.turtle_pen()
     current_pen_state = ad.current_pen()
     print("Turtle pen up: " + str(turtle_pen_state))
-    print("Actutal pen up: " + str(current_pen_state) + "\n")
+    print("Actual pen up: " + str(current_pen_state) + "\n")
 
 ad.interactive()            # Enter interactive mode
 connected = ad.connect()    # Open serial port to AxiDraw

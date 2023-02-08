@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2021 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ Classes and functions for working with simplified path objects
 Part of the AxiDraw driver for Inkscape
 https://github.com/evil-mad/AxiDraw
 
-The classes defined by this function are:
+The primary classes defined by this function are:
 * DocDigest: An object corresponding to a single SVG document
 
 * PathItem: An object corresponding to a single SVG path
@@ -33,8 +33,11 @@ The classes defined by this function are:
 
 In each case, the formats supported here are ones that can be mapped
 to a very limited subset of SVG.
+
+Also included is a LayerProperties class, which manages parsing of layer names.
 """
 
+from math import sqrt
 from lxml import etree
 
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
@@ -125,13 +128,77 @@ class PathItem:
             return self.subpaths[0][-1]
         return None
 
+    def length(self):
+        """
+        Return total path length; the sum of segment lengths for the path object.
+        Intended for use on "flat" PathItem objects that only contain a single subpath.
+        """
+        if self.subpaths is None:
+            return 0
+
+        subpath = self.subpaths[0]
+        vertex_count = len(subpath)
+        vertex_count_less_1 = vertex_count - 1
+        total_length = 0
+        index = 0
+        while index < (vertex_count_less_1):
+            d_x = subpath[index+1][0] - subpath[index][0]
+            d_y = subpath[index+1][1] - subpath[index][1]
+            total_length += sqrt(d_x * d_x + d_y * d_y)
+            index += 1
+        return total_length
+
+
+    def crop_by_distance(self, target):
+        """
+        Trace along the path, calculating the length of each segment, until the specified
+            target distance along the path is reached.
+        Remove all path segments before the target, and splice the segment where the target
+            resides, removing the first vertex of that segment and replacing it with a new
+            vertex (now the new first vertex) at the target distance along the original path.
+
+        Intended for use on "flat" PathItem objects that only contain a single subpath.
+        """
+        if self.subpaths is None:
+            return
+        if target < 0:
+            return
+        subpath = self.subpaths[0]
+        vertex_count = len(subpath)
+        vertex_count_less_1 = vertex_count - 1
+
+        subpath_length = 0
+        index = 0
+        while index < (vertex_count_less_1):
+            d_x = subpath[index+1][0] - subpath[index][0]
+            d_y = subpath[index+1][1] - subpath[index][1]
+            this_seg_dist = sqrt(d_x * d_x + d_y * d_y)
+            if (subpath_length + this_seg_dist) > target:
+                break
+            index += 1
+            subpath_length += this_seg_dist
+
+        if index == vertex_count_less_1:
+            subpath[:] = [] # Target is past the end of this subpath; crop entire subpath.
+            return
+
+        new_seg_fraction = (target - subpath_length)/this_seg_dist
+        d_x = d_x * new_seg_fraction
+        d_y = d_y * new_seg_fraction
+        subpath[index][0] = subpath[index][0] + d_x
+        subpath[index][1] = subpath[index][1] + d_y
+        subpath[:] = subpath[index:]
+
+
     def closed(self):
         """
         If PathItem contains only a single closed subpath, return True
+        Tolerance is of 0.0001 inch
         """
         if self.subpaths:
             if len(self.subpaths) == 1:
-                return plot_utils.points_equal(self.subpaths[0][0], self.subpaths[0][-1])
+                return plot_utils.points_near(self.subpaths[0][0], self.subpaths[0][-1],\
+                    .00000001)
         return False
 
     def reverse(self):
@@ -143,8 +210,101 @@ class PathItem:
             if len(self.subpaths) == 1:
                 self.subpaths[0].reverse()
 
+def find_int(name_string):
+    '''
+    Find a continuous integer, starting at the given position in a string.
+    If found, return integer, remaining string after the integer.
+    Else, return None, and the original string.
+    '''
 
-class LayerItem:
+    temp_num_string = 'x'
+    string_pos = 1
+    while string_pos <= len(name_string):
+        layer_name_fragment = name_string[:string_pos]
+        if layer_name_fragment.isdigit():
+            temp_num_string = name_string[:string_pos]
+            string_pos += 1
+        else:
+            break
+    if str.isdigit(temp_num_string):
+        return int(float(temp_num_string)), name_string[len(temp_num_string):]
+    return None, name_string
+
+
+class LayerProperties: # pylint: disable=too-many-instance-attributes
+    """
+    Minor class for parsing and storing layer name properties
+    https://wiki.evilmadscientist.com/AxiDraw_Layer_Control
+    """
+
+    def __init__(self):
+        self.skip = False   # If true, a non-printing layer (e.g., documentation or hidden)
+        self.number = None  # Layer "number" for the purposes of printing specific layers
+        self.pause = False  # If True, force a pause at the beginning of the layer
+        self.delay = None   # Delay (ms) at beginning of layer
+        self.speed = None   # Defined pen-down speed for the layer
+        self.height = None  # Defined pen-down height for the layer
+        self.text = ""      # Extra text in the layer name, e.g., human-readable name.
+
+    def parse(self, layer_name):
+        '''
+        Populate the LayerProperties instance variables from the string layer_name.
+        '''
+
+        if not layer_name: # Layer name is None; nothing to do
+            return
+        layer_name.strip() # Remove whitespace
+        if len(layer_name) == 0:
+            return # Empty layer name
+        if str(layer_name)[0] == '%':
+            self.skip = True    # A non-printing "documentation layer"
+            self.text = layer_name[1:]
+            return
+        if str(layer_name)[0] == '!':
+            self.pause = True   # Force a pause when beginning this layer
+            layer_name = layer_name[1:] # Strip leading '!'
+
+        self.number, remainder = find_int(layer_name)
+
+        while len(remainder) >= 3:
+            key = remainder[:2].lower()
+            if key in ['+h', '+s', '+d']:
+                remainder = remainder[2:]
+                number_temp, remainder = find_int(remainder)
+                if number_temp is not None:
+                    if key == "+d":
+                        if number_temp > 0: # Delay time, ms
+                            self.delay = number_temp
+                    if key == "+h":
+                        if 0 <= number_temp <= 100:
+                            self.height = number_temp
+                    if key == "+s":
+                        if 1 <= number_temp <= 110:
+                            self.speed = number_temp
+            else:
+                self.text = remainder
+                break
+
+    def compose(self):
+        '''
+        Return a layer name string in a standardized format.
+        '''
+        name_string = ""
+        if self.skip:
+            return "%" + self.text
+        if self.pause:
+            name_string = "!"
+        if self.number is not None:
+            name_string += f"{self.number}"
+        if self.delay is not None:
+            name_string += f"+d{self.delay}"
+        if self.height is not None:
+            name_string += f"+h{self.height}"
+        if self.speed is not None:
+            name_string += f"+s{self.speed}"
+        return name_string + self.text
+
+class LayerItem: # pylint: disable=too-few-public-methods
     """
     LayerItem: An object corresponding to a single SVG layer
 
@@ -152,12 +312,17 @@ class LayerItem:
     - name, a string representing the name of the layer
     - paths, a list of PathItem elements in the layer
     - item_id: A unique ID string
+    - props: A LayerProperties object, containing properties parsed from the name.
+
+    The "name" variable is for reference. Properties encoded in the layer name
+        should be stored in self.props
     """
 
     def __init__(self):
-        self.name = ""          # Name of the layer
-        self.paths = []         # List of PathItem objects in the layer
-        self.item_id = None     # ID string
+        self.name = ""                  # Name of the layer, for reference only
+        self.paths = []                 # List of PathItem objects in the layer
+        self.item_id = None             # ID string
+        self.props = LayerProperties()  # LayerProperties object
 
     def flatten(self):
         """
@@ -185,6 +350,24 @@ class LayerItem:
                 new_paths.append(new_path)
 
         self.paths = new_paths
+
+    def parse_name(self, layer_name=None):
+        """
+        Populate self.props, a LayerProperties object, from the string layer_name or None.
+        If None, use self.name as the input string
+        Used when parsing SVG document into a digest.
+        """
+        if layer_name is None:
+            self.props.parse(self.name)
+        else:
+            self.props.parse(layer_name)
+
+    def compose_name(self):
+        """
+        Return a layer name string in a standardized format, from the values in self.props.
+        Used when generating an SVG plob from the digest.
+        """
+        return self.props.compose()
 
 
 class DocDigest:
@@ -240,7 +423,7 @@ class DocDigest:
         self.width = self.height
         self.height = old_width
 
-        self.viewbox = "0 0 {:f} {:f}".format(self.width, self.height)
+        self.viewbox = f"0 0 {self.width:f} {self.height:f}"
 
         if not self.flat:
             self.flatten()
@@ -253,7 +436,7 @@ class DocDigest:
                     vertex_list = []
                     continue
                 if len(vertex_list) < 2: # Skip paths with only one vertex
-                    vertex_list = []
+                    vertex_list.clear()
                     continue
 
                 new_vertex_list = []
@@ -280,8 +463,8 @@ class DocDigest:
         plob = etree.fromstring(PLOB_BASE)
         plob.set('encoding', "UTF-8")
 
-        plob.set('width', "{:f}in".format(self.width))
-        plob.set('height', "{:f}in".format(self.height))
+        plob.set('width', f"{self.width:f}in")
+        plob.set('height', f"{self.height:f}in")
 
         plob.set('viewBox', str(self.viewbox))
         plob.set(inkex.addNS('docname', 'sodipodi'), self.name)
@@ -290,18 +473,25 @@ class DocDigest:
             self.flatten()
 
         plob_metadata = etree.SubElement(plob, 'metadata')
-        for key in self.metadata:
-            plob_metadata.set(key, str(self.metadata[key]))
+        for key, value in self.metadata.items():
+            plob_metadata.set(key, str(value))
 
         plotdata = etree.SubElement(plob, 'plotdata')
-        for key in self.plotdata:
-            plotdata.set(key, self.plotdata[key])
+        for key, value in self.plotdata.items():
+            plotdata.set(key, str(value))
 
         for layer in self.layers: # path is a LayerItem object.
             new_layer = etree.SubElement(plob, 'g') # Create new layer in root of self.plob
             new_layer.set(inkex.addNS('groupmode', 'inkscape'), 'layer')
-            new_layer.set(inkex.addNS('label', 'inkscape'), layer.name)
-            new_layer.set('id', layer.item_id)
+
+            if layer.name == '__digest-root__':
+                new_layer.set(inkex.addNS('label', 'inkscape'), layer.name)
+            else:
+                layer_name_temp = layer.compose_name()
+                if layer_name_temp == "":
+                    layer_name_temp = f"layer_{layer.item_id}"
+                new_layer.set(inkex.addNS('label', 'inkscape'), layer_name_temp)
+                new_layer.set('id', layer.item_id)
 
             for path in layer.paths: # path is a PathItem object.
                 poly_string = vertex_list_to_string(path.subpaths[0])
@@ -362,6 +552,7 @@ class DocDigest:
                 layer = LayerItem() # New LayerItem object
                 layer.item_id = node.get('id')
                 layer.name = name_temp
+                layer.parse_name()
                 if len(str(name_temp)) > 0:
                     if str(name_temp)[0] == '%':
                         continue # Skip Documentation layer and its contents
@@ -376,6 +567,78 @@ class DocDigest:
                 self.metadata = dict(node.attrib)
             if node.tag == 'plotdata':
                 self.plotdata = dict(node.attrib)
+
+    def crop(self, distance):
+        """
+        Remove the initial portion of a DocDigest object to prepare for plotting the
+        remaining portion. For use only on a flattened digest, after optimizations.
+
+        Inputs:
+            distance: Pen-down distance through the plot at which to resume plotting.
+
+        All complete path elements that occur before distance is will be omitted.
+        If distance occurs within a path, splice that path and remove the first part of it.
+
+        If we are resuming from the beginning of a layer that has a time delay at
+        the beginning of the layer, we do include that time delay (but skip past any
+        programmatic pause that may have already occurred). If we are beginning in a
+        layer that has a time delay, but *after* the time delay, strip out that delay.
+        """
+        if distance <= 0:
+            return
+
+        dist_so_far = 0 # Distance counter for cropping
+
+        # Step through document by plot digest path distances.
+        #   Remove any paths that we are past
+        #   Remove any full layers that we are past
+        #   Remove pause from the layer that we are resuming at
+        #   If we are resuming until some mid-point in a layer (not the beginning),
+        #       then remove any time delay at the beginning of that layer.
+
+        splice_made = False
+        for layer in self.layers:
+            start_index = 0
+            for path in layer.paths:
+
+                path_length = path.length()
+                if (dist_so_far + path_length) <= distance: # Remove this full path
+                    dist_so_far += path_length
+                    start_index += 1 # This count will be used to slice the path out.
+                    layer.props.delay = None # No delay, since not on first path of layer.
+                    continue
+
+                if distance > dist_so_far:
+                    layer.props.delay = None # No delay, splice is after beginning of path
+                    # Crop that path partway, right at our target distance:
+                    target = distance - dist_so_far
+                    path.crop_by_distance(target)
+                layer.props.pause = False
+                splice_made = True
+                break
+
+            layer.paths = layer.paths[start_index:] # Slice out paths to skip
+
+            if len(layer.paths) == 0:
+                layer.name = "__MARKED_FOR_DELETION__"
+
+            if splice_made:
+                break
+
+        self.layers[:] = [layer_tmp for layer_tmp in self.layers \
+            if layer_tmp.name != "__MARKED_FOR_DELETION__"]
+
+
+    def length(self):
+        """
+        Return total path length; the sum of segment lengths for all paths in the digest.
+        For use on "flat" DocDigest objects, where each PathItem contains a single subpath.
+        """
+        total_length = 0
+        for layer in self.layers:
+            for path in layer.paths:
+                total_length += path.length()
+        return total_length
 
 
 def vertex_list_to_string(vertex_list):
@@ -402,11 +665,10 @@ def vertex_list_to_string(vertex_list):
     try:
         while i < (list_length):
             # String conversion: Use default fixed-point precision, 6-digits
-            output += "{:f},{:f} ".format(vertex_list[i][0], vertex_list[i][1])
+            output += f"{vertex_list[i][0]:f},{vertex_list[i][1]:f} "
             i += 1
         return output[:-1] # Drop trailing space from string.
-        # If there is no last character to drop, the exception will return None.
-    except:
+    except IndexError:
         return None
 
 
