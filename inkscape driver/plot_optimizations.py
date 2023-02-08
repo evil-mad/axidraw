@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -239,6 +239,19 @@ def randomize_start(digest, seed=None):
                 rotate = random.randrange(list_length - 1)
                 # Rotate, removing duplicate endpoint, adding new duplicate endpoint:
                 path.subpaths[0] = vertex_list[rotate:] + vertex_list[1:rotate+1]
+
+
+def supersample(digest, tolerance):
+    """
+    Run plot_utils.supersample; reduce density of vertices, with some specified tolerance.
+    """
+    if tolerance <= 0:
+        return
+    for layer_item in digest.layers:
+        for path in layer_item.paths:
+            vertex_list = path.subpaths[0]
+            plot_utils.supersample(vertex_list, tolerance)
+
 
 def reorder(digest, reverse):
     """

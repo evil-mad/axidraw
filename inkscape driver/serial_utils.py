@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -28,6 +28,7 @@ Requires Python 3.7 or newer.
 
 """
 
+import time
 from axidrawinternal.plot_utils_import import from_dependency_import
 ebb_serial = from_dependency_import('plotink.ebb_serial')  # https://github.com/evil-mad/plotink
 ebb_motion = from_dependency_import('plotink.ebb_motion')
@@ -79,3 +80,31 @@ def query_voltage(options, params, plot_status, warnings):
         voltage_ok = ebb_motion.queryVoltage(plot_status.port, False)
         if not voltage_ok:
             warnings.add_new('voltage')
+
+
+def exhaust_queue(ad_ref):
+    """
+    Wait until queued motion commands have finished executing
+    Uses the QG query http://evil-mad.github.io/EggBot/ebb.html#QG
+    Uses time.sleep to sleep as long as motion commands are still executing.
+
+    Query every 50 ms. Also break on keyboard interrupt (if configured) and
+        pause button press.
+
+    Requires EBB firmware version 2.6.2 or newer, returns (without error) otherwise,
+        not executing any delay time.
+    """
+
+    if not ebb_serial.min_version(ad_ref.plot_status.port, "2.6.2"):
+        return # Notably, this will return on any type of serial error.
+    while True:
+        if ad_ref.receive_pause_request(): # Keyboard interrupt detected!
+            break
+        status_string = ebb_serial.query(ad_ref.plot_status.port, 'QG\r').strip()
+        status = int('0x' + status_string, 16)
+        if status & 32: # Pause button pressed
+            break
+        if status & 15 == 0:  # If no commands are queued or executing,
+            break               #   and both motors are idle
+
+        time.sleep(0.050) # Use short intervals for responsiveness

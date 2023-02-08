@@ -47,7 +47,7 @@ https://shop.evilmadscientist.com/contact
 
 ---------------------------------------------------------------------
 
-Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -108,8 +108,19 @@ else:
 # ad.plot_setup("AxiDraw_trivial.svg")
 
 ad.options.preview  = True
-ad.options.report_time = True # Enable time estimates
+ad.options.report_time = True # Enable time and distance estimates
 
 ad.plot_run()   # plot the document
+
 print_time_seconds = ad.time_estimate
+dist_pen_down = ad.distance_pendown
+dist_pen_total = ad.distance_total
+pen_lifts = ad.pen_lifts
+elasped_time = ad.time_elapsed
+
+print("Printing estimates read from python API variables:")
 print(f"Estimated print time: {print_time_seconds} s")
+print(f"Pen-down motion distance: {dist_pen_down:.3f} m")
+print(f"Total motion distance: {dist_pen_total:.3f} m")
+print(f"Pen lift count: {pen_lifts}")
+print(f"Elapsed time for this estimate: {elasped_time:.3f} s")

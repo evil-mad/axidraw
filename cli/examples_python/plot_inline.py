@@ -42,7 +42,7 @@ https://shop.evilmadscientist.com/contact
 
 ---------------------------------------------------------------------
 
-Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -135,8 +135,8 @@ SVG_BODY += """<path
 # Add a programatic ellipse, with randomly generated size and position.
 # This will be different every time that you run this script.
 
-cx = 20 + 140 * random.random()
-cy = 20 + 80 * random.random()
+cx = 20 + 80 * random.random()
+cy = 20 + 40 * random.random()
 rx = 20 * random.random()
 ry = 20 * random.random()
 

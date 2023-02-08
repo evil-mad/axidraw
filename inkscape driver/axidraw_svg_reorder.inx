@@ -1,34 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-  <_name>Plot Optimization (Legacy)</_name>
+  <name>Plot Optimization (Legacy)</name>
   <id>command.evilmadscientist.axidraw.reorder</id>
   <dependency type="executable" location="extensions">axidraw_svg_reorder.py</dependency>
 
-<_param indent="5" name="splashpage" type="description" 
-appearance="header">AxiDraw Plot Optimization Tool</_param>
+<label indent="5" appearance="header">AxiDraw Plot Optimization Tool</label>
 
-<_param name="Header" type="description" xml:space="preserve">
+<label xml:space="preserve">
 This utility will re-order objects within each layer of your
 document, to reduce pen-up travel distance and time.
-</_param>
+</label>
 
-<param name="reordering" _gui-text="Group Handling" type="optiongroup" indent="2" >
-<_option value="2">Reorder within groups</_option>
-<_option value="1">Preserve groups</_option>
-<_option value="3">Break apart groups</_option>
+<param name="reordering" gui-text="Group Handling" type="optiongroup" 
+    appearance="radio" indent="2" >
+<option value="2">Reorder within groups</option>
+<option value="1">Preserve groups</option>
+<option value="3">Break apart groups</option>
 </param>
 
-<_param name="Footer" type="description" indent="3" xml:space="preserve">
-v 2.8. Copyright 2021, Evil Mad Scientist</_param>
+<label indent="3" xml:space="preserve">
+v 2.8. Copyright 2023, Evil Mad Scientist</label>
 
 
 <effect needs-live-preview="false">
     <object-type>all</object-type>
     <effects-menu>
-      <submenu _name="AxiDraw Utilities"/>
+      <submenu name="AxiDraw Utilities"/>
     </effects-menu>
   </effect>
   <script>
-    <command reldir="extensions" interpreter="python">axidraw_svg_reorder.py</command>
+    <command location="extensions" interpreter="python">axidraw_svg_reorder.py</command>
   </script>
 </inkscape-extension>

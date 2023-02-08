@@ -1,35 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <inkscape-extension xmlns="http://www.inkscape.org/namespace/inkscape/extension">
-<_name>AxiDraw Naming</_name>
+<name>AxiDraw Naming</name>
 <id>command.evilmadscientist.axidraw_naming</id>
 <dependency type="extension">org.inkscape.output.svg.inkscape</dependency>
 <dependency type="executable" location="extensions">axidraw_naming.py</dependency>
 
 <param name="mode" type="notebook" >
-<page name="list_names" _gui-text="Read AxiDraw Name">
+<page name="list_names" gui-text="Read AxiDraw Name">
 
-<_param name="read1" type="description" appearance="header">
+<label appearance="header">
 Read AxiDraw Nickname
-</_param>
+</label>
 
-<_param name="read2"  type="description" indent="2"  xml:space="preserve">
+<label indent="2"  xml:space="preserve">
 Click "Apply" to read and list all AxiDraw units found via
 USB. Each is listed by assigned USB Nickname (if any) or by
 USB port enumeration.
-</_param>
+</label>
 
 </page>
 
+<page name="write_name" gui-text="Write AxiDraw Name">
 
-<page name="write_name" _gui-text="Write AxiDraw Name">
-
-<_param name="write1" type="description" appearance="header">
+<label appearance="header">
 Write AxiDraw Nickname
-</_param>
+</label>
 
-<param indent="1" name="nickname" type="string" max_length="16" _gui-text="Nickname:">East</param>
+<param indent="1" name="nickname" type="string" max_length="16" gui-text="Nickname:">East</param>
 
-<_param name="write2" type="description"  indent="2" xml:space="preserve">
+<label indent="2" xml:space="preserve">
 Click "Apply" to assign the Nickname above to the AxiDraw
 connected via USB. After the name change, the AxiDraw will
 reboot to its power-on state. (If more than one AxiDraw is
@@ -39,15 +38,13 @@ Names should be 3-16 characters long.
 
 Assigned Nicknames are semi-permanent; they can be changed
 by this utility and are erased by firmware updates.
-</_param>
-
+</label>
 
 </page>
 
+<page name="about" gui-text="About">
 
-<page name="about" _gui-text="About">
-
-<_param name="aboutpage" type="description" indent="2" xml:space="preserve">
+<label indent="2" xml:space="preserve">
 This extension allows you to assign a "Nickname" (a digital
 name tag) to a given AxiDraw, or to read out that name. 
 
@@ -56,34 +53,32 @@ more than one AxiDraw connected: You can specify which
 AxiDraw to plot to when using AxiDraw Control.
 
 AxiDraw Naming requires firmware version 2.5.5 or newer. 
-You can use the "Config" tab in AxiDraw Control to check
-which firmware version is currently installed.
-
-Firmware update instructions may be found in the
-AxiDraw documentation online at axidraw.com/docs
+You can use the "Options > Config" tab in AxiDraw Control
+to check which firmware version is currently installed.
 
 Please be aware that updating your firmware will remove any
 existing Nickname; resetting the configuration to default.
-</_param>
+
+
+Firmware update instructions may be found online at:</label>
+<label indent="6" 
+appearance="url" xml:space="preserve">https://axidraw.com/fw</label>
 
 
 </page>
 
-
 </param>
-
-
 
 
 <effect needs-live-preview="false">
 <object-type>all</object-type>
 <effects-menu>
-<submenu _name="AxiDraw Utilities"/>
+<submenu name="AxiDraw Utilities"/>
 </effects-menu>
 </effect>
 
 <script>
-<command reldir="extensions" interpreter="python">axidraw_naming.py</command>
+<command location="extensions" interpreter="python">axidraw_naming.py</command>
 </script>
 
 </inkscape-extension>

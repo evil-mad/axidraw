@@ -24,8 +24,8 @@ https://github.com/evil-mad/AxiDraw
 
 Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
+__version__ = '3.8.0'  # Dated 2023-01-01
 
-import sys
 import math
 import gettext
 import copy
@@ -48,7 +48,7 @@ path_objects = from_dependency_import('axidrawinternal.path_objects')
 logger = logging.getLogger(__name__)
 
 
-class ErrConfig:
+class ErrConfig: # pylint: disable=too-few-public-methods
     '''Configure error reporting options for AxiDraw Python API'''
     def __init__(self):
         self.connect = False # Raise error on failure to connect to AxiDraw
@@ -64,10 +64,6 @@ class AxiDraw(axidraw.AxiDraw):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.turtle_x = 0
-        self.turtle_y = 0
-        self.turtle_pen_up = True
-        self.turtle_pen_up = True
         self.document = None
         self.original_document = None
 
@@ -115,24 +111,13 @@ class AxiDraw(axidraw.AxiDraw):
         self.query_ebb_voltage()
         self.update_options() # Apply general settings
 
-        if self.start_x is not None:    # Set initial XY Position:
-            self.f_curr_x = self.start_x
-        else:
-            self.f_curr_x = self.params.start_pos_x
-        if self.start_y is not None:
-            self.f_curr_y = self.start_y
-        else:
-            self.f_curr_y = self.params.start_pos_y
-
-        self.pt_first = (self.f_curr_x, self.f_curr_y)
-        self.turtle_x = self.f_curr_x # Set turtle position to (0,0)
-        self.turtle_y = self.f_curr_y
-        self.turtle_pen_up = True
+        self.pen.turtle = copy.copy(self.pen.phys)
+        self.pen.turtle.z_up = True # Theoretical pen starts UP.
 
         # Query if button pressed, to clear the result:
         ebb_motion.QueryPRGButton(self.plot_status.port)
-        self.pen.servo_setup_wrapper(self.options, self.params, self.plot_status)
-        self.pen.pen_raise(self.options, self.params, self.plot_status) # Raise pen
+        self.pen.servo_setup_wrapper(self)
+        self.pen.pen_raise(self) # Raise pen
         self.enable_motors()         # Set plot resolution & speed & enable motors
         return True
 
@@ -141,6 +126,9 @@ class AxiDraw(axidraw.AxiDraw):
         file_ok = False
         inkex.localize()
         self.getoptions([] if argstrings is None else argstrings)
+
+        self.original_dist = self.options.dist # Remove in v 4.0
+        self.old_walk_dist = None # Remove in v 4.0
 
         if svg_input is None:
             svg_input = plot_utils.trivial_svg
@@ -176,6 +164,40 @@ class AxiDraw(axidraw.AxiDraw):
             logger.error("No SVG input provided.")
             logger.error("Use plot_setup(svg_input) before plot_run().")
             raise RuntimeError("No SVG input provided.")
+
+
+        ### THIS SECTION: SLATED FOR REMOVAL IN AXIDRAW SOFTWARE 4.0 ###
+        # Backwards compatibility for user scripts including `walk_dist`,
+        #   the deprecated predecessor to `dist`
+        #
+        # If the script specifies walk_dist (deprecated version of dist), then that
+        #   value overrides the value of dist in the config file (axidraw_conf.py).
+        # But, if the script gives a value of dist different from that in the config file,
+        # then that value overrides both the config file and any value of walk_dist.
+        #
+        # i.e., if this script has not changed the value of "dist" versus the default
+        #   given in the config file, AND there is a walk_dist value given,
+        #   then accept that walk_dist as the correct value to use.
+
+        # First, handle special case: Multiple walks in a row, with walk_dist set at least once
+        if self.old_walk_dist is not None:
+            if self.options.dist != self.old_walk_dist and\
+                self.options.dist != self.original_dist: # Thus, *dist* has now been set; use it.
+                self.old_walk_dist = None
+            else: # Otherwise, continue using walk_dist, which may have an updated value:
+                self.options.dist = self.options.walk_dist
+                self.old_walk_dist = self.options.walk_dist
+        elif self.options.dist == self.original_dist:
+            try:
+                self.options.walk_dist
+            except AttributeError:
+                pass # No worries; we don't need walk_dist to be defined. :)
+            else:
+                self.options.dist = self.options.walk_dist
+                self.old_walk_dist = self.options.walk_dist
+
+        ### END SECTION FOR REMOVAL IN 4.0 ###
+
         self.set_defaults() # Re-initialize some items normally set at __init__
         self.set_up_pause_receiver(self.software_initiated_pause_event)
         self.effect()
@@ -185,11 +207,16 @@ class AxiDraw(axidraw.AxiDraw):
 
         self.handle_errors()
 
-        self.time_estimate = self.plot_status.stats.pt_estimate / 1000.0
-        self.distance_pendown = 0.0254 * self.plot_status.stats.down_travel_inch
-        self.distance_total = self.distance_pendown +\
-            0.0254 * self.plot_status.stats.up_travel_inch
-        self.pen_lifts = self.pen.status.lifts
+        if self.options.mode in ("plot", "layers", "res_plot"):
+            ''' Timing & distance variables only available in modes that plot '''
+            if self.options.preview:
+                self.time_estimate = self.plot_status.stats.pt_estimate / 1000.0
+            else:
+                self.time_estimate = self.time_elapsed
+            self.distance_pendown = 0.0254 * self.plot_status.stats.down_travel_tot
+            self.distance_total = self.distance_pendown +\
+                0.0254 * self.plot_status.stats.up_travel_tot
+            self.pen_lifts = self.pen.status.lifts
 
         for warning_message in self.warnings.return_text_list():
             self.user_message_fun(warning_message)
@@ -204,8 +231,8 @@ class AxiDraw(axidraw.AxiDraw):
         self.options.units = 0 # inches, by default
         self.options.preview = False
         self.options.mode = "interactive"
-        self.Secondary = False
-        self.pen.update(self.options, self.params)
+        self.plot_status.secondary = False
+        self.pen.update(self)
 
     def _verify_interactive(self, verify_connection=False):
         '''
@@ -235,7 +262,7 @@ class AxiDraw(axidraw.AxiDraw):
         if not self._verify_interactive(True):
             return
         self.update_options()
-        self.pen.servo_setup(self.options, self.params, self.plot_status)
+        self.pen.servo_setup(self)
         if self.plot_status.port:
             self.enable_motors()  # Set plotting resolution & speed
 
@@ -270,41 +297,41 @@ class AxiDraw(axidraw.AxiDraw):
             x_value = x_value / 25.4
             y_value = y_value / 25.4
         if relative:
-            x_value = self.turtle_x + x_value
-            y_value = self.turtle_y + y_value
+            x_value = self.pen.turtle.xpos + x_value
+            y_value = self.pen.turtle.ypos + y_value
 
         # Snap interactive movement to travel bounds, with modest tolerance:
-        if math.isclose(x_value, self.x_bounds_min, abs_tol=1e-9):
-            x_value = self.x_bounds_min
-        if math.isclose(x_value, self.x_bounds_max, abs_tol=1e-9):
-            x_value = self.x_bounds_max
-        if math.isclose(y_value, self.y_bounds_min, abs_tol=1e-9):
-            y_value = self.y_bounds_min
-        if math.isclose(y_value, self.y_bounds_max, abs_tol=1e-9):
-            y_value = self.y_bounds_max
+        if math.isclose(x_value, self.bounds[0][0], abs_tol=2e-9):
+            x_value = self.bounds[0][0] # x_bounds_min
+        if math.isclose(x_value,  self.bounds[1][0], abs_tol=2e-9):
+            x_value = self.bounds[1][0] # x_bounds_max
+        if math.isclose(y_value, self.bounds[0][1], abs_tol=2e-9):
+            y_value = self.bounds[0][1] # y_bounds_min
+        if math.isclose(y_value, self.bounds[1][1], abs_tol=2e-9):
+            y_value = self.bounds[1][1] # y_bounds_max
 
-        turtle = [self.turtle_x, self.turtle_y]
+        turtle = [self.pen.turtle.xpos, self.pen.turtle.ypos]
         target = [x_value, y_value]
         segment = [turtle, target]
         accept, seg = plot_utils.clip_segment(segment, self.bounds)
 
         if accept and self.plot_status.port: # Segment is at least partially within bounds
             if not plot_utils.points_near(seg[0], turtle, 1e-9): # if initial point clipped
-                if self.params.auto_clip_lift and not self.turtle_pen_up:
-                    self.pen.pen_raise(self.options, self.params, self.plot_status)
+                if self.params.auto_clip_lift and not self.pen.turtle.z_up:
+                    self.pen.pen_raise(self)
                     # Pen-up move to initial position
-                    self.turtle_pen_up = False # Keep track of intended state
-                self.plot_seg_with_v(seg[0][0], seg[0][1], 0, 0) # move to start
-            if not self.turtle_pen_up:
-                self.pen.pen_lower(self.options, self.params, self.plot_status)
-            self.plot_seg_with_v(seg[1][0], seg[1][1], 0, 0) # Draw clipped segment
+                    self.pen.turtle.z_up = False # Keep track of intended state
+                self.go_to_position(seg[0][0], seg[0][1])
+            if not self.pen.turtle.z_up:
+                self.pen.pen_lower(self)
+            self.go_to_position(seg[1][0], seg[1][1]) # Draw clipped segment
             if not plot_utils.points_near(seg[1], target, 1e-9) and\
-                    self.params.auto_clip_lift and not self.turtle_pen_up:
-                self.pen.pen_raise(self.options, self.params, self.plot_status)
+                    self.params.auto_clip_lift and not self.pen.turtle.z_up:
+                self.pen.pen_raise(self)
                 # Segment end was clipped; this end is out of bounds.
-                self.turtle_pen_up = False # Keep track of intended state
-        self.turtle_x = x_value
-        self.turtle_y = y_value
+                self.pen.turtle.z_up = False # Keep track of intended state
+        self.pen.turtle.xpos = x_value
+        self.pen.turtle.ypos = y_value
 
         self.handle_errors()
 
@@ -337,7 +364,10 @@ class AxiDraw(axidraw.AxiDraw):
         new_path.item_id = "draw_path_item"
         new_path.stroke = 'Black'
         new_path.subpaths = [scaled_vertices]
-        new_turtle = new_path.last_point() # Final turtle position, if allowed to finish
+
+        # Final turtle position, if allowed to finish:
+        self.pen.turtle.xpos, self.pen.turtle.ypos = new_path.last_point()
+        self.pen.turtle.z_up = True
 
         new_layer = path_objects.LayerItem()
         new_layer.paths.append(new_path)
@@ -357,9 +387,8 @@ class AxiDraw(axidraw.AxiDraw):
             self.penup()
 
         if self.plot_status.stopped:
-            new_turtle = self.f_curr_x, self.f_curr_y
-        self.turtle_x, self.turtle_y = new_turtle
-        self.turtle_pen_up = True
+            self.pen.turtle = copy.copy(self.pen.phys)
+            self.pen.turtle.z_up = True
 
     def handle_errors(self):
         '''Raise keyboard interrupts and runtime errors if thus configured'''
@@ -386,54 +415,55 @@ class AxiDraw(axidraw.AxiDraw):
 
     def goto(self,x_target,y_target):
         '''Interactive context: absolute position move'''
-        self._xy_plot_segment(False,x_target, y_target)
+        self._xy_plot_segment(False, x_target, y_target)
 
     def moveto(self,x_target,y_target):
         '''Interactive context: absolute position move, pen-up'''
         if not self._verify_interactive(True):
             return
-        self.pen.pen_raise(self.options, self.params, self.plot_status)
-        self.turtle_pen_up = True
-        self._xy_plot_segment(False,x_target, y_target)
+        self.pen.pen_raise(self)
+        self.pen.turtle.z_up = True
+        self._xy_plot_segment(False, x_target, y_target)
 
     def lineto(self,x_target,y_target):
         '''Interactive context: absolute position move, pen-down'''
-        self.turtle_pen_up = False
-        self._xy_plot_segment(False,x_target, y_target)
+        self.pen.turtle.z_up = False
+        self._xy_plot_segment(False, x_target, y_target)
 
     def go(self,x_delta,y_delta):
         '''Interactive context: relative position move'''
-        self._xy_plot_segment(True,x_delta, y_delta)
+        self._xy_plot_segment(True, x_delta, y_delta)
 
     def move(self,x_delta,y_delta):
         '''Interactive context: relative position move, pen-up'''
         if not self._verify_interactive(True):
             return
-        self.pen.pen_raise(self.options, self.params, self.plot_status)
-        self.turtle_pen_up = True
-        self._xy_plot_segment(True,x_delta, y_delta)
+        self.pen.pen_raise(self)
+        self.pen.turtle.z_up = True
+        self._xy_plot_segment(True, x_delta, y_delta)
 
     def line(self,x_delta,y_delta):
         '''Interactive context: relative position move, pen-down'''
-        self.turtle_pen_up = False
-        self._xy_plot_segment(True,x_delta, y_delta)
+        self.pen.turtle.z_up = False
+        self._xy_plot_segment(True, x_delta, y_delta)
 
     def penup(self):
         '''Interactive context: raise pen'''
         if not self._verify_interactive(True):
             return
-        self.pen.pen_raise(self.options, self.params, self.plot_status)
-        self.turtle_pen_up = True
+        self.pen.pen_raise(self)
+        self.pen.turtle.z_up = True
 
     def pendown(self):
         '''Interactive context: lower pen'''
         if not self._verify_interactive(True):
             return
-        self.turtle_pen_up = False
+        self.pen.turtle.z_up = False
         if self.params.auto_clip_lift and not\
-                plot_utils.point_in_bounds([self.turtle_x, self.turtle_y], self.bounds):
+                plot_utils.point_in_bounds([self.pen.turtle.xpos, \
+                    self.pen.turtle.ypos], self.bounds):
             return # Skip out-of-bounds pen lowering
-        self.pen.pen_lower(self.options, self.params, self.plot_status)
+        self.pen.pen_lower(self)
 
     def usb_query(self, query):
         '''Interactive context: Low-level USB query'''
@@ -449,17 +479,19 @@ class AxiDraw(axidraw.AxiDraw):
 
     def turtle_pos(self):
         '''Interactive context: Report last known "turtle" position'''
-        return plot_utils.position_scale(self.turtle_x, self.turtle_y, self.options.units)
+        return plot_utils.position_scale(self.pen.turtle.xpos, self.pen.turtle.ypos,\
+            self.options.units)
 
     def turtle_pen(self):
         '''Interactive context: Report last known "turtle" pen state'''
-        return self.turtle_pen_up
+        return self.pen.turtle.z_up
 
     def current_pos(self):
         '''Interactive context: Report last known physical position '''
         self._verify_interactive(True)
-        return plot_utils.position_scale(self.f_curr_x, self.f_curr_y, self.options.units)
+        return plot_utils.position_scale(self.pen.phys.xpos, self.pen.phys.ypos,\
+            self.options.units)
 
     def current_pen(self):
         '''Interactive context: Report last known physical pen state '''
-        return self.pen.status.pen_up
+        return self.pen.phys.z_up

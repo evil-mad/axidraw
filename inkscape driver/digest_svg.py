@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -47,7 +47,7 @@ plot_utils = from_dependency_import('plotink.plot_utils')
 logger = logging.getLogger(__name__)
 
 
-class DigestSVG:
+class DigestSVG:# pylint: disable=pointless-string-statement
     """
     Main class for parsing SVG document and "digesting" it into a
     path_objects.DocDigest object, a heavily simplified representation of the
@@ -75,13 +75,11 @@ class DigestSVG:
 
         # Variables that will be populated in process_svg():
         self.bezier_tolerance = 0
-        self.supersample_tolerance = 0
         self.layer_selection = 0
 
         self.doc_width_100 = 0
         self.doc_height_100 = 0
         self.diagonal_100 = 0
-
 
     def process_svg(self, node_list, warnings, digest_params, mat_current=None):
         """
@@ -92,6 +90,7 @@ class DigestSVG:
 
         Inputs:
         node_list, an lxml etree representing an SVG document
+        warnings, a plot_warnings.PlotWarnings object
         digest_params, a tuple with additional parameters
         mat_current, a transformation matrix
 
@@ -106,7 +105,7 @@ class DigestSVG:
         """
 
         [self.doc_digest.width, self.doc_digest.height, scale_x, scale_y, self.layer_selection,\
-            self.bezier_tolerance, self.supersample_tolerance]\
+            self.bezier_tolerance]\
             = digest_params
 
         # Store document information in doc_digest
@@ -116,8 +115,8 @@ class DigestSVG:
         self.doc_height_100 = self.doc_digest.height / scale_y  # height of a "100% height" object
         self.diagonal_100 = sqrt((self.doc_width_100)**2 + (self.doc_height_100)**2)/sqrt(2)
 
-        docname = node_list.get(inkex.addNS('docname', 'sodipodi'), )
-        if docname:
+        docname = node_list.get('{http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd}docname')
+        if docname: # Previously: inkex.addNS('docname', 'sodipodi'),
             self.doc_digest.name = docname
 
         root_layer = path_objects.LayerItem()
@@ -141,8 +140,9 @@ class DigestSVG:
 
         Inputs:
         node_list, an lxml etree representing an SVG document
+        parent_style, dict from inherit_style
+        warnings, a plot_warnings.PlotWarnings object
         mat_current, a transformation matrix
-        parent_visibility, string
 
         This function handles path, group, line, rect, polyline, polygon,
         circle, ellipse  and use (clone) elements. Notable elements not handled
@@ -163,56 +163,35 @@ class DigestSVG:
             if node.get('display') == 'none': # Possible SVG attribute as well
                 continue  # Do not plot this object or its children
 
-            # first apply the current matrix transform to this node's transform
-            mat_new = simpletransform.composeTransform(mat_current, \
-                simpletransform.parseTransform(node.get("transform")))
+            # Apply the current matrix transform to this node's transform
+            trans = node.get("transform")
+            if trans is None:
+                mat_new = mat_current
+            else:
+                mat_new = simpletransform.composeTransform(mat_current, \
+                simpletransform.parseTransform(trans))
 
-            if node.tag == inkex.addNS('g', 'svg') or node.tag == 'g':
+            if node.tag in ('{http://www.w3.org/2000/svg}g', 'g'):
 
                 old_layer_name = self.current_layer_name
                 if old_layer_name == '__digest-root__' and\
-                    node.get(inkex.addNS('groupmode', 'inkscape')) == 'layer':
+                    node.get('{http://www.inkscape.org/namespaces/inkscape}groupmode') == 'layer':
                     # Ensure that sublayers are treated like regular groups only
 
-                    str_layer_name = node.get(inkex.addNS('label', 'inkscape'))
-
-                    if not str_layer_name:
-                        str_layer_name = "Auto-Layer " + str(self.next_id)
-                        self.next_id += 1
-                    else:
-                        str_layer_name.lstrip()  # Remove leading whitespace
-                        if len(str(str_layer_name)) > 0:
-                            if str(str_layer_name)[0] == '%':
-                                continue # Skip Documentation layer and its contents
-
-                    if self.layer_selection >= 0 and len(str(str_layer_name)) > 0: # layers mode
-                        layer_match = False
-                        layer_name_int = -1
-                        temp_num_string = 'x'
-                        string_pos = 1
-
-                        layer_name_temp = str(str_layer_name) # Ignore leading '!' in layers mode
-                        if str(str_layer_name)[0] == '!':
-                            layer_name_temp = str_layer_name[1:]
-
-                        max_length = len(layer_name_temp)
-                        while string_pos <= max_length:
-                            layer_name_fragment = layer_name_temp[:string_pos]
-                            if layer_name_fragment.isdigit():
-                                temp_num_string = layer_name_temp[:string_pos]
-                                string_pos += 1
-                            else:
-                                break
-
-                        if str.isdigit(temp_num_string):
-                            layer_name_int = int(float(temp_num_string))
-                            if self.layer_selection == layer_name_int:
-                                layer_match = True
-                        if not layer_match:
-                            continue # Skip this layer and its contents
+                    str_layer_name = node.get('{http://www.inkscape.org/namespaces/inkscape}label')
+                    if str_layer_name is None:
+                        str_layer_name = f"Auto-Layer {self.next_id}"
 
                     new_layer = path_objects.LayerItem()
                     new_layer.name = str_layer_name
+                    new_layer.parse_name()
+
+                    if new_layer.props.skip:
+                        continue # Skip Documentation layer and its contents
+                    if self.layer_selection >= 0 and new_layer.props.number is not None:
+                        if self.layer_selection != new_layer.props.number:  # layers mode
+                            continue # Skip this layer and its contents
+
                     new_layer.item_id = str(self.next_id)
                     self.next_id += 1
                     self.doc_digest.layers.append(new_layer)
@@ -228,6 +207,7 @@ class DigestSVG:
                     new_layer.name = '__digest-root__' # Label this as a "root" layer
                     new_layer.item_id = str(self.next_id)
                     self.next_id += 1
+
                     self.doc_digest.layers.append(new_layer)
                     self.current_layer = new_layer
                     self.current_layer_name = new_layer.name
@@ -235,26 +215,26 @@ class DigestSVG:
                     self.traverse(node, style_dict, warnings, mat_new)
                 continue
 
-            if node.tag == inkex.addNS('symbol', 'svg') or node.tag == 'symbol':
+            if node.tag in ('{http://www.w3.org/2000/svg}symbol', 'symbol'):
                 # A symbol is much like a group, except that it should only
                 #       be rendered when called within a "use" tag.
                 if self.use_tag_nest_level > 0:
                     self.traverse(node, style_dict, warnings, mat_new)
                 continue
 
-            if node.tag == inkex.addNS('a', 'svg') or node.tag == 'a':
+            if node.tag in ('{http://www.w3.org/2000/svg}a', 'a'):
                 # An 'a' is much like a group, in that it is a generic container element.
                 self.traverse(node, style_dict, warnings, mat_new)
                 continue
 
-            if node.tag == inkex.addNS('switch', 'svg') or node.tag == 'switch':
+            if node.tag in ('{http://www.w3.org/2000/svg}switch', 'switch'):
                 # A 'switch' is much like a group, in that it is a generic container element.
                 # We are not presently evaluating conditions on switch elements, but parsing
                 # their contents to the extent possible.
                 self.traverse(node, style_dict, warnings, mat_new)
                 continue
 
-            if node.tag == inkex.addNS('use', 'svg') or node.tag == 'use':
+            if node.tag in ('{http://www.w3.org/2000/svg}use', 'use'):
                 """
                 A <use> element refers to another SVG element via an xlink:href="#blah"
                 attribute.  We will handle the element by doing an XPath search through
@@ -271,7 +251,7 @@ class DigestSVG:
                  3. We may be able to unlink clones using the code in pathmodifier.py
                 """
 
-                refid = node.get(inkex.addNS('href', 'xlink'))
+                refid = node.get('{http://www.w3.org/1999/xlink}href')
                 if refid is not None:
                     # [1:] to ignore leading '#' in reference
                     path = f'//*[@id="{refid[1:]}"]'
@@ -301,11 +281,11 @@ class DigestSVG:
                 # visible children of hidden elements can still plot.)
                 continue
 
-            if node.tag == inkex.addNS('path', 'svg'):
+            if node.tag == '{http://www.w3.org/2000/svg}path':
                 path_d = node.get('d')
                 self.digest_path(path_d, style_dict, mat_new)
                 continue
-            if node.tag == inkex.addNS('rect', 'svg') or node.tag == 'rect':
+            if node.tag in ('{http://www.w3.org/2000/svg}rect', 'rect'):
                 """
                 Create a path with the outline of the rectangle
                 Manually transform  <rect x="X" y="Y" width="W" height="H"/>
@@ -351,7 +331,8 @@ class DigestSVG:
 
                 self.digest_path(simplepath.formatPath(instr), style_dict, mat_new)
                 continue
-            if node.tag == inkex.addNS('line', 'svg') or node.tag == 'line':
+
+            if node.tag in ('{http://www.w3.org/2000/svg}line', 'line'):
                 """
                 Convert an SVG line object  <line x1="X1" y1="Y1" x2="X2" y2="Y2/>
                 to an SVG path object:      <path d="MX1,Y1 LX2,Y2"/>
@@ -367,8 +348,8 @@ class DigestSVG:
                 self.digest_path(simplepath.formatPath(path_a), style_dict, mat_new)
                 continue
 
-            if node.tag in [inkex.addNS('polyline', 'svg'), 'polyline',
-                              inkex.addNS('polygon', 'svg'), 'polygon']:
+            if node.tag in ('{http://www.w3.org/2000/svg}polyline', 'polyline',
+                            '{http://www.w3.org/2000/svg}polygon', 'polygon'):
                 """
                 Convert
                  <polyline points="x1,y1 x2,y2 x3,y3 [...]"/>
@@ -397,13 +378,15 @@ class DigestSVG:
                 while i < (path_length - 1):
                     path_d += " L " + pa[i] + " " + pa[i + 1]
                     i += 2
-                if node.tag in [inkex.addNS('polygon', 'svg'), 'polygon']:
-                    path_d += " Z"
 
-                self.digest_path(path_d, style_dict, mat_new) # Vertices are already in user coordinate system
+                if node.tag in ('{http://www.w3.org/2000/svg}polygon', 'polygon'):
+                    path_d += " Z"
+                self.digest_path(path_d, style_dict, mat_new)
                 continue
-            if node.tag in [inkex.addNS('ellipse', 'svg'), 'ellipse',
-                              inkex.addNS('circle', 'svg'), 'circle']:
+
+
+            if node.tag in ('{http://www.w3.org/2000/svg}ellipse', 'ellipse',
+                            '{http://www.w3.org/2000/svg}circle', 'circle'):
                 """
                 Convert circles and ellipses to paths as two 180 degree arcs.
                 In general (an ellipse), we convert
@@ -416,7 +399,7 @@ class DigestSVG:
                 Ellipses or circles with a radius attribute of 0 are ignored
                 """
 
-                if node.tag in [inkex.addNS('circle', 'svg'), 'circle']:
+                if node.tag in ('{http://www.w3.org/2000/svg}circle', 'circle'):
                     r_x = plot_utils.unitsToUserUnits(node.get('r', '0'), self.diagonal_100)
                     r_y = r_x
                 else:
@@ -437,51 +420,41 @@ class DigestSVG:
                          f'0 1 0 {x_1:f},{c_y:f}'
                 self.digest_path(path_d, style_dict, mat_new)
                 continue
-            if node.tag == inkex.addNS('metadata', 'svg') or node.tag == 'metadata':
+
+            if node.tag in ('{http://www.w3.org/2000/svg}metadata', 'metadata'):
                 self.doc_digest.metadata.update(dict(node.attrib))
                 continue
-            if node.tag == inkex.addNS('plotdata', 'svg') or node.tag == 'plotdata':
+
+            if node.tag in ('{http://www.w3.org/2000/svg}plotdata', 'plotdata'):
                 self.doc_digest.plotdata.update(dict(node.attrib))
                 continue
-            if node.tag == inkex.addNS('defs', 'svg') or node.tag == 'defs':
+
+            if node.tag in ['{http://www.w3.org/2000/svg}defs', 'defs',
+                'namedview',
+                '{http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd}namedview',
+                'eggbot', 'WCB', 'MergeData', '{http://www.w3.org/2000/svg}eggbot',
+                '{http://www.w3.org/2000/svg}WCB', '{http://www.w3.org/2000/svg}MergeData',
+                '{http://www.w3.org/2000/svg}title', 'title',
+                '{http://www.w3.org/2000/svg}desc', 'desc',
+                '{http://www.w3.org/2000/svg}pattern', 'pattern',
+                '{http://www.w3.org/2000/svg}radialGradient', 'radialGradient',
+                '{http://www.w3.org/2000/svg}linearGradient', 'linearGradient',
+                '{http://www.w3.org/2000/svg}style', 'style', #  external style sheet
+                '{http://www.w3.org/2000/svg}cursor', 'cursor',
+                '{http://www.w3.org/2000/svg}font', 'font',
+                '{http://www.inkscape.org/namespaces/inkscape}templateinfo',
+                '{http://www.w3.org/2000/svg}color-profile', 'color-profile',
+                '{http://www.w3.org/2000/svg}foreignObject', 'foreignObject',
+                etree.Comment]:
                 continue
-            if node.tag == inkex.addNS('namedview', 'sodipodi') or node.tag == 'namedview':
-                continue
-            if node.tag in ['eggbot', 'WCB', 'MergeData', inkex.addNS('eggbot', 'svg'),
-                 inkex.addNS('WCB', 'svg'), inkex.addNS('MergeData', 'svg'),]:
-                continue
-            if node.tag == inkex.addNS('title', 'svg') or node.tag == 'title':
-                continue
-            if node.tag == inkex.addNS('desc', 'svg') or node.tag == 'desc':
-                continue
-            if node.tag in [inkex.addNS('text', 'svg'), 'text',
-                              inkex.addNS('flowRoot', 'svg'), 'flowRoot']:
+
+            if node.tag in ('{http://www.w3.org/2000/svg}text', 'text',
+                            '{http://www.w3.org/2000/svg}flowRoot', 'flowRoot'):
                 warnings.add_new('text', self.current_layer_name)
                 continue
-            if node.tag == inkex.addNS('image', 'svg') or node.tag == 'image':
+
+            if node.tag in ('{http://www.w3.org/2000/svg}image', 'image'):
                 warnings.add_new('image', self.current_layer_name)
-                continue
-            if node.tag == inkex.addNS('pattern', 'svg') or node.tag == 'pattern':
-                continue
-            if node.tag == inkex.addNS('radialGradient', 'svg') or node.tag == 'radialGradient':
-                continue  # Similar to pattern
-            if node.tag == inkex.addNS('linearGradient', 'svg') or node.tag == 'linearGradient':
-                continue  # Similar in pattern
-            if node.tag == inkex.addNS('style', 'svg') or node.tag == 'style':
-                # This is a reference to an external style sheet and not the value
-                # of a style attribute to be inherited by child elements
-                continue
-            if node.tag == inkex.addNS('cursor', 'svg') or node.tag == 'cursor':
-                continue
-            if node.tag == inkex.addNS('font', 'svg') or node.tag == 'font':
-                continue
-            if node.tag == inkex.addNS('templateinfo', 'inkscape'):
-                continue
-            if node.tag == etree.Comment:
-                continue
-            if node.tag == inkex.addNS('color-profile', 'svg') or node.tag == 'color-profile':
-                continue
-            if node.tag in [inkex.addNS('foreignObject', 'svg'), 'foreignObject']:
                 continue
             if not isinstance(node.tag, str):
                 # This is likely an XML processing instruction such as an XML
@@ -502,38 +475,29 @@ class DigestSVG:
         - Build a path_objects.PathItem object and append it to the current layer
         """
 
-        logger.debug('digest_path()\n')
+        # logger.debug('digest_path()\n')
         # logger.debug('path d: ' + path_d)
 
-        if len(simplepath.parsePath(path_d)) == 0:
-            logger.debug('path length is zero, will not be plotted.')
+        parsed_path = cubicsuperpath.CubicSuperPath(simplepath.parsePath(path_d))
+
+        if len(parsed_path) == 0: # path length is zero, will not be plotted
             return
 
-        parsed_path = cubicsuperpath.parsePath(path_d)
-
         # Apply the transformation to each point
-        simpletransform.applyTransformToPath(mat_transform, parsed_path)
+        apply_transform_to_path(mat_transform, parsed_path)
 
         subpaths = []
 
         # p is now a list of lists of cubic beziers [control pt1, control pt2, endpoint]
         # where the start-point is the last point in the previous segment.
         for subpath in parsed_path: # for subpaths in the path:
-            vertex_list = []
-
             # Divide each path into a set of straight segments:
             plot_utils.subdivideCubicPath(subpath, self.bezier_tolerance)
 
-            for vertex in subpath:
-                # Pick out vertex location information from cubic bezier curve:
-                vertex_list.append([float(vertex[1][0]), float(vertex[1][1])])
-            if len(vertex_list) < 2:
-                continue # At least two points required for a path
-            if self.supersample_tolerance > 0:
-                plot_utils.supersample(vertex_list, self.supersample_tolerance)
-            if len(vertex_list) < 2:
-                continue # At least two points required for a path
-            subpaths.append(vertex_list)
+            if len(subpath) < 2:
+                continue        # At least two points required for a path
+            # Pick out vertex location information from cubic bezier curve:
+            subpaths.append([[vertex[1][0], vertex[1][1]] for vertex in subpath])
 
         if len(subpaths) == 0:
             return # At least one sub-path required
@@ -550,7 +514,22 @@ class DigestSVG:
         # Add new list of subpaths to the current "LayerItem" element:
         self.current_layer.paths.append(new_path)
 
-        logger.debug('End of digest_path()\n')
+        # logger.debug('End of digest_path()\n')
+
+
+def apply_transform_to_path(mat, path):
+    '''
+    A very slightly faster version of simpletransform.applyTransformToPath()
+    Possibly move this function to plotink in the future.
+    '''
+    [mt00, mt01, mt02], [mt10, mt11, mt12] = mat
+    for comp in path:
+        for ctl in comp:
+            for point in ctl: # apply transform to each point:
+                pt_x = point[0]
+                pt_y = point[1]
+                point[0] = mt00*pt_x + mt01*pt_y + mt02
+                point[1] = mt10*pt_x + mt11*pt_y + mt12
 
 
 def inherit_style(parent_style, node_style, visibility):
@@ -561,7 +540,7 @@ def inherit_style(parent_style, node_style, visibility):
     Note that children of hidden parents may be plotted if they assert visibility.
     '''
 
-    default_style = dict()
+    default_style = {}
     default_style['fill'] = None
     default_style['stroke'] = None
     default_style['fill-rule'] = None # Future work: Add support for 'nonzero' and 'evenodd'
@@ -597,6 +576,8 @@ def verify_plob(svg, model):
     """
     Check to see if the provided SVG is a valid plob that can be automatically converted
     to a plot digest object. Also check that the plob version and hardware model match.
+    Styles are *presently allowed* in the plob, for the sake of verification. (They can
+        increase the file size, but do not otherwise cause harm.)
 
     Returns True or False.
 
@@ -634,7 +615,7 @@ def verify_plob(svg, model):
     for node in svg:
         if node.tag in ['g', inkex.addNS('g', 'svg')]:
             name_temp = node.get(inkex.addNS('label', 'inkscape'))
-            if not name_temp:
+            if name_temp is None:
                 return False # All groups must be named
             if len(str(name_temp)) > 0:
                 if str(name_temp)[0] == '%':
@@ -644,7 +625,7 @@ def verify_plob(svg, model):
             for subnode in node:
                 if subnode.get("transform"): # No transforms are allowed on objects
                     return False
-                if subnode.tag in ['polyline', inkex.addNS('polyline', 'svg')]:
+                if subnode.tag in ['polyline', '{http://www.w3.org/2000/svg}polyline']:
                     continue
                 return False
         elif node.tag in tag_list:

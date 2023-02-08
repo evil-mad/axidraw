@@ -1,4 +1,3 @@
-from __future__ import print_function
 '''
 axicli - Command Line Interface (CLI) for AxiDraw.
 
@@ -36,7 +35,7 @@ https://shop.evilmadscientist.com/contact
 
 
 
-Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 
 The MIT License (MIT)
 
@@ -63,9 +62,7 @@ SOFTWARE.
 import argparse
 import copy
 import sys
-
 from lxml import etree
-
 from pyaxidraw.axidraw_options import common_options
 
 from axicli import utils
@@ -73,7 +70,7 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface 3.7.2"
+cli_version = "AxiDraw Command Line Interface 3.8.0"
 
 quick_help = '''
     Basic syntax to plot a file:      axicli svg_in [OPTIONS]
@@ -84,7 +81,7 @@ quick_help = '''
 
     For full user guide, please see: https://axidraw.com/doc/cli_api/
 
-    (c) 2022 Evil Mad Scientist Laboratories
+    (c) 2023 Evil Mad Scientist Laboratories
         '''
 
 def axidraw_CLI(dev = False):
@@ -157,12 +154,13 @@ def axidraw_CLI(dev = False):
             metavar='COMMAND', type=str, \
             help="Manual command. One of: [fw_version, lower_pen, raise_pen, "\
             + "walk_x, walk_y, walk_mmx, walk_mmy, walk_home, enable_xy, disable_xy, "\
-            + "bootload, strip_data, read_name, list_names,  write_name]. "\
-            + "Default: fw_version")
+            + "bootload, strip_data, read_name, "\
+            + "list_names,  write_name]. Default: fw_version")
 
-    parser.add_argument("-w","--walk_dist", \
+    parser.add_argument("-w","--dist","--walk_dist", \
             metavar='DISTANCE', type=float, \
-            help="Distance for manual walk")
+            help="Distance for manual walk or changing resume position. "\
+            + "(The argument name walk_dist is deprecated.)")
 
     parser.add_argument("-l","--layer", \
             type=int, \
@@ -200,9 +198,16 @@ def axidraw_CLI(dev = False):
     parser.add_argument("-L","--model",\
             metavar='MODELCODE', type=int,\
             help="AxiDraw Model (1-7). 1: AxiDraw V2, V3, or SE/A4. " \
-            + "2:AxiDraw V3/A3 or SE/A3. 3: AxiDraw V3 XLX. " \
-            + "4:AxiDraw MiniKit. 5:AxiDraw SE/A1. 6: AxiDraw SE/A2. " \
-            + "7:AxiDraw V3/B6." )
+            + "2: AxiDraw V3/A3 or SE/A3. 3: AxiDraw V3 XLX. " \
+            + "4: AxiDraw MiniKit. 5:AxiDraw SE/A1. 6: AxiDraw SE/A2. " \
+            + "7: AxiDraw V3/B6." )
+
+    parser.add_argument("-q","--penlift",\
+            metavar='LIFTCODE', type=int,\
+            help="Pen lift servo configuration (1-3). " \
+            + "1: Default for AxiDraw model. " \
+            + "2: Standard servo (lowest connector position). " \
+            + "3: Narrow-band brushless servo (3rd position up)." )
 
     parser.add_argument("-p","--port",\
             metavar='PORTNAME', type=str,\
@@ -257,7 +262,10 @@ def axidraw_CLI(dev = False):
 
     # Detect certain "trivial" cases that do not require an input file
     use_trivial_file = False
-    if args.mode in ["align", "toggle", "cycle", "version", "sysinfo", "manual"]:
+    if args.mode in ("align", "toggle", "cycle", "version", "sysinfo"):
+        use_trivial_file = True
+    if args.mode == "manual" and args.manual_cmd not in\
+            ("strip_data", "res_read","res_off_in", "res_adj_mm"):
         use_trivial_file = True
 
     svg_input = args.svg_in
@@ -299,7 +307,25 @@ def axidraw_CLI(dev = False):
         quit()
 
     # For nontrivial cases, import the axidraw module and go from there:
+
+    # THIS SECTION: SLATED FOR REMOVAL IN AXIDRAW SOFTWARE 4.0
+    # Backwards compatibility for custom configuration files including `walk_dist`,
+    #   the deprecated predecessor to `dist`
+    #
+    # If a custom config file specifies walk_dist (deprecated version of dist),
+    #   that overrides the value in the default config file.
+    # If a custom config file specifies dist, that overrides both:
+    config_dict = utils.load_configs([args.config])         # Remove in v 4.0
+    new_dist = config_dict.get('dist')                      # Remove in v 4.0
+    new_walk_dist = config_dict.get('walk_dist')            # Remove in v 4.0
+
     config_dict = utils.load_configs([args.config, 'axidrawinternal.axidraw_conf'])
+
+    if new_walk_dist is not None:                           # Remove in v 4.0
+        config_dict['dist'] = new_walk_dist                 # Remove in v 4.0
+    if new_dist is not None:                                # Remove in v 4.0
+        config_dict['dist'] = new_dist                      # Remove in v 4.0
+
     combined_config = utils.FakeConfigModule(config_dict)
 
     from pyaxidraw import axidraw_control
@@ -334,9 +360,9 @@ def axidraw_CLI(dev = False):
     option_names = ['mode', 'speed_pendown', 'speed_penup', 'accel', 'pen_pos_down', 'pen_pos_up',
                     'pen_rate_lower', 'pen_rate_raise', 'pen_delay_down', 'pen_delay_up',
                     'random_start', 'reordering', 'no_rotate', 'const_speed', 'report_time',
-                    'manual_cmd', 'walk_dist', 'layer', 'copies', 'page_delay', 'preview',
-                    'rendering', 'model', 'port', 'port_config', 'webhook', 'webhook_url',
-                    'digest', 'progress']
+                    'manual_cmd', 'dist', 'layer', 'copies', 'page_delay', 'preview',
+                    'rendering', 'model', 'penlift', 'port', 'port_config', 'webhook',
+                    'webhook_url', 'digest', 'progress']
     utils.assign_option_values(adc.options, args, [config_dict], option_names)
 
     adc.cli_api = True # Set flag that this is being called from the CLI.

@@ -39,6 +39,11 @@ preview = False """)
     @patch.object(axidraw, "AxiDraw")
     def test_noncli_conf_options(self, m_axidraw):
         """ Some values used by axidraw are configurable but not settable via command line. `axidraw` grabs those values directly from the configurations, i.e. without an intermediary `options` object. (see https://gitlab.com/evil-mad/AxiDraw-Internal/-/blob/7e9e27434b3a4356e34ec7dc8858a1c5881fbbc9/axidrawinternal/axidraw.py#L203). Such values that are configured via the custom config (using the `--config` command line option) need to be properly sent to the AxiDraw class and override configured values in the default config file. """
+        # set up axidraw mock
+        attrs = {'plot_status.stopped': 0}
+        m_axidraw().configure_mock(**attrs)
+
+        # test with config
         confpy_name = self._setup_confpy("""
 speed_lim_xy_lr = 'testvalue'""")
         adc = axidraw_cli.axidraw_CLI(dev=True)
@@ -47,7 +52,7 @@ speed_lim_xy_lr = 'testvalue'""")
             if 'params' in call.kwargs:
                 self.assertTrue(hasattr(call.kwargs['params'], 'speed_lim_xy_lr'))
                 self.assertEqual(call.kwargs['params'].speed_lim_xy_lr, 'testvalue')
-                self.assertTrue(hasattr(call.kwargs['params'], 'smoothness'), "the config 'module' must contain attributes that are in the default config but not the custom config")
+                self.assertTrue(hasattr(call.kwargs['params'], 'curve_tolerance'), "the config 'module' must contain attributes that are in the default config but not the custom config")
 
                 return
 

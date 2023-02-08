@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -212,8 +212,8 @@ class AxiDrawWrapperClass( inkex.Effect ):
         selected_options = {item: self.options.__dict__[item] for item in ['mode',
             'speed_pendown', 'speed_penup',  'accel', 'pen_pos_up', 'pen_pos_down',
             'pen_rate_raise', 'pen_rate_lower', 'pen_delay_up', 'pen_delay_down',
-            'no_rotate', 'const_speed', 'report_time', 'manual_cmd', 'walk_dist',
-            'layer', 'copies', 'page_delay', 'preview', 'rendering', 'model',
+            'no_rotate', 'const_speed', 'report_time', 'manual_cmd', 'dist',
+            'layer', 'copies', 'page_delay', 'preview', 'rendering', 'model', 'penlift',
             'setup_type', 'resume_type', 'auto_rotate', 'resolution', 'reordering',
             'random_start', 'webhook', 'webhook_url', 'digest', 'progress',]}
         ad.options.__dict__.update(selected_options)
