@@ -188,8 +188,10 @@ class DigestSVG:# pylint: disable=pointless-string-statement
 
                     if new_layer.props.skip:
                         continue # Skip Documentation layer and its contents
-                    if self.layer_selection >= 0 and new_layer.props.number is not None:
-                        if self.layer_selection != new_layer.props.number:  # layers mode
+                    if self.layer_selection >= 0: # Plotting in layers mode
+                        if new_layer.props.number is None:
+                            continue
+                        if self.layer_selection != new_layer.props.number:
                             continue # Skip this layer and its contents
 
                     new_layer.item_id = str(self.next_id)
@@ -477,6 +479,11 @@ class DigestSVG:# pylint: disable=pointless-string-statement
 
         # logger.debug('digest_path()\n')
         # logger.debug('path d: ' + path_d)
+
+        if path_d is None:
+            return
+        if path_d == "":
+            return
 
         parsed_path = cubicsuperpath.CubicSuperPath(simplepath.parsePath(path_d))
 

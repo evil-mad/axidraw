@@ -430,7 +430,7 @@ indent="2" gui-text='Action on "Apply": '>
 
 </param>
 <label indent="5" xml:space="preserve"
->Version 3.8.0      —      Copyright 2023 Evil Mad Science LLC</label>
+>Version 3.8.1      —      Copyright 2023 Evil Mad Science LLC</label>
 
 <effect needs-live-preview="false">
 <object-type>all</object-type>
