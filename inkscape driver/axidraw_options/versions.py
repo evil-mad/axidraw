@@ -65,33 +65,15 @@ def get_versions_online():
 
     return online_versions
 
-def get_fw_version(serial_port):
+def get_current(plot_status):
     '''
     `serial_port` is the serial port to the AxiDraw (which must already be connected)
-    returns an ebb version string
-
-    Possible future change: Get fw_version from plot_status.fw_version, rather than querying
-    '''
-    try:
-        fw_version_string = ebb_serial.queryVersion(serial_port)
-        fw_version_string = fw_version_string.split("Firmware Version ", 1)
-        fw_version_string = fw_version_string[1]
-        fw_version_string = fw_version_string.strip() # For number comparisons
-        return fw_version_string
-    except RuntimeError as err_info:
-        raise RuntimeError(f"Error retrieving the EBB firmware version.\n\n(Error: {err_info})\n")\
-            from err_info
-
-def get_current(serial_port):
-    '''
-    `serial_port` is the serial port to the AxiDraw (which must already be connected)
-
     Query the EBB current setpoint and voltage input
     '''
     try:
-        if not ebb_serial.min_version(serial_port, "2.2.3"):
+        if not min_fw_version(plot_status, "2.2.3"):
             return None, None
-        raw_string = (ebb_serial.query(serial_port, 'QC\r'))
+        raw_string = ebb_serial.query(plot_status.port, 'QC\r')
         split_string = raw_string.split(",", 1)
         split_len = len(split_string)
         if split_len > 1:
@@ -138,13 +120,11 @@ def log_ebb_version(fw_version_string, online_versions, log_fun):
         else:
             log_fun("Your firmware is up to date; no updates are available.\n")
 
-def log_version_info(serial_port, check_updates, current_version_string, preview,
+def log_version_info(plot_status, check_updates, current_version_string, preview,
         message_fun, logger):
     '''
     works whether or not `check_updates` is True, online versions were successfully retrieved,
-    or `serial_port` is None (i.e. not connected AxiDraw)
-
-    Possible future change: Get fw_version from plot_status.fw_version, rather than querying
+    or `plot_status.port` is None (i.e. not connected AxiDraw)
     '''
     message_fun(f"This is AxiDraw Control version {current_version_string}.")
     online_versions = False
@@ -159,10 +139,10 @@ def log_version_info(serial_port, check_updates, current_version_string, preview
 
     log_axidraw_control_version(online_versions, current_version_string, message_fun)
     voltage, current = None, None
-    if serial_port is not None: # i.e. there is a connected AxiDraw
+    if plot_status.port is not None: # i.e. there is a connected AxiDraw
         try:
-            fw_version_string = get_fw_version(serial_port)
-            voltage, current = get_current(serial_port)
+            fw_version_string = plot_status.fw_version
+            voltage, current = get_current(plot_status)
             log_ebb_version(fw_version_string, online_versions, message_fun)
         except RuntimeError as err_info:
             msg = f"\nUnable to retrieve AxiDraw EBB firmware version. (Error: {err_info}) \n"
@@ -178,3 +158,17 @@ def log_version_info(serial_port, check_updates, current_version_string, preview
         scaled_current = current  * 3.3 / (1023 * 1.76)
         message_fun(f'Voltage readout: {voltage:d} (~ {scaled_voltage:.2f} V).')
         message_fun(f'Current setpoint: {current:d} (~ {scaled_current:.2f} A).')
+
+def min_fw_version(plot_status, version_string):
+    '''
+    Using already-known firmware version string in plot_status:
+    Return True if the EBB firmware version is at least version_string.
+    Return False if the EBB firmware version is below version_string.
+    Return None if we are unable to determine True or False.
+    '''
+    fw_version = plot_status.fw_version
+    if fw_version is None:
+        return None
+    if parse(fw_version) >= parse(version_string):
+        return True
+    return False

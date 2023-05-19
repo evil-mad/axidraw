@@ -39,6 +39,7 @@ Also included is a LayerProperties class, which manages parsing of layer names.
 
 from math import sqrt
 from lxml import etree
+from enum import Enum
 
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
 plot_utils = from_dependency_import('plotink.plot_utils')
@@ -59,6 +60,12 @@ PLOB_BASE = """<?xml version="1.0" standalone="no"?>
 
 PLOB_VERSION = "1"
 
+class FillRule(Enum):
+    """
+    Based on SVG fill rules: https://www.w3.org/TR/SVG2/painting.html#WindingRule
+    """
+    NONZERO = "nonzero"
+    EVENODD = "evenodd"
 
 class PathItem:
     """
@@ -94,6 +101,16 @@ class PathItem:
         self.fill = None        # fill color or None
         self.fill_rule = None   # May be None, "nonzero", or "evenodd"
         self.item_id = None     # string
+
+    @classmethod
+    def from_attrs(cls, **kwargs):
+        path_item = cls()
+        path_item.subpaths = kwargs.pop("subpaths", None)
+        path_item.stroke = kwargs.pop("stroke", None)
+        path_item.fill = kwargs.pop("fill", None)
+        path_item.fill_rule = kwargs.pop("fill_rule", None)
+        path_item.item_id = kwargs.pop("item_id", None)
+        return path_item
 
     def to_string(self):
         """
@@ -201,6 +218,12 @@ class PathItem:
                     .00000001)
         return False
 
+    def has_stroke(self):
+        """
+        return False if self.stroke is None, "none", "None", etc., else True
+        """
+        return str(self.stroke).lower() != "none"
+
     def reverse(self):
         """
         If PathItem contains only a single subpath, reverse it.
@@ -209,6 +232,28 @@ class PathItem:
         if self.subpaths:
             if len(self.subpaths) == 1:
                 self.subpaths[0].reverse()
+
+    @classmethod
+    def equal_lists_of_points(cls, points_a, points_b):
+        """
+        simple comparison of lists of points
+        """
+        if len(points_a) != len(points_b):
+            return False
+
+        for point_a, point_b in zip(points_a, points_b):
+            if not plot_utils.points_equal(point_a, point_b):
+                return False
+        return True
+
+    def __str__(self):
+        """
+        basically so builtin `str(path_item)` and `print(path_item)` will work nicely
+        """
+        return "{}(\n  subpaths={},\n  fill={},\n  \
+fill_rule={},\n  stroke={},\n  item_id={})".format(
+            type(self).__name__, self.subpaths, self.fill,
+            self.fill_rule, self.stroke, self.item_id)
 
 def find_int(name_string):
     '''
@@ -324,11 +369,19 @@ class LayerItem: # pylint: disable=too-few-public-methods
         self.item_id = None             # ID string
         self.props = LayerProperties()  # LayerProperties object
 
+    @classmethod
+    def from_attrs(cls, **kwargs):
+        layer_item = cls()
+        layer_item.name = kwargs.pop("name", None)
+        layer_item.paths = kwargs.pop("paths", None)
+        layer_item.item_id = kwargs.pop("item_id", None)
+        return layer_item
+
     def flatten(self):
         """
         Flatten all PathItem objects in the LayerItem, so that each
         PathItem instance represents only a single subpath.
-        Remove fill color and fill rule
+        Remove fill color, fill rule, stroke.
         """
 
         if not self.paths:
@@ -338,12 +391,14 @@ class LayerItem: # pylint: disable=too-few-public-methods
 
         for path in self.paths:
             if len(path.subpaths) == 1: # This path is already flat
+                path.stroke = None
+                path.fill = None
+                path.fill_rule = None
                 new_paths.append(path)
                 continue
             counter = 0
             for subpath in path.subpaths: # Make new PathItem objects
                 new_path = PathItem()
-                new_path.stroke=path.stroke # preserve stroke color
                 new_path.item_id = path.item_id + "_f" + str(counter)
                 counter += 1
                 new_path.subpaths = [subpath]
@@ -405,6 +460,8 @@ class DocDigest:
         represents only a single subpath.
         """
 
+        if self.flat:
+            return # Already flat; leave it alone.
         if not self.layers:
             return # No paths in the layer; nothing to flatten
 
@@ -412,11 +469,29 @@ class DocDigest:
             layer.flatten()
         self.flat = True
 
+    def remove_unstroked(self):
+        ''' For use with hidden path removal, remove paths without a stroke'''
+        for layer in self.layers:
+            layer.paths = list(filter(lambda p: str(p.stroke).lower() != "none", layer.paths))
+
+
+    def layer_filter(self, layer_number):
+        """
+        If layer_number >= 0, indicating that we are only plotting certain layers,
+            remove layers that do not match the pattern.
+        """
+        if layer_number < 0: # if not plotting in layers mode
+            return
+        for index in reversed(range(len(self.layers))): # Iterate backwards; removing items!
+            layer = self.layers[index]
+            if layer.props.number is None or layer.props.number != layer_number:
+                del self.layers[index]
+
+
     def rotate(self, rotate_ccw = True):
         """
         Rotate the document by 90 degrees, e.g., from portrait to landscape
-        aspect ratio. Flatten the document prior to rotating if it is not
-        already flattened.
+        aspect ratio.
         """
 
         old_width = self.width
@@ -425,29 +500,24 @@ class DocDigest:
 
         self.viewbox = f"0 0 {self.width:f} {self.height:f}"
 
-        if not self.flat:
-            self.flatten()
-
         for layer_item in self.layers:
             for path in layer_item.paths:
-                vertex_list = path.subpaths[0]
+                new_subpaths = []
+                for vertex_list in path.subpaths:
+                    if len(vertex_list) < 2: # Skip paths with only one vertex
+                        vertex_list.clear()
+                        continue
 
-                if not vertex_list:
-                    vertex_list = []
-                    continue
-                if len(vertex_list) < 2: # Skip paths with only one vertex
-                    vertex_list.clear()
-                    continue
-
-                new_vertex_list = []
-                for vertex in vertex_list:
-                    [v_x, v_y] = vertex
-                    if rotate_ccw:
-                        new_vertex = [v_y, self.height - v_x]
-                    else:
-                        new_vertex = [self.width - v_y, v_x]
-                    new_vertex_list.append(new_vertex)
-                path.subpaths[0] = new_vertex_list
+                    new_vertex_list = []
+                    for vertex in vertex_list:
+                        [v_x, v_y] = vertex
+                        if rotate_ccw:
+                            new_vertex = [v_y, self.height - v_x]
+                        else:
+                            new_vertex = [self.width - v_y, v_x]
+                        new_vertex_list.append(new_vertex)
+                    new_subpaths.append(new_vertex_list)
+                path.subpaths = new_subpaths
 
     def to_plob(self):
         """

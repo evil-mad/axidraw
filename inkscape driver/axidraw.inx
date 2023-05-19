@@ -10,32 +10,60 @@
 <label indent="0" appearance="header">AxiDraw Control</label>
 
 <hbox >
-<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="30" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
-<label>Press "Apply" to begin plotting. Use other tabs to adjust
+<label  xml:space="preserve">Press "Apply" to begin plotting. Use other tabs to adjust
 settings and access additional AxiDraw functions.</label>
 <spacer />
-<label>
-AxiDraw documentation is online at: http://axidraw.com/docs . For technical support or other assistance, please write to contact@evilmadscientist.com 
+<label xml:space="preserve">AxiDraw documentation is online at: axidraw.com/docs . For technical
+support, email  contact@evilmadscientist.com  or visit axidraw.com/chat
 </label>
 </vbox>
-<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
 </hbox>
 
 
-<spacer />
-<label appearance="header">Multiple Copies:</label>
-<hbox >
-<image width="80" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
-<vbox >
-<param name="copies" type="int" min="0" max="9999"  gui-text="Copies to Plot:">1</param>	
-<param name="page_delay" type="int" min="0" max="3600" gui-text="Delay between Copies (seconds):">15</param>	
+
+
+<image width="10" height="5">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
+<image>axidraw_deps/axidrawinternal/inx_img/ad_hr.svg</image>
+<image width="10" height="5">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
+
+
+
+<hbox indent="0">
+<image width="10" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
+
+<vbox indent="3">
+<label appearance="header">Copies:</label>
+<image width="10" height="33">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
+
 </vbox>
+<vbox indent="4">
+<param name="copies" type="int" min="0" max="9999"  gui-text="Copies to Plot:">1</param>	
+<param name="page_delay" type="int" min="0" max="3600" gui-text="Page Delay (s):">15</param>	
+
+</vbox>
+<image width="10" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
+
 </hbox>
+<image width="10" height="3">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
+<label indent="13">Tip: Select 0 copies to plot continuously.</label>
 
-<spacer />
 
-<label indent="4" >Tip: Select 0 copies to plot continuously until paused.</label>
+
+
+
+<image width="10" height="5">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
+<image>axidraw_deps/axidrawinternal/inx_img/ad_hr.svg</image>
+<image width="10" height="5">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
+
+<label indent="6"
+>Version 3.9.0      —      Copyright 2023 Evil Mad Science LLC</label>
+
+
+
+
+
 </page>
 
 
@@ -44,14 +72,14 @@ AxiDraw documentation is online at: http://axidraw.com/docs . For technical supp
 <label appearance="header">Basic Setup</label>
 
 <hbox >
-<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="30" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 <param name="pen_pos_up" type="int" min="0" max="100" appearance="full" 
 gui-text="Pen height: UP (%):">60</param>
 <param name="pen_pos_down" type="int" min="0" max="100" appearance="full"
 gui-text="Pen height: DOWN, (%):">30</param>
 </vbox>
-<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
 
 <spacer />
@@ -85,7 +113,7 @@ appearance="radio" gui-text='Action on "Apply": '>
 
 
 <hbox >
-<image width="80" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="80" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 
 <param name="speed_pendown" type="int" min="1" max="110" 
@@ -104,7 +132,7 @@ gui-text="Pen-up movement speed (%):   ">75</param>
 <param name="const_speed" type="bool" gui-text="Use constant speed when pen is down">false</param>	
 
 </vbox>
-<image width="10" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
 
 </page>
@@ -115,7 +143,7 @@ gui-text="Pen-up movement speed (%):   ">75</param>
 
 
 <hbox >
-<image width="70" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="70" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 
 <param name="pen_rate_raise" type="optiongroup" appearance="combo" gui-text="Pen raising speed :">
@@ -137,21 +165,22 @@ gui-text="Pen-up movement speed (%):   ">75</param>
 <param name="pen_delay_up" type="int" min="-500" max="500" gui-text="Optional delay after raising pen (ms):">0</param>
 <param name="pen_delay_down" type="int" min="-500" max="500" gui-text="Optional delay after lowering pen (ms):">0</param>
 </vbox>
-<image width="10" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
 
 </page>
 
 
-<page name='preview' gui-text='Preview &amp; Alerts'>
+<page name='preview' gui-text='Notifications'>
 
-<label appearance="header">Preview mode:</label>
+<label appearance="header">Rendering and reporting:</label>
 
 
 <hbox >
-<image width="50" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="50" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
-<param name="preview" type="bool" gui-text="Enable offline preview mode; Simulate plotting only">false</param> 
+<param name="report_time" type="bool" gui-text="Report time elapsed">false</param> 
+
 <param name="rendering" type="optiongroup" appearance="combo" gui-text="Preview mode rendering:">
 <option value="3">All movement</option>
 <option value="1">Pen-down movement</option>
@@ -159,7 +188,7 @@ gui-text="Pen-up movement speed (%):   ">75</param>
 <option value="0">None</option>
 </param>
 </vbox>
-<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
 
 <spacer />
@@ -169,7 +198,7 @@ gui-text="Pen-up movement speed (%):   ">75</param>
 
 
 <hbox >
-<image width="50" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="50" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 <param name="webhook" type="bool" gui-text="Post to webhook when a plot finishes">false</param> 
 </vbox>
@@ -184,14 +213,14 @@ gui-text="Pen-up movement speed (%):   ">75</param>
 <label appearance="header">Advanced Options:</label>
 
 <hbox >
-<image width="50" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="50" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
-
 <param name="auto_rotate" type="bool" gui-text="Auto-rotate page when printing">true</param>	
 <param name="random_start" type="bool" gui-text="Randomize starts of closed paths">false</param>
-<param name="report_time" type="bool" gui-text="Report time elapsed">false</param> 
+<param name="hiding" type="bool" gui-text="Hidden-line removal">false</param>
 
-<spacer />
+
+<image width="10" height="5">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 
 <param name="reordering" type="optiongroup" appearance="combo" gui-text="Plot optimization:">
 <option value="0">Least; Only connect adjoining paths</option>
@@ -204,8 +233,12 @@ gui-text="Pen-up movement speed (%):   ">75</param>
 <option value="1">~2870 DPI (Slightly smoother)</option>
 <option value="2">~1435 DPI (Slightly faster)</option>
 </param></vbox>
-<image width="10" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
+<image width="10" height="5">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
+
+<label indent="3" xml:space="preserve">Tip: Hidden-line removal can be slow. It also ignores path</label>
+<label indent="3" xml:space="preserve">        orientation, so full optimization is recommended.</label>
 
 </page>
 
@@ -214,7 +247,7 @@ gui-text="Pen-up movement speed (%):   ">75</param>
 <label appearance="header">Hardware configuration</label>
 
 <hbox >
-<image width="60" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="60" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 <param name="model" type="optiongroup" appearance="combo" gui-text="AxiDraw model:">
 <option value="1">AxiDraw V2, V3, or SE/A4</option>
@@ -242,22 +275,20 @@ gui-text="Pen-up movement speed (%):   ">75</param>
 
 </vbox>
 </hbox>
-<image width="50" height="2">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="50" height="2">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 
 <label appearance="header" indent="2">
 Press "Apply" with this tab selected to check online for updates.</label>
 
 
 
-</page>
-</param>
-</page>
+</page></param></page>
 
 <page name="manual" gui-text="Manual">
 <label appearance="header">Manual Control</label>
 
 <hbox >
-<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="30" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 <label>
 Press "Apply" with this tab selected to execute various "manual"
@@ -266,13 +297,13 @@ raise or lower the pen, enable or disable the motors, or adjust
 the position where a paused plot will be resumed.
 </label>
 </vbox>
-<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
 
 <spacer />
 
 <hbox >
-<image width="80" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="80" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 <param name="manual_cmd" type="optiongroup" appearance="combo"
 gui-text="Command: ">
@@ -290,16 +321,16 @@ gui-text="Command: ">
 <option value="strip_data" >Strip plotter data from file</option>
 </param>
 <param name="dist" indent="1" type="float" precision="3" min="-100000" max="100000"
-    gui-text="Walk or adjustment distance:">1.000</param>
+    gui-text="Walk distance:">1.000</param>
 </vbox>
-<image width="10" height="10">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="10">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
 
 <spacer />
 
 
 <hbox >
-<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="30" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 <label>
 Caution: The manual "walk" commands will move the carriage as
@@ -308,7 +339,7 @@ far or in the wrong direction may cause AxiDraw to try and
 move beyond its physical limits of travel.
 </label>
 </vbox>
-<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
 
 
@@ -325,7 +356,7 @@ move beyond its physical limits of travel.
 <label appearance="header">Plot Individual Layers </label>
 
 <hbox >
-<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="30" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 
 <label>
@@ -346,7 +377,7 @@ or "2-black" will be skipped.
 </label>
 
 </vbox>
-<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
 
 
@@ -364,14 +395,14 @@ gui-text="Plot only layers beginning with: ">1</param>
 
 
 <hbox >
-<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="30" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 <label>
 Tip: Number of copies to plot and the time delay between them
 are given by parameters in the "Plot" tab.
 </label>
 </vbox>
-<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
 
 
@@ -384,7 +415,7 @@ are given by parameters in the "Plot" tab.
 <label appearance="header">Pause and Resume</label>
 
 <hbox >
-<image width="30" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="30" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 <vbox >
 <label> 
 To pause a plot in progress, press the pause button on the
@@ -406,7 +437,7 @@ You can resume directly where you paused, or after using
 the Return to Home Corner command.
 </label>
 </vbox>
-<image width="10" height="1">axidraw_deps/axidrawinternal/spacer_10px.svg</image>
+<image width="10" height="1">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 </hbox>
 
 
@@ -426,11 +457,10 @@ indent="2" gui-text='Action on "Apply": '>
 
 
 </page>
-
-
 </param>
-<label indent="5" xml:space="preserve"
->Version 3.8.1      —      Copyright 2023 Evil Mad Science LLC</label>
+
+<param name="preview" type="bool" indent="4" 
+    gui-text="Preview mode (Simulate plotting only)">false</param>
 
 <effect needs-live-preview="false">
 <object-type>all</object-type>

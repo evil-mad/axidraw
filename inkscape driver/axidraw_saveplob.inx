@@ -39,10 +39,11 @@ gui-text="Specific layer selection:">1</param>
 </param>
 <param indent="5" name="auto_rotate" type="bool" gui-text="Auto-rotate page when printing">true</param>	
 <param indent="5" name="random_start" type="bool" gui-text="Randomize starts of closed paths">false</param>
+<param indent="5" name="hiding" type="bool" gui-text="Hidden-line removal">false</param>
 
 <spacer />
 <spacer />
-<label indent="6">Version 3.8.0. Copyright 2023 Evil Mad Scientist</label>
+<label indent="6">Version 3.9.0. Copyright 2023 Evil Mad Scientist</label>
 
 </page>
 

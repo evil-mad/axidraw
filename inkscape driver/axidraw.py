@@ -28,7 +28,7 @@ Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
 # pylint: disable=pointless-string-statement
 
-__version__ = '3.8.1'  # Dated 2023-02-25
+__version__ = '3.9.0'  # Dated 2023-05-11
 
 import copy
 import gettext
@@ -302,7 +302,7 @@ class AxiDraw(inkex.Effect):
             self.plot_status.resume.clear_button(self) # Query button to clear its state
 
         if self.options.mode == "sysinfo":
-            versions.log_version_info(self.plot_status.port, self.params.check_updates,
+            versions.log_version_info(self.plot_status, self.params.check_updates,
                                       self.version_string, self.options.preview,
                                       self.user_message_fun, logger)
 
@@ -311,10 +311,12 @@ class AxiDraw(inkex.Effect):
 
         if self.options.mode in ('align', 'toggle', 'cycle'):
             self.setup_command()
+            self.warnings.report(self.called_externally, self.user_message_fun) # print warnings
             return
 
         if self.options.mode == "manual":
             self.manual_command() # Handle manual commands that use both power and usb.
+            self.warnings.report(self.called_externally, self.user_message_fun) # print warnings
             return
 
         self.svg = self.document.getroot()
@@ -358,8 +360,7 @@ class AxiDraw(inkex.Effect):
                 self.plot_cleanup()     # Revert document to save plob & print time elapsed
                 self.plot_status.resume.new.plob_version = str(path_objects.PLOB_VERSION)
                 self.plot_status.resume.write_to_svg(self.svg)
-                for warning_message in self.warnings.return_text_list():
-                    self.user_message_fun(warning_message)
+                self.warnings.report(False, self.user_message_fun) # print warnings
                 return
 
             if self.options.mode == "res_plot": # Crop digest up to when the plot resumes:
@@ -416,7 +417,6 @@ class AxiDraw(inkex.Effect):
             self.pen.servo_setup_wrapper(self)
             self.pen.pen_raise(self)
             self.enable_motors()
-
             self.go_to_position(self.params.start_pos_x, self.params.start_pos_y)
 
         if self.plot_status.resume.update_needed:
@@ -424,16 +424,12 @@ class AxiDraw(inkex.Effect):
             self.plot_status.resume.new.last_y = self.pen.phys.ypos
             if self.options.digest: # i.e., if self.options.digest > 0
                 self.plot_status.resume.new.plob_version = str(path_objects.PLOB_VERSION)
-
             self.plot_status.resume.write_to_svg(self.svg)
         if self.plot_status.port is not None:
             ebb_motion.doTimedPause(self.plot_status.port, 10, False) # Final timed motion command
             if self.options.port is None:  # Do not close serial port if it was opened externally.
                 self.disconnect()
-
-        if not self.called_externally: # Print optional time reports
-            for warning_message in self.warnings.return_text_list():
-                self.user_message_fun(warning_message)
+        self.warnings.report(self.called_externally, self.user_message_fun) # print warnings
 
 
     def setup_command(self):
@@ -496,7 +492,8 @@ class AxiDraw(inkex.Effect):
             temp_string = temp_string[:16] # Only use first 16 characters in name
             if not temp_string:
                 temp_string = "" # Use empty string to clear nickname.
-            if ebb_serial.min_version(self.plot_status.port, "2.5.5"):
+
+            if versions.min_fw_version(self.plot_status, "2.5.5"):
                 renamed = ebb_serial.write_nickname(self.plot_status.port, temp_string)
                 if renamed is True:
                     if temp_string == "":
@@ -527,7 +524,7 @@ class AxiDraw(inkex.Effect):
             self.pen.servo_setup_wrapper(self)
             self.enable_motors()  # Set plotting resolution
             if self.options.manual_cmd == "walk_home":
-                if ebb_serial.min_version(self.plot_status.port, "2.6.2"):
+                if versions.min_fw_version(self.plot_status, "2.6.2"):
                     serial_utils.exhaust_queue(self) # Wait until all motion stops
                     a_pos, b_pos = ebb_motion.query_steps(self.plot_status.port, False)
                     n_delta_x = -(a_pos + b_pos) / (4 * self.params.native_res_factor)
@@ -605,39 +602,57 @@ class AxiDraw(inkex.Effect):
             self.plot_status.resume.new.plob_version = str(path_objects.PLOB_VERSION)
         else: # Process the input SVG into a simplified, restricted-format DocDigest object:
             digester = digest_svg.DigestSVG() # Initialize class
-            digest_params = [self.svg_width, self.svg_height, s_x, s_y,\
-                self.plot_status.resume.new.layer, self.params.curve_tolerance]
+            if self.options.hiding: # Process all visible layers
+                digest_params = [self.svg_width, self.svg_height, s_x, s_y,\
+                    -2, self.params.curve_tolerance]
+            else: # Process only selected layer, if in layers mode
+                digest_params = [self.svg_width, self.svg_height, s_x, s_y,\
+                    self.plot_status.resume.new.layer, self.params.curve_tolerance]
             self.digest = digester.process_svg(self.svg, self.warnings,
                 digest_params, self.svg_transform,)
 
-            """
-            Possible future work: Perform hidden-line clipping at this point, based on object
-                fills, clipping masks, and document and plotting bounds, via self.bounds
-            """
+            if self.rotate_page: # Rotate digest
+                self.digest.rotate(self.params.auto_rotate_ccw)
+
+            if self.options.hiding:
+                """
+                Perform hidden-line clipping at this point, based on object
+                    fills, clipping masks, and document and plotting bounds, via self.bounds
+                """
+                # clipping involves a non-pure Python dependency (pyclipper), so only import
+                # when necessary
+                from axidrawinternal.clipping import ClipPathsProcess
+                bounds = ClipPathsProcess.calculate_bounds(self.bounds, self.svg_height,\
+                    self.svg_width, self.params.clip_to_page, self.rotate_page)
+                # flattening removes essential information for the clipping process
+                assert not self.digest.flat
+                self.digest.layers = ClipPathsProcess().run(self.digest.layers,\
+                    bounds, clip_on=True)
+                self.digest.layer_filter(self.plot_status.resume.new.layer) # For Layers mode
+                self.digest.remove_unstroked() # Only stroked objects can plot
+                self.digest.flatten() # Flatten digest before optimizations and plotting
+            else:
+                """
+                Clip digest at plot bounds
+                """
+                if self.rotate_page:
+                    doc_bounds = [self.svg_height + 1e-9, self.svg_width + 1e-9]
+                else:
+                    doc_bounds = [self.svg_width + 1e-9, self.svg_height + 1e-9]
+                out_of_bounds_flag = boundsclip.clip_at_bounds(self.digest, self.bounds,\
+                    doc_bounds, self.params.bounds_tolerance, self.params.clip_to_page)
+                if out_of_bounds_flag:
+                    self.warnings.add_new('bounds')
+
             """
             Possible future work: Perform automatic hatch filling at this point, based on object
                 fill colors and possibly other factors.
             """
 
-            self.digest.flatten() # Flatten digest, readying it for optimizations and plotting
-
-            if self.rotate_page: # Rotate digest
-                self.digest.rotate(self.params.auto_rotate_ccw)
-
-            """
-            Clip digest at plot bounds
-            """
-            if self.rotate_page:
-                doc_bounds = [self.svg_height + 1e-9, self.svg_width + 1e-9]
-            else:
-                doc_bounds = [self.svg_width + 1e-9, self.svg_height + 1e-9]
-            out_of_bounds_flag = boundsclip.clip_at_bounds(self.digest, self.bounds, doc_bounds,\
-                self.params.bounds_tolerance, self.params.clip_to_page)
-            if out_of_bounds_flag:
-                self.warnings.add_new('bounds')
             """
             Optimize digest
             """
+
             allow_reverse = self.options.reordering in [2, 3]
 
             if self.options.reordering < 3: # Set reordering to 4 to disable path joining
@@ -787,7 +802,6 @@ class AxiDraw(inkex.Effect):
                 if self.plot_status.stopped:
                     return
                 self.plot_polyline(path_item.subpaths[0])
-
             self.use_layer_speed = old_use_layer_speed # Restore old layer status variables
 
             if self.layer_speed_pendown != old_layer_speed_pendown:

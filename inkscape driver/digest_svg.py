@@ -75,7 +75,7 @@ class DigestSVG:# pylint: disable=pointless-string-statement
 
         # Variables that will be populated in process_svg():
         self.bezier_tolerance = 0
-        self.layer_selection = 0
+        self.layer_selection = -2 # All layers; Matches default from plot_status.py
 
         self.doc_width_100 = 0
         self.doc_height_100 = 0
@@ -518,6 +518,14 @@ class DigestSVG:# pylint: disable=pointless-string-statement
 
         new_path.subpaths = subpaths
 
+        ok_to_fill = False
+        for subpath in subpaths:
+            if len(subpath) != 2:
+                ok_to_fill = True   # As long as at least one path has more than two vertices
+                break
+        if not ok_to_fill:
+            new_path.fill = None # Strip fill, if path has only 2-vertex subpaths
+
         # Add new list of subpaths to the current "LayerItem" element:
         self.current_layer.paths.append(new_path)
 
@@ -616,12 +624,9 @@ def verify_plob(svg, model):
         return False
 
     # inkex.errormsg( "Passed plotdata checks") # Optional halfwaypoint check
-    tag_list = [inkex.addNS('defs', 'svg'), 'defs', 'metadata', inkex.addNS('metadata', 'svg'),
-        inkex.addNS('namedview', 'sodipodi'), 'plotdata', inkex.addNS('plotdata', 'svg'), ]
-
     for node in svg:
-        if node.tag in ['g', inkex.addNS('g', 'svg')]:
-            name_temp = node.get(inkex.addNS('label', 'inkscape'))
+        if node.tag in ['g', '{http://www.w3.org/2000/svg}g']:
+            name_temp = node.get('{http://www.inkscape.org/namespaces/inkscape}label')
             if name_temp is None:
                 return False # All groups must be named
             if len(str(name_temp)) > 0:
@@ -635,7 +640,10 @@ def verify_plob(svg, model):
                 if subnode.tag in ['polyline', '{http://www.w3.org/2000/svg}polyline']:
                     continue
                 return False
-        elif node.tag in tag_list:
+        elif node.tag in ['{http://www.w3.org/2000/svg}defs', 'defs', 'metadata',\
+                '{http://www.w3.org/2000/svg}metadata',\
+                '{http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd}namedview',\
+                'plotdata', '{http://www.w3.org/2000/svg}plotdata']:
             continue
         else:
             return False
