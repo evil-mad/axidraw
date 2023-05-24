@@ -1,0 +1,49 @@
+[project]
+
+name = "axicli"
+
+version = "3.9.0"
+
+description = "AxiDraw CLI and Python API"
+
+readme = "README.txt"
+
+requires-python = ">=3.7"
+
+authors = [
+  {name = "Windell H. Oskay", email = "windell@evilmadscientist.com" } # Optional
+]
+
+maintainers = [
+  {name = "Evil Mad Science LLC", email = "contact@evilmadscientist.com" }
+]
+
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3 :: Only",
+]
+
+
+
+[project.urls]  # Optional
+"CLI API documentation" = "https://axidraw.com/doc/cli_api/'"
+"Python API documentation" = "https://axidraw.com/doc/cli_api/"
+"About AxiDraw" = "https://axidraw.com/"
+"A project by" = "https://shop.evilmadscientist.com"
+
+
+
+[project.optional-dependencies]
+dev =  ["axidrawinternal>=3.0.0", "coverage", "mock", "pyfakefs"] # see Installation instructions
+test = ["coverage", "mock", "pyfakefs"]
+
+
+[build-system]
+requires = ["setuptools >= 40.6.0"]
+build-backend = "setuptools.build_meta"

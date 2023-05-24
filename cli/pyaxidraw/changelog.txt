@@ -10,6 +10,28 @@ Additional release notes about the AxiDraw software in general (not just API cha
 are at: https://github.com/evil-mad/axidraw/releases
 
 
+
+=========================================
+v 3.9 (May 2023)
+
+New option, hiding, enables hidden-line removal. Default can be set in a configuration file.
+
+New manual commands res_read, res_adj_in, res_adj_mm allow one to offset the
+    pause position on a plot, letting you resume plotting a little bit before
+    (or a little bit after) where the plot was initially paused. You can also
+    use it to configure a plot to start some specified distance through, even
+    if it was not initially paused.
+
+Small gain in initial processing speed of large SVG files, thanks to rewritten
+    SVG path parser.
+
+Python API: New load_config()function, which loads a configuration file.
+
+Python API: New block()function, which waits until all queued motion commands have completed.
+
+Python API: The numeric time report values noted in the description of the
+report_time option are now always populated, even if report_time is not enabled.
+
 =========================================
 v 3.8 (January 2023)
 
@@ -25,13 +47,15 @@ Changed walk_dist option in configuration file and Python/CLI APIs to dist.
 - The old option name walk_dist is now deprecated, but still functional in
     config files and python scripts that specify walk_dist but not dist.
 
-Added new `button_interval` parameter; specifies interval for polling pause button
+Added new "button_interval" parameter; specifies interval for polling pause button
 
 Added 6 new parameters in configuration file to support new brushless servo option.
 
 Supersampling to smooth paths with overly-high vertex density is now dramatically faster
     and now happens *after* path joining. Supersampling tolerance is now slightly higher.
 
+Archive release at:
+https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_381.zip
 
 =========================================
 v 3.7.2 (November 2022)
@@ -244,17 +268,16 @@ now stripped of whitespace; previously, they were not.
 Archived release at:
 https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_274r1.zip
 
-
 =========================================
 
 v 2.7.0 (November 2020)
 
-Add support for macOS 11 Big Sur.
+Add support for macOS 11 (Big Sur) and Mac computers using Apple Silicon
 
-Drop support for Python 2. Python 3.5-3.9 now supported.
+Drop support for Python 2. Python 3.5-3.9 now supported. If you need
+to use Python 2, the previous release version (2.6.3) is archived below.
 
-New version posted 2020-11-21 (no version number change) includes dependency updates
-for compatibility with Mac computers using Apple Silicon.
+Archived release [here](https://cdn.evilmadscientist.com/dl/ad/public/ad_api/AxiDraw_API_270r13.zip)
 
 =========================================
 

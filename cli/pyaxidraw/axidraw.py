@@ -24,7 +24,7 @@ https://github.com/evil-mad/AxiDraw
 
 Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
-__version__ = '3.8.1'  # Dated 2023-02-25
+__version__ = '3.9.0'  # Dated 2023-05-11
 
 import math
 import gettext
@@ -38,12 +38,13 @@ from lxml import etree
 from axidrawinternal import axidraw
 
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
-from axidrawinternal import boundsclip
+from axidrawinternal import boundsclip, serial_utils
 inkex = from_dependency_import('ink_extensions.inkex')
 ebb_motion = from_dependency_import('plotink.ebb_motion')
 ebb_serial = from_dependency_import('plotink.ebb_serial')
 plot_utils = from_dependency_import('plotink.plot_utils')
 path_objects = from_dependency_import('axidrawinternal.path_objects')
+from axicli import utils as axicli_utils
 
 logger = logging.getLogger(__name__)
 
@@ -223,6 +224,22 @@ class AxiDraw(axidraw.AxiDraw):
         if output:
             return self.get_output()
         return None
+
+    def load_config(self, config_ref):
+        '''
+        Plot or Interactive context: Load settings from a configuration file.
+        config_ref may be a file name, or the full path to a file
+        '''
+        backup_mode = ""
+        if self.options.mode == "interactive":
+            backup_mode = "interactive"
+        config_dict = axicli_utils.load_config(config_ref)
+        combined_config = axicli_utils.FakeConfigModule(config_dict)
+        self.params = combined_config
+        axicli_utils.assign_option_values(self.options, None, [config_dict],\
+            axicli_utils.OPTION_NAMES)
+        if backup_mode == "interactive":
+            self.options.mode = "interactive"
 
     def interactive(self):
         '''Python module: Begin interactive context and Initialize options'''
@@ -476,6 +493,12 @@ class AxiDraw(axidraw.AxiDraw):
         if not self._verify_interactive(True):
             return
         ebb_serial.command(self.plot_status.port, command)
+
+    def block(self):
+        '''Interactive context: Wait until all current motion commands have completed '''
+        if not self._verify_interactive(True):
+            return
+        serial_utils.exhaust_queue(self)
 
     def turtle_pos(self):
         '''Interactive context: Report last known "turtle" position'''
