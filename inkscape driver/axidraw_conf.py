@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 #
 # https://github.com/evil-mad/axidraw
-# Version 3.8.0, dated 2023-01-06.
+# Version 3.9.0, dated 2023-05-11.
 #
 # Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -98,6 +98,8 @@ reordering = 0          # Plot optimization option (0-4; 3 is deprecated)
                             # 4: None; Strictly preserve file order
 
 random_start = False    # Randomize start locations of closed paths. Default False
+
+hiding = False          # Hidden-line removal. Default: False
 
 webhook = False         # Enable webhook alerts when True
                             # Default False

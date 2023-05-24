@@ -131,6 +131,11 @@ def core_options(parser, config):
                         default=config["random_start"], \
                         help="Randomize start locations of closed paths")
 
+    options.add_option("--hiding",\
+                        type="inkbool", action="store", dest="hiding",\
+                        default=config["hiding"], \
+                        help="Hidden-line removal")
+
     options.add_option("--reordering",\
                         type="int", action="store", dest="reordering",\
                         default=config["reordering"],\
@@ -184,7 +189,7 @@ def core_mode_options(parser, config):
                         default=config["manual_cmd"],\
                         help="Manual command. One of: [fw_version, raise_pen, lower_pen, "\
                         + "walk_x, walk_y, walk_mmx, walk_mmy, walk_home, enable_xy, "\
-                        + "disable_xy, bootload, "\
+                        + "disable_xy, res_read, res_adj_in, res_adj_mm, bootload, "\
                         + "strip_data, read_name, list_names, write_name]. Default: fw_version")
 
     options.add_option("--dist", "--walk_dist",\

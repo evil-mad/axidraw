@@ -30,6 +30,7 @@ Requires Python 3.7 or newer.
 
 import time
 from axidrawinternal.plot_utils_import import from_dependency_import
+from axidrawinternal.axidraw_options import versions as ad_versions
 ebb_serial = from_dependency_import('plotink.ebb_serial')  # https://github.com/evil-mad/plotink
 ebb_motion = from_dependency_import('plotink.ebb_motion')
 
@@ -95,8 +96,10 @@ def exhaust_queue(ad_ref):
         not executing any delay time.
     """
 
-    if not ebb_serial.min_version(ad_ref.plot_status.port, "2.6.2"):
-        return # Notably, this will return on any type of serial error.
+    if not ad_versions.min_fw_version(ad_ref.plot_status, "2.6.2"):
+        return
+    if ad_ref.plot_status.port is None:
+        return
     while True:
         if ad_ref.receive_pause_request(): # Keyboard interrupt detected!
             break

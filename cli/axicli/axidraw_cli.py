@@ -70,7 +70,7 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface 3.8.1"
+cli_version = "AxiDraw Command Line Interface 3.9.0"
 
 quick_help = '''
     Basic syntax to plot a file:      axicli svg_in [OPTIONS]
@@ -154,7 +154,7 @@ def axidraw_CLI(dev = False):
             metavar='COMMAND', type=str, \
             help="Manual command. One of: [fw_version, lower_pen, raise_pen, "\
             + "walk_x, walk_y, walk_mmx, walk_mmy, walk_home, enable_xy, disable_xy, "\
-            + "bootload, strip_data, read_name, "\
+            + "res_read, res_adj_in, res_adj_mm, bootload, strip_data, read_name, "\
             + "list_names,  write_name]. Default: fw_version")
 
     parser.add_argument("-w","--dist","--walk_dist", \
@@ -194,6 +194,10 @@ def axidraw_CLI(dev = False):
     parser.add_argument("-Y","--random_start", \
             action="store_const", const='True', \
             help="Randomize start position of closed paths.")
+
+    parser.add_argument("-H","--hiding", \
+            action="store_const", const='True', \
+            help="Enable hidden-line removal")
 
     parser.add_argument("-L","--model",\
             metavar='MODELCODE', type=int,\
@@ -357,12 +361,7 @@ def axidraw_CLI(dev = False):
 
     # assign command line options to adc's options.
     # additionally, look inside the config to see if any command line options were set there
-    option_names = ['mode', 'speed_pendown', 'speed_penup', 'accel', 'pen_pos_down', 'pen_pos_up',
-                    'pen_rate_lower', 'pen_rate_raise', 'pen_delay_down', 'pen_delay_up',
-                    'random_start', 'reordering', 'no_rotate', 'const_speed', 'report_time',
-                    'manual_cmd', 'dist', 'layer', 'copies', 'page_delay', 'preview',
-                    'rendering', 'model', 'penlift', 'port', 'port_config', 'webhook',
-                    'webhook_url', 'digest', 'progress']
+    option_names = utils.OPTION_NAMES
     utils.assign_option_values(adc.options, args, [config_dict], option_names)
 
     adc.cli_api = True # Set flag that this is being called from the CLI.

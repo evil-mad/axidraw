@@ -92,8 +92,7 @@ def clip_at_bounds(digest, phy_bounds, doc_bounds, warn_tol, doc_clip=True):
     x_max_warn = x_max + warn_tol
     y_max_warn = y_max + warn_tol
 
-    if not digest.flat:
-        digest.flatten()
+    digest.flatten()
 
     for layer in digest.layers:    # Each layer is a LayerItem object.
         for path in layer.paths: # Each path is a PathItem object.

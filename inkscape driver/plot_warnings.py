@@ -124,3 +124,9 @@ class PlotWarnings:
             )
 
         return warning_text_list
+
+    def report(self, suppress, message_fun):
+        '''Print warning messages to the given message function'''
+        if not suppress:
+            for warning_message in self.return_text_list():
+                message_fun(warning_message)

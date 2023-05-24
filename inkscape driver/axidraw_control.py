@@ -30,7 +30,7 @@ import logging
 # import threading
 import time
 import signal
-from multiprocessing import Event
+from threading import Event
 
 from axidrawinternal import axidraw   # https://github.com/evil-mad/axidraw
 from axidrawinternal.axidraw_options import common_options
@@ -214,7 +214,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
             'pen_rate_raise', 'pen_rate_lower', 'pen_delay_up', 'pen_delay_down',
             'no_rotate', 'const_speed', 'report_time', 'manual_cmd', 'dist',
             'layer', 'copies', 'page_delay', 'preview', 'rendering', 'model', 'penlift',
-            'setup_type', 'resume_type', 'auto_rotate', 'resolution', 'reordering',
+            'setup_type', 'resume_type', 'auto_rotate', 'resolution', 'hiding', 'reordering',
             'random_start', 'webhook', 'webhook_url', 'digest', 'progress',]}
         ad.options.__dict__.update(selected_options)
 

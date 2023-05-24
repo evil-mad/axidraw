@@ -8,6 +8,13 @@ import warnings
 
 from lxml import etree
 
+OPTION_NAMES = ['mode', 'speed_pendown', 'speed_penup', 'accel', 'pen_pos_down', 'pen_pos_up',
+                    'pen_rate_lower', 'pen_rate_raise', 'pen_delay_down', 'pen_delay_up',
+                    'random_start', 'hiding', 'reordering', 'no_rotate', 'const_speed',
+                    'report_time','manual_cmd', 'dist', 'layer', 'copies', 'page_delay',
+                    'preview', 'rendering', 'model', 'penlift', 'port', 'port_config', 'webhook',
+                    'webhook_url', 'digest', 'progress']
+
 def handle_info_cases(no_flag_arg, quick_help, cli_version, software_name = None, version = None):
     ''' handles the simple cases like "version" and "help" '''
 
@@ -37,7 +44,7 @@ def check_for_input(input_file, bad_input_message):
 
 def effect_parse(effect, svg_input):
     ''' `effect` is an `inkex.Effect` object, e.g. `AxiDrawControl`
-    if `svg_input` is None`, it usees stdin '''
+    if `svg_input` is None`, it uses stdin '''
     # hack so inkex handles stdin properly
     # https://github.com/evil-mad/ink_extensions/blob/6a246a5c530491302e155b4d1965e989381438e6/ink_extensions/inkex.py#L194
     effect.svg_file = None
@@ -128,7 +135,9 @@ def assign_option_values(options_obj, command_line, configs, option_names):
 def get_configured_value(attr, configs):
     """ configs is a list of configuration dicts, in order of priority.
 
-    e.g. if configs is a list [user_config, other_config], then the default for "speed_pendown" will be user_config.speed_pendown if user_config.speed_pendown exists, and if not, the default will be other_config.speed_pendown.
+    e.g. if configs is a list [user_config, other_config], then the default for
+    "speed_pendown" will be user_config.speed_pendown if user_config.speed_pendown exists,
+    and if not, the default will be other_config.speed_pendown.
     """
     for config in configs:
         if attr in config:
