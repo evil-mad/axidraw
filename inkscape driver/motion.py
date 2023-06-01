@@ -1,6 +1,6 @@
 # coding=utf-8
 #
-# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -52,7 +52,6 @@ def trajectory(ad_ref, vertex_list, xyz_pos=None):
             Commands may include: Pen lift, pen lower, horizontal movement, etc.
             [['lift', (params tuple), (seg_data)],
             ['SM', (params tuple), (seg_data)],
-            ['LU', (params tuple), (seg_data)]]
 
             seg_data: Segment data list for a motion segment.
                 * final x position, float

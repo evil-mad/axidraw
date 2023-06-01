@@ -28,7 +28,7 @@ Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
 # pylint: disable=pointless-string-statement
 
-__version__ = '3.9.0'  # Dated 2023-05-11
+__version__ = '3.9.1'  # Dated 2023-05-31
 
 import copy
 import gettext
@@ -359,7 +359,7 @@ class AxiDraw(inkex.Effect):
             if self.options.digest > 1: # Generate digest only; do not run plot or preview
                 self.plot_cleanup()     # Revert document to save plob & print time elapsed
                 self.plot_status.resume.new.plob_version = str(path_objects.PLOB_VERSION)
-                self.plot_status.resume.write_to_svg(self.svg)
+                self.plot_status.resume.write_to_svg(self.document)
                 self.warnings.report(False, self.user_message_fun) # print warnings
                 return
 
@@ -733,14 +733,12 @@ class AxiDraw(inkex.Effect):
         """
         try:
             self.document = copy.deepcopy(self.backup_original)
-            if self.options.digest:
-                self.options.rendering = 0 # Turn off rendering
-                self.svg = self.document
-            else:
-                self.svg = self.document.getroot()
-
         except AttributeError:
             self.document = copy.deepcopy(self.original_document)
+
+        if self.options.digest:
+            self.options.rendering = 0 # Turn off rendering
+        else:
             self.svg = self.document.getroot()
 
         if self.options.digest > 1: # Save Plob file only and exit.
