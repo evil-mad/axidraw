@@ -280,13 +280,24 @@ class DigestSVG:# pylint: disable=pointless-string-statement
 
             if style_dict['visibility'] in ('hidden', 'collapse'):
                 # Not visible; Do not plot. (This comes after the container tags;
-                # visible children of hidden elements can still plot.)
+                #   visible children of hidden elements can still plot.)
                 continue
+
+            # We now check for presentation attributes on the element.  If present, they have a
+            # lower precedence than the style attribute, and do not cascade to children.
+
+            if style_dict['fill'] is None: # If the style has not been set...
+                style_dict['fill'] = node.get('fill')
+            if style_dict['stroke'] is None: # If the style has not been set...
+                style_dict['stroke'] = node.get('stroke')
+            if style_dict['fill-rule'] is None: # If the style has not been set...
+                style_dict['fill-rule'] = node.get('fill-rule')
 
             if node.tag == '{http://www.w3.org/2000/svg}path':
                 path_d = node.get('d')
                 self.digest_path(path_d, style_dict, mat_new)
                 continue
+
             if node.tag in ('{http://www.w3.org/2000/svg}rect', 'rect'):
                 """
                 Create a path with the outline of the rectangle
@@ -558,7 +569,7 @@ def inherit_style(parent_style, node_style, visibility):
     default_style = {}
     default_style['fill'] = None
     default_style['stroke'] = None
-    default_style['fill-rule'] = None # Future work: Add support for 'nonzero' and 'evenodd'
+    default_style['fill-rule'] = None
     default_style['visibility'] = 'visible'
     default_style['display'] = None # A null value; not "display:none".
 
