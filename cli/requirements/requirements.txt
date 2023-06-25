@@ -7,6 +7,6 @@ ink-extensions==1.2.0
 lxml==4.9.1
 plotink==1.8.0
 pyserial==3.5
-requests==2.26.0
+requests==2.31.0
 tqdm==4.64.0
 urllib3==1.26.7
