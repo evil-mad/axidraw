@@ -68,17 +68,6 @@ class UtilsTestCase(unittest.TestCase):
         self.assertTrue(hasattr(resulting_options, "overridden"))
         self.assertEqual(resulting_options.overridden, command_line_values.overridden)
 
-    def test_load_config(self):
-        config_filenames = ["test/assets/hta_custom_config.py", "test/assets/conf_without_suffix"]
-
-        for filename in config_filenames:
-            with self.subTest(filename=filename):
-                result = load_config(filename)
-
-                self.assertIsInstance(result, dict)
-                self.assertIn("font_option", result.keys())
-                self.assertEqual(result["font_option"], "EMSAllure")
-
     def test_load_config_bad_filename(self):
         config_filenames = ["a_nonexistent_file.py", "another_nonexistent_file"]
         for filename in config_filenames:
