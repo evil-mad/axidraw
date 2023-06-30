@@ -40,8 +40,8 @@ classifiers = [
 
 
 [project.optional-dependencies]
-dev =  ["axidrawinternal>=3.0.0", "coverage", "mock", "pyfakefs"] # see Installation instructions
-test = ["coverage", "mock", "pyfakefs"]
+dev =  ["axidrawinternal>=3.0.0", "coverage", "pyfakefs"] # see Installation instructions
+test = ["coverage", "pyfakefs"]
 
 
 [build-system]
