@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -#-
 
 '''
 interactive_usb_com.py
