@@ -1019,7 +1019,7 @@ class AxiDraw(inkex.Effect):
 class SecondaryLoggingHandler(logging.Handler):
     '''To be used for logging to AxiDraw.text_out and AxiDraw.error_out.'''
     def __init__(self, axidraw, log_name, level = logging.NOTSET):
-        super(SecondaryLoggingHandler, self).__init__(level=level)
+        super().__init__(level=level)
 
         log = getattr(axidraw, log_name) if hasattr(axidraw, log_name) else ""
         setattr(axidraw, log_name, log)
@@ -1037,7 +1037,7 @@ class SecondaryLoggingHandler(logging.Handler):
 class SecondaryErrorHandler(SecondaryLoggingHandler):
     '''Handle logging for "secondary" machines, plotting alongside primary.'''
     def __init__(self, axidraw):
-        super(SecondaryErrorHandler, self).__init__(axidraw, 'error_out', logging.ERROR)
+        super().__init__(axidraw, 'error_out', logging.ERROR)
 
 class SecondaryNonErrorHandler(SecondaryLoggingHandler):
     class ExceptErrorsFilter(logging.Filter):
@@ -1045,7 +1045,7 @@ class SecondaryNonErrorHandler(SecondaryLoggingHandler):
             return record.levelno < logging.ERROR
 
     def __init__(self, axidraw):
-        super(SecondaryNonErrorHandler, self).__init__(axidraw, 'text_out')
+        super().__init__(axidraw, 'text_out')
         self.addFilter(self.ExceptErrorsFilter())
 
 if __name__ == '__main__':
