@@ -143,7 +143,7 @@ def get_configured_value(attr, configs):
             return config[attr]
     raise ValueError("The given attr ({}) was not found in any of the configurations.".format(attr))
 
-class FakeConfigModule():
+class FakeConfigModule:
     ''' just turns a dict into an object
     so attributes can be set/retrieved object-style '''
     def __init__(self, a_dict):
