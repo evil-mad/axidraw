@@ -13,7 +13,7 @@ from axicli.utils import get_configured_value, assign_option_values, load_config
 
 class UtilsTestCase(unittest.TestCase):
 
-    
+
     def test_get_configured_value_no_configs(self):
         """ If no configs are provided, raise an error """
         with self.assertRaises(BaseException):
@@ -60,7 +60,7 @@ class UtilsTestCase(unittest.TestCase):
         configured_values = { "not_overridden": "configured value", "overridden": "configured value" }
         command_line_values = optparse.Values({ "not_overridden": None, "overridden": "commandline value" })
         resulting_options = optparse.Values() # will contain the result of running assign_option_values
-        
+
         assign_option_values(resulting_options, command_line_values, [configured_values], option_names)
 
         self.assertTrue(hasattr(resulting_options, "not_overridden"))
@@ -69,17 +69,19 @@ class UtilsTestCase(unittest.TestCase):
         self.assertEqual(resulting_options.overridden, command_line_values.overridden)
 
     def test_load_config(self):
-        config_filenames = ["test/assets/hta_custom_config.py", "test/assets/conf_without_suffix"]
+        """Test that a valid config file loads."""
+        config_filenames = ["test/assets/axidraw_conf.py"]
 
         for filename in config_filenames:
             with self.subTest(filename=filename):
                 result = load_config(filename)
 
                 self.assertIsInstance(result, dict)
-                self.assertIn("font_option", result.keys())
-                self.assertEqual(result["font_option"], "EMSAllure")
+                self.assertIn("mode", result.keys())
+                self.assertEqual(result["mode"], "plot")
 
     def test_load_config_bad_filename(self):
+        """Test that the program does not load invalid config files."""
         config_filenames = ["a_nonexistent_file.py", "another_nonexistent_file"]
         for filename in config_filenames:
             with self.subTest(filename=filename):
@@ -96,4 +98,3 @@ class UtilsTestCase(unittest.TestCase):
 
         self.assertNotEqual(se.exception.args, (None, ), "program will exit with a zero exit code")
         self.assertNotEqual(se.exception.args, (), "program will exit with a zero exit code")
-
