@@ -27,7 +27,7 @@ Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
 # pylint: disable=pointless-string-statement
 
-__version__ = '3.9.1'  # Dated 2023-05-31
+__version__ = '3.9.2'  # Dated 2023-06-25
 
 import copy
 import gettext
@@ -358,7 +358,7 @@ class AxiDraw(inkex.Effect):
             if self.options.digest > 1: # Generate digest only; do not run plot or preview
                 self.plot_cleanup()     # Revert document to save plob & print time elapsed
                 self.plot_status.resume.new.plob_version = str(path_objects.PLOB_VERSION)
-                self.plot_status.resume.write_to_svg(self.document)
+                self.plot_status.resume.write_to_svg(self.svg)
                 self.warnings.report(False, self.user_message_fun) # print warnings
                 return
 
@@ -730,15 +730,15 @@ class AxiDraw(inkex.Effect):
         Doing so allows us to use routines that alter the SVG prior to this point,
             e.g., plot re-ordering for speed or font substitutions.
         """
-        try:
-            self.document = copy.deepcopy(self.backup_original)
+        self.document = copy.deepcopy(self.backup_original) 
+
+        try: # Handle cases: backup_original May be etree Element or ElementTree
+            self.svg = self.document.getroot() # For ElementTree, get the root
         except AttributeError:
-            self.document = copy.deepcopy(self.original_document)
+            self.svg = self.document # For Element; no need to get the root
 
         if self.options.digest:
             self.options.rendering = 0 # Turn off rendering
-        else:
-            self.svg = self.document.getroot()
 
         if self.options.digest > 1: # Save Plob file only and exit.
             elapsed_time = time.time() - self.start_time
@@ -894,9 +894,10 @@ class AxiDraw(inkex.Effect):
             self.user_message_fun('\nPlot paused by keyboard interrupt.\n')
 
         if pause_button_pressed == -1:
-            self.user_message_fun(\
-                '\nError: USB connection to AxiDraw lost. ' +\
-                f'[Position {self.plot_status.stats.down_travel_inch} mm]\n')
+            self.user_message_fun('\nError: USB connection to AxiDraw lost. ' +\
+                f'[Position: {25.4 * self.plot_status.stats.down_travel_inch:.3f} mm]\n')
+
+
             self.connected = False # Python interactive API variable
             self.plot_status.stopped = -104 # Code 104: "Lost connectivity"
 

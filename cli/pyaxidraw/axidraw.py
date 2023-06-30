@@ -23,7 +23,7 @@ https://github.com/evil-mad/AxiDraw
 
 Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
-__version__ = '3.9.0'  # Dated 2023-05-11
+__version__ = '3.9.2'  # Dated 2023-06-25
 
 import math
 import gettext
