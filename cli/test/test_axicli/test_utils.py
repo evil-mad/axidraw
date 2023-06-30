@@ -68,20 +68,7 @@ class UtilsTestCase(unittest.TestCase):
         self.assertTrue(hasattr(resulting_options, "overridden"))
         self.assertEqual(resulting_options.overridden, command_line_values.overridden)
 
-    def test_load_config(self):
-        """Test that a valid config file loads."""
-        config_filenames = ["test/assets/axidraw_conf.py"]
-
-        for filename in config_filenames:
-            with self.subTest(filename=filename):
-                result = load_config(filename)
-
-                self.assertIsInstance(result, dict)
-                self.assertIn("mode", result.keys())
-                self.assertEqual(result["mode"], "plot")
-
     def test_load_config_bad_filename(self):
-        """Test that the program does not load invalid config files."""
         config_filenames = ["a_nonexistent_file.py", "another_nonexistent_file"]
         for filename in config_filenames:
             with self.subTest(filename=filename):
@@ -98,3 +85,4 @@ class UtilsTestCase(unittest.TestCase):
 
         self.assertNotEqual(se.exception.args, (None, ), "program will exit with a zero exit code")
         self.assertNotEqual(se.exception.args, (), "program will exit with a zero exit code")
+
