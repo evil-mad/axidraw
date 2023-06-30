@@ -38,8 +38,8 @@ Also included is a LayerProperties class, which manages parsing of layer names.
 """
 
 from math import sqrt
-from lxml import etree
 from enum import Enum
+from lxml import etree
 
 from axidrawinternal.plot_utils_import import from_dependency_import # plotink
 plot_utils = from_dependency_import('plotink.plot_utils')
@@ -104,6 +104,7 @@ class PathItem:
 
     @classmethod
     def from_attrs(cls, **kwargs):
+        ''' Populate class from attribute keywords '''
         path_item = cls()
         path_item.subpaths = kwargs.pop("subpaths", None)
         path_item.stroke = kwargs.pop("stroke", None)
@@ -247,13 +248,11 @@ class PathItem:
         return True
 
     def __str__(self):
-        """
-        basically so builtin `str(path_item)` and `print(path_item)` will work nicely
-        """
-        return "{}(\n  subpaths={},\n  fill={},\n  \
-fill_rule={},\n  stroke={},\n  item_id={})".format(
-            type(self).__name__, self.subpaths, self.fill,
-            self.fill_rule, self.stroke, self.item_id)
+        ''' For builtin `str(path_item)` and `print(path_item)` to work nicely '''
+
+        return f"{type(self).__name__}(\n  subpaths={self.subpaths},\n" +\
+            f"  fill={self.fill},\n  fill_rule={self.fill_rule},\n" +\
+            f"  stroke={self.stroke},\n  item_id={self.item_id})"
 
 def find_int(name_string):
     '''
@@ -371,6 +370,7 @@ class LayerItem: # pylint: disable=too-few-public-methods
 
     @classmethod
     def from_attrs(cls, **kwargs):
+        ''' Populate class from attribute keywords '''
         layer_item = cls()
         layer_item.name = kwargs.pop("name", None)
         layer_item.paths = kwargs.pop("paths", None)

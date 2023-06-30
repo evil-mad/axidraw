@@ -156,6 +156,17 @@ class DigestSVG:# pylint: disable=pointless-string-statement
         for node in node_list:
             node_visibility = node.get('visibility')
             element_style = simplestyle.parseStyle(node.get('style'))
+
+            # Presentation attributes, which have lower precedence than the style attribute:
+            if 'fill' not in element_style: # If the style has not been set...
+                element_style['fill'] = node.get('fill')
+            if 'stroke' not in element_style: # If the style has not been set...
+                element_style['stroke'] = node.get('stroke')
+            if 'fill-rule' not in element_style: # If the style has not been set...
+                element_style['fill-rule'] = node.get('fill-rule')
+            # Since these are added to the style dictionary, a potential problem is that
+            # these are now treated on equal footing to CSS styling information.
+
             style_dict = inherit_style(parent_style, element_style, node_visibility)
 
             if style_dict['display'] == 'none':
@@ -172,7 +183,6 @@ class DigestSVG:# pylint: disable=pointless-string-statement
                 simpletransform.parseTransform(trans))
 
             if node.tag in ('{http://www.w3.org/2000/svg}g', 'g'):
-
                 old_layer_name = self.current_layer_name
                 if old_layer_name == '__digest-root__' and\
                     node.get('{http://www.inkscape.org/namespaces/inkscape}groupmode') == 'layer':
@@ -282,16 +292,6 @@ class DigestSVG:# pylint: disable=pointless-string-statement
                 # Not visible; Do not plot. (This comes after the container tags;
                 #   visible children of hidden elements can still plot.)
                 continue
-
-            # We now check for presentation attributes on the element.  If present, they have a
-            # lower precedence than the style attribute, and do not cascade to children.
-
-            if style_dict['fill'] is None: # If the style has not been set...
-                style_dict['fill'] = node.get('fill')
-            if style_dict['stroke'] is None: # If the style has not been set...
-                style_dict['stroke'] = node.get('stroke')
-            if style_dict['fill-rule'] is None: # If the style has not been set...
-                style_dict['fill-rule'] = node.get('fill-rule')
 
             if node.tag == '{http://www.w3.org/2000/svg}path':
                 path_d = node.get('d')
@@ -565,7 +565,6 @@ def inherit_style(parent_style, node_style, visibility):
     Also handle precedence of SVG "visibility" attribute, separate from the style.
     Note that children of hidden parents may be plotted if they assert visibility.
     '''
-
     default_style = {}
     default_style['fill'] = None
     default_style['stroke'] = None
