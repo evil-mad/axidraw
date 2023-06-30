@@ -1,4 +1,3 @@
-# coding=utf-8
 #
 # Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #

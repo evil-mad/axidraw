@@ -1,4 +1,3 @@
-# coding=utf-8
 #
 # SVG Path Ordering Extension
 # This extension uses a simple TSP algorithm to order the paths so as
