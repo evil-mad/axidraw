@@ -324,7 +324,7 @@ def plan_trajectory(ad_ref, vertex_list, xyz_pos=None):
             # traj_logger.debug('traj_vels I: %.3f', vcurrent_max)
 
         """
-        Velocity at vertex: Part II 
+        Velocity at vertex: Part II
 
         Assuming that we have the same velocity when we enter and
         leave a corner, our acceleration limit provides a velocity
@@ -335,7 +335,7 @@ def plan_trajectory(ad_ref, vertex_list, xyz_pos=None):
         https://onehossshay.wordpress.com/2011/09/24/improving_grbl_cornering_algorithm/
 
         The dot product of the unit vectors is equal to the cosine of the angle between the
-        two unit vectors, giving the deflection between the incoming and outgoing angles. 
+        two unit vectors, giving the deflection between the incoming and outgoing angles.
         Note that this angle is (pi - theta), in the convention of that article, giving us
         a sign inversion. [cos(pi - theta) = - cos(theta)]
         """

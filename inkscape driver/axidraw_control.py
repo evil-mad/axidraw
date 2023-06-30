@@ -119,7 +119,7 @@ class AxiDrawWrapperClass( inkex.Effect ):
                 * If no port is specified, use the first available AxiDraw
 
             1: Use first AxiDraw located via USB, even if a port is given.
-    
+
             2: Use only specified port, given by self.options.port
 
             3: Plot to all attached AxiDraw units

@@ -40,7 +40,7 @@ def clip_at_bounds(digest, phy_bounds, doc_bounds, warn_tol, doc_clip=True):
 
     Inputs:
     digest: A path_objects.DocDigest object
-    phy_bounds: Physical bounds. A 4-element list: 
+    phy_bounds: Physical bounds. A 4-element list:
         [[x_min, y_min],[x_max, y_max]], adjusted out for rounding tolerance
     doc_bounds: Document bounds. A 2-element list with (x_max, y_max)
     warn_tol: Distance that motion exceed limits without warning messages

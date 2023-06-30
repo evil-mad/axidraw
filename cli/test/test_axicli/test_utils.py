@@ -13,7 +13,7 @@ from axicli.utils import get_configured_value, assign_option_values, load_config
 
 class UtilsTestCase(unittest.TestCase):
 
-    
+
     def test_get_configured_value_no_configs(self):
         """ If no configs are provided, raise an error """
         with self.assertRaises(BaseException):
@@ -60,7 +60,7 @@ class UtilsTestCase(unittest.TestCase):
         configured_values = { "not_overridden": "configured value", "overridden": "configured value" }
         command_line_values = optparse.Values({ "not_overridden": None, "overridden": "commandline value" })
         resulting_options = optparse.Values() # will contain the result of running assign_option_values
-        
+
         assign_option_values(resulting_options, command_line_values, [configured_values], option_names)
 
         self.assertTrue(hasattr(resulting_options, "not_overridden"))
