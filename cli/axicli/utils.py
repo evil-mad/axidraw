@@ -92,7 +92,7 @@ def load_config(config):
         print('    {}'.format(se.text))
         print('The config file should be a python file (e.g., a file that ends in ".py").')
         sys.exit(1)
-    except IOError as ose:
+    except OSError as ose:
         if len(config) > 3 and config[-3:] == ".py" and ose.errno == errno.ENOENT:
             # if config is a filename ending in ".py" but it doesn't appear to exist
             print("Could not find any file named {}.".format(config))
