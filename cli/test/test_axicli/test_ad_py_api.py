@@ -3,7 +3,7 @@ import logging
 import time
 import unittest
 
-from mock import ANY, MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 from pyaxidraw import axidraw
 

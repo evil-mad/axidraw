@@ -1,4 +1,4 @@
-from mock import patch
+from unittest.mock import patch
 import sys
 
 from pyfakefs.fake_filesystem import PatchMode

@@ -4,7 +4,7 @@ import random
 import optparse
 import argparse
 
-from mock import patch
+from unittest.mock import patch
 
 from axicli import utils
 from axicli.utils import get_configured_value, assign_option_values, load_config
