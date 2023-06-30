@@ -139,7 +139,7 @@ class AxiDraw(axidraw.AxiDraw):
             self.original_document = copy.deepcopy(self.document)
             file_ref.close()
             file_ok = True
-        except IOError:
+        except OSError:
             pass # It wasn't a file; was it a string?
         if not file_ok:
             try:
