@@ -441,7 +441,7 @@ class _HorizontalLineWorkaround:
 
     This workaround is inspired by a suggestion in a related bug report
     (https://sourceforge.net/p/polyclipping/bugs/183/). The suggestion calls it
-    impractical, but considering the circumstance is a fairly rare occurence, I
+    impractical, but considering the circumstance is a fairly rare occurrence, I
     think it's acceptable. Hopefully it eventually becomes unnecessary.'''
     @classmethod
     def is_necessary(cls, clipper, clippee):
