@@ -1,4 +1,3 @@
-from __future__ import print_function
 import copy
 import errno
 import os
@@ -24,7 +23,7 @@ def handle_info_cases(no_flag_arg, quick_help, cli_version, software_name = None
         sys.exit()
 
     if no_flag_arg == "version":
-        print (cli_version)
+        print(cli_version)
         sw_string = "Software "
         if software_name:
             sw_string = software_name + " " + sw_string
@@ -93,7 +92,7 @@ def load_config(config):
         print('    {}'.format(se.text))
         print('The config file should be a python file (e.g., a file that ends in ".py").')
         sys.exit(1)
-    except IOError as ose:
+    except OSError as ose:
         if len(config) > 3 and config[-3:] == ".py" and ose.errno == errno.ENOENT:
             # if config is a filename ending in ".py" but it doesn't appear to exist
             print("Could not find any file named {}.".format(config))
@@ -144,7 +143,7 @@ def get_configured_value(attr, configs):
             return config[attr]
     raise ValueError("The given attr ({}) was not found in any of the configurations.".format(attr))
 
-class FakeConfigModule():
+class FakeConfigModule:
     ''' just turns a dict into an object
     so attributes can be set/retrieved object-style '''
     def __init__(self, a_dict):

@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARN if print_warnings else logging.ERROR)
 logger.addFilter(DeduplicateMessages())
 
-class ClipPathsProcess():
+class ClipPathsProcess:
     ''' NOTE: does not preserve the direction of the strokes '''
     def __init__(self, clipping_path_cls=None):
         # clipping_path_cls is a class that subclasses AbstractClippingPathItem

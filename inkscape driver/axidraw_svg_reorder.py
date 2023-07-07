@@ -1,4 +1,3 @@
-# coding=utf-8
 #
 # SVG Path Ordering Extension
 # This extension uses a simple TSP algorithm to order the paths so as
@@ -299,12 +298,8 @@ class ReorderEffect(inkex.Effect):
                     self.layer_index += 1
 
                     layer_name = node.get( inkex.addNS( 'label', 'inkscape' ) )
-    
-                    if sys.version_info < (3,): # Yes this is ugly. More elegant suggestions welcome. :)
-                        layer_name = layer_name.encode( 'ascii', 'ignore' ) #Drop non-ascii characters    
-                    else:
-                        layer_name = str(layer_name)        
-                    layer_name.lstrip        # Remove leading whitespace
+
+                    layer_name = str(layer_name).lstrip()
                 
                     if layer_name:
                         if layer_name[0] == '%': # First character is '%'; This
