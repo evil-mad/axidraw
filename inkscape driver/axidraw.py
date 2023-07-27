@@ -1,4 +1,3 @@
-#
 # Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
@@ -27,7 +26,7 @@ Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
 # pylint: disable=pointless-string-statement
 
-__version__ = '3.9.2'  # Dated 2023-06-25
+__version__ = '3.9.3'  # Dated 2023-7-25
 
 import copy
 import gettext
@@ -35,6 +34,7 @@ from importlib import import_module
 import logging
 import math
 import time
+import socket  # for exception handling only
 
 from lxml import etree
 
@@ -65,6 +65,7 @@ ebb_motion = from_dependency_import('plotink.ebb_motion')
 plot_utils = from_dependency_import('plotink.plot_utils')
 text_utils = from_dependency_import('plotink.text_utils')
 requests = from_dependency_import('requests')
+urllib3 = from_dependency_import('urllib3') # for exception handling only
 
 logger = logging.getLogger(__name__)
 
@@ -730,7 +731,7 @@ class AxiDraw(inkex.Effect):
         Doing so allows us to use routines that alter the SVG prior to this point,
             e.g., plot re-ordering for speed or font substitutions.
         """
-        self.document = copy.deepcopy(self.backup_original) 
+        self.document = copy.deepcopy(self.backup_original)
 
         try: # Handle cases: backup_original May be etree Element or ElementTree
             self.svg = self.document.getroot() # For ElementTree, get the root
@@ -767,12 +768,14 @@ class AxiDraw(inkex.Effect):
                     'value3': str(self.options.port),
                     }
                 try:
-                    requests.post(self.options.webhook_url, data=payload)
-                    # wh_result = requests.post(self.options.webhook_url, data=payload)
-                    # self.user_message_fun("webhook results: " + str(wh_result))
-                except (RuntimeError, requests.exceptions.ConnectionError) as wh_err:
-                    raise RuntimeError("An error occurred while posting webhook. " +
-                        "Are you connected to the internet?\n") from wh_err
+                    requests.post(self.options.webhook_url, data=payload, timeout=7)
+                except (TimeoutError, urllib3.exceptions.ConnectTimeoutError,\
+                    urllib3.exceptions.MaxRetryError, requests.exceptions.ConnectTimeout):
+                    self.user_message_fun("Webhook notification failed (Timed out).\n")
+                except (urllib3.exceptions.NewConnectionError,\
+                    socket.gaierror, requests.exceptions.ConnectionError):
+                    self.user_message_fun("An error occurred while posting webhook. " +
+                        "Check your internet connection and webhook URL.\n")
 
     def plot_doc_digest(self, digest):
         """
@@ -791,9 +794,13 @@ class AxiDraw(inkex.Effect):
             self.pen.end_temp_height(self)
             old_use_layer_speed = self.use_layer_speed  # A Boolean
             old_layer_speed_pendown = self.layer_speed_pendown  # Numeric value
+            self.pen.pen_raise(self) # Raise pen prior to computing layer properties
 
-            self.pen.pen_raise(self)
-            self.eval_layer_props(layer.props) # Raise pen; compute with pen up.
+            if self.options.mode == "layers": # Special case: The plob contains all layers
+                if layer.props.number != self.options.layer: # and is plotted in layers mode.
+                    continue # Here, ensure that only certain layers should be printed.
+
+            self.eval_layer_props(layer.props)
 
             for path_item in layer.paths:
                 if self.plot_status.stopped:
