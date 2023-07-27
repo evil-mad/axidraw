@@ -2,7 +2,7 @@
 
 name = "axicli"
 
-version = "3.9.2"
+version = "3.9.3"
 
 description = "AxiDraw CLI and Python API"
 

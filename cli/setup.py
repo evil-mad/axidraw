@@ -12,7 +12,7 @@ import setuptools
 # specified in pyproject.toml, so it is specified here.
 
 install_requires=[
-        'ink_extensions>=1.2.0',
+        'ink_extensions>=1.3.2',
         'lxml>=4.9.1',
         'plotink>=1.8.0',
         'pyserial>=3.5',

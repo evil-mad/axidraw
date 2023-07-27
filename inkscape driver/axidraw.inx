@@ -58,7 +58,7 @@ support, email  contact@evilmadscientist.com  or visit axidraw.com/chat
 <image width="10" height="5">axidraw_deps/axidrawinternal/inx_img/spacer_10px.svg</image>
 
 <label indent="6"
->Version 3.9.2      —      Copyright 2023 Evil Mad Science LLC</label>
+>Version 3.9.3      —      Copyright 2023 Evil Mad Science LLC</label>
 
 
 
@@ -148,7 +148,7 @@ gui-text="Pen-up movement speed (%):   ">75</param>
 
 <param name="pen_rate_raise" type="optiongroup" appearance="combo" gui-text="Pen raising speed :">
 <option value="100">Maximum</option>
-<option value="38">Standard</option>
+<option value="50">Standard</option>
 <option value="25">Slow</option>
 <option value="12">Very slow</option>
 <option value="6">Dead slow</option>
