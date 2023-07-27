@@ -131,7 +131,7 @@ SVG_BODY += """<path
         id="path2" />
         """
 
-# Add a programatic ellipse, with randomly generated size and position.
+# Add a programmatic ellipse, with randomly generated size and position.
 # This will be different every time that you run this script.
 
 cx = 20 + 80 * random.random()

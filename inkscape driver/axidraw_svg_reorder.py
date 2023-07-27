@@ -529,7 +529,7 @@ class ReorderEffect(inkex.Effect):
                             # We need to parse past the unused parameters in our command
                             # The number of parameters to parse past is dependent on the command and stored 
                             # as the value of accepted_command
-                            # Spaces and commas are used to deliniate paramters 
+                            # Spaces and commas are used to deliniate parameters 
                             while jx < prev_path_length and num_of_params_to_skip < accepted_commands[current_command]:
                                 if(prev_path[jx].isspace() or prev_path[jx] == ','):
                                     num_of_params_to_skip = num_of_params_to_skip + 1 
