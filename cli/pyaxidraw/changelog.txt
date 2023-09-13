@@ -12,6 +12,16 @@ are at: https://github.com/evil-mad/axidraw/releases
 
 
 =========================================
+v 3.9.4 (September 2023)
+
+Pen-lift servo motor initialization routines rewritten for more consistent behavior.
+
+As part of this, the update() function in the Python API now itself applies pen height
+changes. For example, if the pen-up height (pen_pos_up) changes, calling update()
+with the pen up will immediately move to the new pen-up height, rather than at the
+next penup() command.
+
+=========================================
 v 3.9 (May 2023)
 
 New option, hiding, enables hidden-line removal. Default can be set in a configuration file.
