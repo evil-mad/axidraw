@@ -26,7 +26,7 @@ Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
 # pylint: disable=pointless-string-statement
 
-__version__ = '3.9.3'  # Dated 2023-7-25
+__version__ = '3.9.4'  # Dated 2023-09-09
 
 import copy
 import gettext
@@ -205,7 +205,6 @@ class AxiDraw(inkex.Effect):
         self.options.speed_pendown = plot_utils.constrainLimits(self.options.speed_pendown, 1, 110)
         self.options.speed_penup = plot_utils.constrainLimits(self.options.speed_penup, 1, 200)
         self.options.accel = plot_utils.constrainLimits(self.options.accel, 1, 110)
-        self.pen.update(self)
 
 
     def effect(self):
@@ -414,7 +413,7 @@ class AxiDraw(inkex.Effect):
                 return
 
             self.query_ebb_voltage()
-            self.pen.servo_setup_wrapper(self)
+            self.pen.servo_init(self)
             self.pen.pen_raise(self)
             self.enable_motors()
             self.go_to_position(self.params.start_pos_x, self.params.start_pos_y)
@@ -443,15 +442,14 @@ class AxiDraw(inkex.Effect):
             return
 
         self.query_ebb_voltage()
-        self.pen.servo_setup_wrapper(self)
+        self.pen.servo_init(self)
 
         if self.options.mode == "align":
             self.pen.pen_raise(self)
             ebb_motion.sendDisableMotors(self.plot_status.port, False)
-        elif self.options.mode == "toggle":
-            self.pen.toggle(self)
         elif self.options.mode == "cycle":
             self.pen.cycle(self)
+        # Note that "toggle" mode is handled within self.pen.servo_init(self)
 
     def manual_command(self):
         """ Manual mode commands that need USB connectivity and don't need SVG file """
@@ -511,17 +509,15 @@ class AxiDraw(inkex.Effect):
 
         self.query_ebb_voltage() # Next: Commands that also require both power to move motors:
         if self.options.manual_cmd == "raise_pen":
-            self.pen.servo_setup_wrapper(self)
-            self.pen.pen_raise(self)
+            self.pen.servo_init(self) # Initializes to pen-up position
         elif self.options.manual_cmd == "lower_pen":
-            self.pen.servo_setup_wrapper(self)
-            self.pen.pen_lower(self)
+            self.pen.servo_init(self) # Initializes to pen-down position
         elif self.options.manual_cmd == "enable_xy":
             self.enable_motors()
         elif self.options.manual_cmd == "disable_xy":
             ebb_motion.sendDisableMotors(self.plot_status.port, False)
         else:  # walk motors or move home cases:
-            self.pen.servo_setup_wrapper(self)
+            self.pen.servo_init(self)
             self.enable_motors()  # Set plotting resolution
             if self.options.manual_cmd == "walk_home":
                 if versions.min_fw_version(self.plot_status, "2.6.2"):
@@ -703,7 +699,7 @@ class AxiDraw(inkex.Effect):
         self.plot_status.progress.launch(self)
 
         try:  # wrap everything in a try so we can be sure to close the serial port
-            self.pen.servo_setup_wrapper(self)
+            self.pen.servo_init(self)
             self.pen.pen_raise(self)
             self.enable_motors()  # Set plotting resolution
 
@@ -939,10 +935,8 @@ class AxiDraw(inkex.Effect):
             if self.options.mode not in ("plot", "layers", "res_plot"):
                 return # Don't update pause_dist in res_home or repositioning modes
 
-            if not math.isclose(self.plot_status.resume.new.pause_dist,
-                        self.plot_status.stats.down_travel_inch): # Only update if changed
-                self.plot_status.resume.new.pause_dist = self.plot_status.stats.down_travel_inch
-                self.plot_status.resume.new.pause_ref = self.plot_status.stats.down_travel_inch
+            self.plot_status.resume.new.pause_dist = self.plot_status.stats.down_travel_inch
+            self.plot_status.resume.new.pause_ref = self.plot_status.stats.down_travel_inch
 
     def serial_connect(self):
         """ Connect to AxiDraw over USB """

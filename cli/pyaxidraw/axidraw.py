@@ -1,5 +1,6 @@
+# coding=utf-8
 #
-# Copyright 2022 Windell H. Oskay, Evil Mad Scientist Laboratories
+# Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -23,7 +24,7 @@ https://github.com/evil-mad/AxiDraw
 
 Requires Python 3.7 or newer and Pyserial 3.5 or newer.
 """
-__version__ = '3.9.2'  # Dated 2023-06-25
+__version__ = '3.9.4'  # Dated 2023-09-09
 
 import math
 import gettext
@@ -116,7 +117,7 @@ class AxiDraw(axidraw.AxiDraw):
 
         # Query if button pressed, to clear the result:
         ebb_motion.QueryPRGButton(self.plot_status.port)
-        self.pen.servo_setup_wrapper(self)
+        self.pen.servo_init(self)
         self.pen.pen_raise(self) # Raise pen
         self.enable_motors()         # Set plot resolution & speed & enable motors
         return True
@@ -139,7 +140,7 @@ class AxiDraw(axidraw.AxiDraw):
             self.original_document = copy.deepcopy(self.document)
             file_ref.close()
             file_ok = True
-        except OSError:
+        except IOError:
             pass # It wasn't a file; was it a string?
         if not file_ok:
             try:
@@ -248,7 +249,6 @@ class AxiDraw(axidraw.AxiDraw):
         self.options.preview = False
         self.options.mode = "interactive"
         self.plot_status.secondary = False
-        self.pen.update(self)
 
     def _verify_interactive(self, verify_connection=False):
         '''
@@ -278,7 +278,7 @@ class AxiDraw(axidraw.AxiDraw):
         if not self._verify_interactive(True):
             return
         self.update_options()
-        self.pen.servo_setup(self)
+        self.pen.servo_init(self)
         if self.plot_status.port:
             self.enable_motors()  # Set plotting resolution & speed
 

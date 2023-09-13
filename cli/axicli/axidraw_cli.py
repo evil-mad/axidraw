@@ -70,7 +70,7 @@ from axicli import utils
 from plotink.plot_utils_import import from_dependency_import # plotink
 exit_status = from_dependency_import("ink_extensions_utils.exit_status")
 
-cli_version = "AxiDraw Command Line Interface 3.9.3"
+cli_version = "AxiDraw Command Line Interface 3.9.4"
 
 quick_help = '''
     Basic syntax to plot a file:      axicli svg_in [OPTIONS]
@@ -269,7 +269,7 @@ def axidraw_CLI(dev = False):
     if args.mode in ("align", "toggle", "cycle", "version", "sysinfo"):
         use_trivial_file = True
     if args.mode == "manual" and args.manual_cmd not in\
-            ("strip_data", "res_read","res_off_in", "res_adj_mm"):
+            ("strip_data", "res_read","res_adj_in", "res_adj_mm"):
         use_trivial_file = True
 
     svg_input = args.svg_in

@@ -671,7 +671,8 @@ class DocDigest:
             for path in layer.paths:
 
                 path_length = path.length()
-                if (dist_so_far + path_length) <= distance: # Remove this full path
+                skip_length_tol = min(path_length/100, 0.001) # Tighter tolerance for short paths
+                if (dist_so_far + path_length) <= (distance + skip_length_tol):
                     dist_so_far += path_length
                     start_index += 1 # This count will be used to slice the path out.
                     layer.props.delay = None # No delay, since not on first path of layer.
