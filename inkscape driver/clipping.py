@@ -429,7 +429,7 @@ class _HorizontalLineWorkaround:
     certain horizontal two-vertex lines when clipped by a polygon (see
     https://sourceforge.net/p/polyclipping/bugs/190/). Specifically, it
     applies only to horizontal lines whose y axis coordinates are a lower
-    number than the y axis coordinates of the polygon. The bug remains unfixed
+    number than (or an equal number to) the y axis coordinates of the polygon. The bug remains unfixed
     in the last release of the clipper library (6.4).
 
     As of summer 2022, the original clipper library is no longer maintained, in
@@ -461,7 +461,7 @@ class _HorizontalLineWorkaround:
             return min_y
 
         for subpath in clippee.subpaths:
-            if cls.is_horizontal(subpath) and min_y([subpath]) < min_y(clipper.subpaths):
+            if cls.is_horizontal(subpath) and min_y([subpath]) <= min_y(clipper.subpaths):
 
                 return True
         return False

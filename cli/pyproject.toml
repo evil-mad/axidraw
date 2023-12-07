@@ -2,13 +2,13 @@
 
 name = "axicli"
 
-version = "3.9.3"
+version = "3.9.5"
 
 description = "AxiDraw CLI and Python API"
 
 readme = "README.txt"
 
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 
 authors = [
   {name = "Windell H. Oskay", email = "windell@evilmadscientist.com" } # Optional
@@ -21,15 +21,20 @@ maintainers = [
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.7",
   "Programming Language :: Python :: 3.8",
   "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3 :: Only",
 ]
 
+dynamic = ["dependencies"]
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
 
+[project.scripts]
+axicli = "axicli.__main__:axidraw_CLI"
 
 [project.urls]  # Optional
 "CLI API documentation" = "https://axidraw.com/doc/cli_api/'"
