@@ -25,21 +25,54 @@ https://github.com/evil-mad/AxiDraw
 
 import sys
 import ast
-from collections import namedtuple
-from packaging.version import parse
+import logging
 
 from axidrawinternal.plot_utils_import import from_dependency_import
-ebb_serial = from_dependency_import('plotink.ebb_serial')  # https://github.com/evil-mad/plotink
 requests = from_dependency_import('requests')
+version = from_dependency_import('packaging.version')
 
-Versions = namedtuple("Versions", "axidraw_control ebb_firmware dev_axidraw_control")
+logger = logging.getLogger('axidrawinternal.axidraw.versions')
 
-def get_versions_online():
+# keys used for reporting versions relevant to this repo
+DEV_AXIDRAW_CONTROL = "AxiDraw Control (unstable)"
+AXIDRAW_CONTROL = "AxiDraw Control"
+
+# EBB firmware key
+EBB_FIRMWARE = "EBB Firmware"
+
+def get_versions_online(check_updates, message_fun, keys = None):
+    '''
+    this is easily used by any consumers of AxiDraw-Internal, e.g. hershey-advanced
+
+    keys is a list of software/firmware that we want versions for.
+    If keys is None, default to [AXIDRAW_CONTROL, DEV_AXIDRAW_CONTROL, EBB_FIRMWARE]
+
+    returns dict with the versions. list(dict.keys()) will equal the `keys` parameter, if provided.
+    '''
+
+    keys = (keys if keys is not None else
+            ["AxiDraw Control", "AxiDraw Control (unstable)", "EBB Firmware"])
+    online_versions = {}
+    if check_updates:
+        try:
+            online_versions = _query_versions_url(keys)
+        except RuntimeError as err_info:
+            msg = f'{err_info}'
+            logger.error(msg)
+    else:
+        message_fun('Note: Online version checking disabled.')
+
+    return online_versions
+
+def _query_versions_url(keys):
     ''' check online for current versions. does not require connection to Axidraw,
     but DOES require connection to the internet.
 
-    returns namedtuple with the versions
-    raises RuntimeError if online check fails.
+    returns dict with the versions.
+    list(dict.keys()) will equal the `keys` parameter
+    dict.values() will all be of type packaging.version.Version, or None
+
+    raises RuntimeError if online check fails
     '''
     url = "https://evilmadscience.s3.amazonaws.com/sites/axidraw/versions.txt"
     text = None
@@ -53,23 +86,27 @@ def get_versions_online():
 
     if text:
         try:
-            dictionary = ast.literal_eval(text)
-            online_versions = Versions(axidraw_control=dictionary['AxiDraw Control'],
-                                   ebb_firmware=dictionary['EBB Firmware'],
-                                   dev_axidraw_control=dictionary['AxiDraw Control (unstable)'])
-        except RuntimeError as err_info:
+            all_versions = ast.literal_eval(text)
+            requested_versions = { key: version.parse(all_versions.get(key)) for key in keys }
+            return requested_versions
+        except (RuntimeError, ValueError, KeyError, SyntaxError) as err_info:
             raise RuntimeError("Could not parse server response. " +
                     f"This is probably the server's fault.\n\n(Error details: {err_info}\n)"
                     ).with_traceback(sys.exc_info()[2])
 
-    return online_versions
+    return requested_versions
 
 def get_current(plot_status):
     '''
+    this is easily used by any consumers of AxiDraw-Internal, e.g. hershey-advanced
+
     `serial_port` is the serial port to the AxiDraw (which must already be connected)
     Query the EBB current setpoint and voltage input
     '''
     try:
+        # not all consumers of this module require ebb_serial, e.g. hta/hershey_advanced.py
+        ebb_serial = from_dependency_import('plotink.ebb_serial')
+
         if not min_fw_version(plot_status, "2.2.3"):
             return None, None
         raw_string = ebb_serial.query(plot_status.port, 'QC\r')
@@ -83,66 +120,94 @@ def get_current(plot_status):
     except RuntimeError:
         return None, None # presumably, we've already reported connection difficulties.
 
-def log_axidraw_control_version(online_versions, current_version_string, log_fun):
+def _report_axidraw_control_version(online_versions, current_version_string, message_fun):
     '''
     `online_versions` is a Versions namedtuple or False,
     e.g. the return value of get_versions_online
     '''
-    if online_versions:
-        if parse(online_versions.axidraw_control) > parse(current_version_string):
-            log_fun("An update is available to a newer version, " +
-                    f"{online_versions.axidraw_control}.")
-            log_fun("Please visit: axidraw.com/sw for the latest software.")
-        elif parse(current_version_string) > parse(online_versions.axidraw_control):
-            log_fun("~~ An early-release version ~~")
-            if parse(online_versions.dev_axidraw_control) > parse(current_version_string):
-                log_fun("An update is available to a newer version, " +
-                        f"{online_versions.dev_axidraw_control}.")
-                log_fun("To update, please contact AxiDraw technical support.")
-            elif (parse(online_versions.dev_axidraw_control) == parse(current_version_string)):
-                log_fun("This is the newest available development version.")
+    report_software_version(
+            AXIDRAW_CONTROL,
+            version.parse(current_version_string),
+            online_versions.get(AXIDRAW_CONTROL),
+            online_versions.get(DEV_AXIDRAW_CONTROL),
+            message_fun,
+            stable_updates_url = "axidraw.com/sw"
+    )
 
-            log_fun(f'(The current "stable" release is v. {online_versions.axidraw_control}).')
-        else:
-            log_fun("Your AxiDraw Control software is up to date.")
-
-def log_ebb_version(fw_version_string, online_versions, log_fun):
+def report_software_version(
+        software_name, local_version, stable_version, dev_version, message_fun,
+        stable_updates_url=False):
     '''
+    this is easily used by any consumers of AxiDraw-Internal, e.g. hershey-advanced
+
+    `local_version`, `stable_version`, `local_version` are all of type `packaging.version.Version`
+
+    `stable_updates_url` a url where stable version updates can be found online
+
+    `online_versions` is a dict containing relevant keys or False,
+    e.g. the return value of get_versions_online
+    '''
+    update_contact_str = "To update, please contact AxiDraw technical support."
+
+    message_fun(f"This is {software_name} version {local_version}.")
+
+    if stable_version is None or dev_version is None: # no version data was retrieved from web
+        return
+
+    if stable_version > local_version:
+        message_fun("An update is available to a newer version, " +
+                f"{stable_version}.")
+        if stable_updates_url: # AxiDraw Control, probably
+            message_fun(f"Please visit: {stable_updates_url} for the latest software.")
+        else: # hershey or merge, probably
+            message_fun(update_contact_str)
+    elif local_version > stable_version:
+        message_fun("~~ An early-release version~~")
+        if dev_version > local_version:
+            message_fun("An update is available to a newer version, " +
+                    f"{dev_version}.")
+            message_fun(update_contact_str)
+        elif dev_version == local_version:
+            message_fun("This is the newest available development version.")
+
+        message_fun(f'(The current "stable" release is v. {stable_version}).')
+    else:
+        message_fun(f"Your {software_name} software is up to date.")
+
+def report_ebb_version(fw_version_string, online_versions, message_fun):
+    '''
+    this is easily used by any consumers of AxiDraw-Internal, e.g. hershey-advanced
+
     `online_versions` is False if we failed or didn't try to get the online versions
     '''
-    log_fun(f"\nYour AxiDraw has firmware version {fw_version_string}.")
+    message_fun(f"\nYour AxiDraw has firmware version {fw_version_string}.")
 
     if online_versions:
-        if parse(online_versions.ebb_firmware) > parse(fw_version_string):
-            log_fun(f"An update is available to EBB firmware v. {online_versions.ebb_firmware};")
-            log_fun("To download the updater, please visit: axidraw.com/fw\n")
+        if online_versions[EBB_FIRMWARE] > version.parse(fw_version_string):
+            message_fun(
+                    f"An update is available to EBB firmware v. {online_versions[EBB_FIRMWARE]};")
+            message_fun("To download the updater, please visit: axidraw.com/fw\n")
         else:
-            log_fun("Your firmware is up to date; no updates are available.\n")
+            message_fun("Your firmware is up to date; no updates are available.\n")
 
-def log_version_info(plot_status, check_updates, current_version_string, preview,
-        message_fun, logger):
+def report_version_info(plot_status, check_updates, current_version_string, preview, message_fun):
     '''
+    currently should only be used by AxiDraw-Internal, might change in the future todo decide
+
     works whether or not `check_updates` is True, online versions were successfully retrieved,
     or `plot_status.port` is None (i.e. not connected AxiDraw)
     '''
-    message_fun(f"This is AxiDraw Control version {current_version_string}.")
-    online_versions = False
-    if check_updates:
-        try:
-            online_versions = get_versions_online()
-        except RuntimeError as err_info:
-            msg = f'{err_info}'
-            logger.error(msg)
-    else:
-        message_fun('Note: Online version checking disabled.')
 
-    log_axidraw_control_version(online_versions, current_version_string, message_fun)
+    online_versions = get_versions_online(check_updates, message_fun)
+
+    _report_axidraw_control_version(online_versions, current_version_string, message_fun)
+
     voltage, current = None, None
     if plot_status.port is not None: # i.e. there is a connected AxiDraw
         try:
             fw_version_string = plot_status.fw_version
             voltage, current = get_current(plot_status)
-            log_ebb_version(fw_version_string, online_versions, message_fun)
+            report_ebb_version(fw_version_string, online_versions, message_fun)
         except RuntimeError as err_info:
             msg = f"\nUnable to retrieve AxiDraw EBB firmware version. (Error: {err_info}) \n"
             message_fun(msg)
@@ -160,6 +225,8 @@ def log_version_info(plot_status, check_updates, current_version_string, preview
 
 def min_fw_version(plot_status, version_string):
     '''
+    this is easily used by any consumers of AxiDraw-Internal, e.g. hershey-advanced
+
     Using already-known firmware version string in plot_status:
     Return True if the EBB firmware version is at least version_string.
     Return False if the EBB firmware version is below version_string.
@@ -168,6 +235,6 @@ def min_fw_version(plot_status, version_string):
     fw_version = plot_status.fw_version
     if fw_version is None:
         return None
-    if parse(fw_version) >= parse(version_string):
+    if version.parse(fw_version) >= version.parse(version_string):
         return True
     return False

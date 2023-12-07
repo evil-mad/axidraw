@@ -13,10 +13,10 @@ import setuptools
 
 install_requires=[
         'ink_extensions>=1.3.2',
-        'lxml>=4.9.1',
+        'lxml>=4.9.3',
         'plotink>=1.8.0',
         'pyserial>=3.5',
-        'requests', # just for the certificates for now
+        'requests',
     ]
 
 
@@ -32,9 +32,4 @@ if depdir.is_dir(): #installing on a non-privileged machine
 setuptools.setup(
     packages=setuptools.find_packages(exclude=['contrib', 'docs', 'test']),
     install_requires=install_requires,
-    entry_points={
-        'console_scripts': [
-            'axicli = axicli.__main__:axidraw_CLI',
-        ]
-    },
 )

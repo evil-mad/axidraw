@@ -22,11 +22,11 @@ https://github.com/evil-mad/AxiDraw
 
 See version_string below for current version and date.
 
-Requires Python 3.7 or newer and Pyserial 3.5 or newer.
+Requires Python 3.8 or newer
 """
 # pylint: disable=pointless-string-statement
 
-__version__ = '3.9.4'  # Dated 2023-09-09
+__version__ = '3.9.5'  # Dated 2023-12-06
 
 import copy
 import gettext
@@ -301,9 +301,9 @@ class AxiDraw(inkex.Effect):
             self.plot_status.resume.clear_button(self) # Query button to clear its state
 
         if self.options.mode == "sysinfo":
-            versions.log_version_info(self.plot_status, self.params.check_updates,
-                                      self.version_string, self.options.preview,
-                                      self.user_message_fun, logger)
+            versions.report_version_info(self.plot_status, self.params.check_updates,
+                                         self.version_string, self.options.preview,
+                                         self.user_message_fun)
 
         if self.plot_status.port is None and not self.options.preview:
             return # unable to connect to axidraw
