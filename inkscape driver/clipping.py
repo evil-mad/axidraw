@@ -117,8 +117,6 @@ class ClipPathsProcess:
 
         paths = filter(lambda p: p is not None, paths)
 
-        paths = _HorizontalLineWorkaround.prepare(paths)
-
         paths = self._flatten_nonfilled_paths(paths)
 
         return paths, layer_dict
@@ -221,7 +219,25 @@ class _ClippingPathItem_pyclipper(AbstractClippingPathItem):
         if self.is_filled:
             self.fill_rule = fill_rule
 
+        self.adjust_horizontal_segments()
+
         assert len(kwargs.keys()) == 0
+
+    def adjust_horizontal_segments(self):
+        ''' We've encountered a couple of very odd bugs, where clipper/pyclipper doesn't
+        handle horizontal line segments very well. '''
+        # naive implementation
+        X = 0
+        Y = 1
+
+        epsilon = 1
+        for subpath in self.subpaths:
+            i = 1
+            while i < len(subpath):
+                if subpath[i][Y] == subpath[i - 1][Y]: # y coordinates of this and prev point are equal
+                    subpath[i] = (subpath[i][X], subpath[i][Y] + epsilon) # bump the y coordinate a tiny bit
+                    epsilon *= -1 # flip the sign of epsilon so inaccuracy doesn't propagate
+                i += 1
 
     @classmethod
     def from_path_item(cls, path_item, layer_id):
@@ -300,15 +316,7 @@ class _ClippingPathItem_pyclipper(AbstractClippingPathItem):
 
     def clip_stroked(self, clippee):
         ''' used when clippee is stroked '''
-        use_workaround = _HorizontalLineWorkaround.is_necessary(self, clippee)
-        if use_workaround:
-            _HorizontalLineWorkaround.begin(self, clippee)
-
         results = self.clip(clippee, PathType.STROKE, self._rejoin)
-
-        if use_workaround:
-            _HorizontalLineWorkaround.end(self, clippee, results)
-
         return results
 
     def clip(self, clippee, path_type, postclip_process):
@@ -370,6 +378,7 @@ class _ClippingPathItem_pyclipper(AbstractClippingPathItem):
     def _complete_the_loop(paths):
         ''' pyclipper returns the closed paths without the last point,
         (which is the same as the first point), but PathItem explicitly states the last point '''
+        paths = [pyclipper.CleanPolygon(path) if len(path) > 2 else path for path in paths]
         return [ path + copy(path[:1]) for path in paths ]
 
     @staticmethod
@@ -384,19 +393,30 @@ class _ClippingPathItem_pyclipper(AbstractClippingPathItem):
             joined = True
             return path_a + path_b[1:] # so we don't have the same coordinate twice in a row
 
+        def almost_equal(a, b):
+            # due to horizontal adjusting, Y coordinates may be off by one
+            X, Y = 0, 1
+            if a[X] != b[X]:
+                return False
+
+            if abs(a[Y] - b[Y]) > 1:
+                return False
+
+            return True
+
         i = 0
         while i < len(paths):
             j = i + 1
             while j < len(paths):
                 joined = False
-                if paths[i][0] == paths[j][0]:
+                if almost_equal(paths[i][0], paths[j][0]):
                     paths[i].reverse()
                     paths[i] = join_2(paths[i], paths[j])
-                elif paths[i][0] == paths[j][-1]:
+                elif almost_equal(paths[i][0], paths[j][-1]):
                     paths[i] = join_2(paths[j], paths[i])
-                elif paths[i][-1] == paths[j][0]:
+                elif almost_equal(paths[i][-1], paths[j][0]):
                     paths[i] = join_2(paths[i], paths[j])
-                elif paths[i][-1] == paths[j][-1]:
+                elif almost_equal(paths[i][-1], paths[j][-1]):
                     paths[j].reverse()
                     paths[i] = join_2(paths[i], paths[j])
 
@@ -423,114 +443,3 @@ class _ClippingPathItem_pyclipper(AbstractClippingPathItem):
 class PathType(Enum):
     FILL = "fill"
     STROKE = "stroke"
-
-class _HorizontalLineWorkaround:
-    ''' The original clipper library contains a bug that applies only to
-    certain horizontal two-vertex lines when clipped by a polygon (see
-    https://sourceforge.net/p/polyclipping/bugs/190/). Specifically, it
-    applies only to horizontal lines whose y axis coordinates are a lower
-    number than (or an equal number to) the y axis coordinates of the polygon. The bug remains unfixed
-    in the last release of the clipper library (6.4).
-
-    As of summer 2022, the original clipper library is no longer maintained, in
-    favor of clipper2 (see https://sourceforge.net/projects/polyclipping/). It
-    is unclear whether or not the bug has been fixed in the clipper2 library;
-    furthermore, the pyclipper wrapper still packages the original clipper
-    library and plans to transition to clipper2 are unclear (see
-    https://github.com/fonttools/pyclipper/issues/46).
-
-    This workaround is inspired by a suggestion in a related bug report
-    (https://sourceforge.net/p/polyclipping/bugs/183/). The suggestion calls it
-    impractical, but considering the circumstance is a fairly rare occurrence, I
-    think it's acceptable. Hopefully it eventually becomes unnecessary.'''
-    @classmethod
-    def is_necessary(cls, clipper, clippee):
-        '''
-        clippee is an object of type _ClippingPathItem_pyclipper
-
-        returns True if clippee has a subpath with two vertices, this subpath
-        is exactly horizontal, and the y-coordinates are smaller than the
-        y-coordinates of the clipping polygon; else False
-        '''
-        def min_y(subpaths):
-            if len(subpaths) == 0: # should never happen but you never know
-                return -100
-            min_y = subpaths[0][0][1]
-            for subpath in subpaths:
-                min_y = min(*[point[1] for point in subpath], min_y)
-            return min_y
-
-        for subpath in clippee.subpaths:
-            if cls.is_horizontal(subpath) and min_y([subpath]) <= min_y(clipper.subpaths):
-
-                return True
-        return False
-
-    @classmethod
-    def is_horizontal(cls, path):
-        return len(path) == 2 and path[0][1] == path[1][1]
-
-    @classmethod
-    def is_vertical(cls, path):
-        return cls.is_horizontal(cls._inverted_coords([path])[0])
-
-    @classmethod
-    def begin(cls, clipper, clippee):
-        ''' essentially swaps the x and y axes, since the bug does not apply to vertical lines '''
-        for path_item in [clipper, clippee]:
-            cls._swap_axes(path_item)
-
-    @classmethod
-    def end(cls, clipper, clippee, results):
-        ''' swap the axes back '''
-        for path_item in [clipper, clippee, *results]:
-            cls._swap_axes(path_item)
-
-    @classmethod
-    def prepare(cls, path_items):
-        ''' hack hack hack. the workaround does not work if one stroked path
-        item contains BOTH a horizontal subpath and a vertical
-        subpath--therefore if there is a path item with both, separate them.
-        Luckily I think this should be very unusual '''
-        new_path_items = []
-        for path_item in path_items:
-            if len(path_item.subpaths) <= 1 or not path_item.is_stroked:
-                new_path_items.append(path_item)
-                continue
-
-            horiz_subpaths = list(filter(cls.is_horizontal, path_item.subpaths))
-            if len(horiz_subpaths) == 0:
-                new_path_items.append(path_item)
-                continue
-
-            verti_subpaths = list(filter(cls.is_vertical, path_item.subpaths))
-            if len(verti_subpaths) == 0:
-                new_path_items.append(path_item)
-                continue
-
-            # has horiz and verti subpaths. separate into one path_item with
-            # only horiz subpaths and another path_item with everything else
-            horiz_path_item = _ClippingPathItem_pyclipper.from_cpath(
-                    path_item, horiz_subpaths, is_stroked=True, is_filled=False)
-            other_subpaths = list(filterfalse(cls.is_horizontal, path_item.subpaths))
-            other_path_item = _ClippingPathItem_pyclipper.from_cpath(
-                    path_item, other_subpaths,
-                    is_stroked=path_item.is_stroked, is_filled=path_item.is_filled)
-
-            new_path_items.extend([horiz_path_item, other_path_item])
-
-        return new_path_items
-
-    @classmethod
-    def _swap_axes(cls, path_item):
-        path_item.subpaths = cls._inverted_coords(path_item.subpaths)
-
-    @staticmethod
-    def _inverted_coords(paths):
-        ''' if performance becomes a problem (unlikely), functools.cache may be helpful '''
-        swapped_paths =  []
-        for path in paths:
-            x_coords = [point[0] for point in path]
-            y_coords = [point[1] for point in path]
-            swapped_paths.append(list(zip(y_coords, x_coords)))
-        return swapped_paths

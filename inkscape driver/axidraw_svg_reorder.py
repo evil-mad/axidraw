@@ -56,14 +56,15 @@ TODOs:
 <_option value=2>Break apart</_option>
 </param>
 
-self.OptionParser.add_option( "--path_handling",\
-action="store", type="int", dest="path_handling",\
+self.arg_parser.add_argument( "--path_handling",\
+action="store", type=int, dest="path_handling",\
 default=1,help="How compound paths are handled")
 
 
 * Consider re-introducing GUI method for rendering:
 
-<param indent="1" name="rendering" type="boolean" _gui-text="Preview pen-up travel">false</param> 
+<param indent="1" name="rendering" type=inkex.boolean_option _gui-text="Preview pen-up travel">
+  false</param>
 
 
 """
@@ -78,14 +79,14 @@ class ReorderEffect(inkex.Effect):
         be sorted.
         
     """
-    
+
     def __init__( self ):
         inkex.Effect.__init__( self )
-    
-        self.OptionParser.add_option( "--reordering",\
-        action="store", type="int", dest="reordering",\
+
+        self.arg_parser.add_argument( "--reordering",\
+        action="store", type=int, dest="reordering",\
         default=1,help="How groups are handled")
-        
+
         self.auto_rotate = True
 
     def effect(self):
