@@ -1,7 +1,6 @@
 import unittest
 import copy
 import random
-import optparse
 import argparse
 
 from mock import patch
@@ -54,12 +53,14 @@ class UtilsTestCase(unittest.TestCase):
             self.assertIsNone(get_configured_value(attr, [user_config, standard_config]))
 
     def test_assign_option_values(self):
-        """ test that command line values override configured values, using optparse """
+        """ test that command line values override configured values """
 
         option_names = ["not_overridden", "overridden"]
         configured_values = { "not_overridden": "configured value", "overridden": "configured value" }
-        command_line_values = optparse.Values({ "not_overridden": None, "overridden": "commandline value" })
-        resulting_options = optparse.Values() # will contain the result of running assign_option_values
+        command_line_values = argparse.Namespace()
+        command_line_values.not_overridden = None
+        command_line_values.overridden = "commandline value"
+        resulting_options = argparse.Namespace() # will contain the result of running assign_option_values
 
         assign_option_values(resulting_options, command_line_values, [configured_values], option_names)
 

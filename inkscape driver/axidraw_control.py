@@ -63,12 +63,9 @@ class AxiDrawWrapperClass( inkex.Effect ):
         self.params = params
         self.status_code = 0
 
-        inkex.Effect.__init__( self )
-
-        self.OptionParser.add_option_group(
-            common_options.core_options(self.OptionParser, params.__dict__))
-        self.OptionParser.add_option_group(
-            common_options.core_mode_options(self.OptionParser, params.__dict__))
+        # certain options are common to many extensions in this library
+        core_axidraw_options = common_options.core_axidraw_options(params.__dict__)
+        inkex.Effect.__init__(self, common_options = [core_axidraw_options])
 
         self.default_logging = default_logging
         if default_logging:
@@ -198,7 +195,6 @@ class AxiDrawWrapperClass( inkex.Effect ):
 
         ad = axidraw.AxiDraw(params=self.params, default_logging=self.default_logging)
         ad.set_up_pause_receiver(self.software_initiated_pause_event)
-        ad.getoptions([])
 
         prim = "primary" if primary else "secondary"
         logger.info("plot_to_axidraw started, at port %s (%s)", port, prim)

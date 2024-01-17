@@ -121,8 +121,8 @@ def assign_option_values(options_obj, command_line, configs, option_names):
     """
 
     for name in option_names:
-        # argparse.ArgumentParser.parse_args and optparse.OptionParser.parse_args
-        # assign None to any options that were
+        # argparse.ArgumentParser.parse_args
+        # assigns None to any options that were
         # not defined by the user, so command line arguments are handled differently from
         # configured values (which might be correctly assigned None)
         command_line_value = getattr(command_line, name, None)

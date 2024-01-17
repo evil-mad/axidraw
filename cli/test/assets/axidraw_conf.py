@@ -2,7 +2,7 @@
 # Part of the AxiDraw driver software
 #
 # https://github.com/evil-mad/axidraw
-# Version 3.8.0, dated 2023-01-01.
+# Version 3.9.0, dated 2023-05-11.
 #
 # Copyright 2023 Windell H. Oskay, Evil Mad Scientist Laboratories
 #
@@ -99,6 +99,8 @@ reordering = 0          # Plot optimization option (0-4; 3 is deprecated)
 
 random_start = False    # Randomize start locations of closed paths. Default False
 
+hiding = False          # Hidden-line removal. Default: False
+
 webhook = False         # Enable webhook alerts when True
                             # Default False
 
@@ -164,7 +166,7 @@ skip_voltage_check = False  # Set to True to disable EBB input power voltage che
 
 clip_to_page = True  # Clip plotting area to SVG document size. Default: True
 
-min_gap = 0.008     # Automatic path joining threshold, inches. Default: 0.008
+min_gap = 0.006     # Automatic path joining threshold, inches. Default: 0.006
                     # If greater than zero, pen-up moves shorter than this distance
                     #   will be replaced by pen-down moves. Set negative to disable.
                     # Setting reordering to 4 (strict) will also disable path joining.

@@ -26,7 +26,7 @@ Requires Python 3.8 or newer
 """
 # pylint: disable=pointless-string-statement
 
-__version__ = '3.9.5'  # Dated 2023-12-06
+__version__ = '3.9.7'  # Dated 2024-01-16
 
 import copy
 import gettext
@@ -79,13 +79,16 @@ class AxiDraw(inkex.Effect):
             params = import_module("axidrawinternal.axidraw_conf") # Default configuration file
         self.params = params
 
-        inkex.Effect.__init__(self)
-        self.version_string = __version__
+        # axidraw.py is never actually called as a commandline tool, so why add options to
+        # self.arg_parser here? Because it helps populate the self.options object
+        # (argparse.Namespace) with necessary attributes and set the right defaults.
+        # See self.initialize_options
+        core_axidraw_options = common_options.core_axidraw_options(params.__dict__)
+        inkex.Effect.__init__(self, common_options = [core_axidraw_options])
 
-        self.OptionParser.add_option_group(
-            common_options.core_options(self.OptionParser, params.__dict__))
-        self.OptionParser.add_option_group(
-            common_options.core_mode_options(self.OptionParser, params.__dict__))
+        self.initialize_options()
+
+        self.version_string = __version__
 
         self.plot_status = plot_status.PlotStatus()
         self.pen = pen_handling.PenHandler()
@@ -157,6 +160,13 @@ class AxiDraw(inkex.Effect):
 
         self.svg_transform = [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]]
         self.digest = None
+
+    def initialize_options(self):
+        """ Use the flags and arguments defined in __init__ to populate self.options with
+            the necessary attributes and set defaults """
+        self.getoptions([])
+        # self.getoptions initializes self.options by calling self.arg_parser.parse_args, which is
+        # not the intended use of parse_args
 
     def update_options(self):
         """ Parse and update certain options; called in effect and in interactive modes

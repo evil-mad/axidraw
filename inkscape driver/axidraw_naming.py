@@ -42,9 +42,9 @@ class AxiDrawNamingClass( inkex.Effect ): # pylint: disable=too-few-public-metho
 
         self.version_string = "2.2.0" # Dated 2023-01-01
 
-        self.OptionParser.add_option( "--mode", action="store", type="string",
+        self.arg_parser.add_argument( "--mode", action="store", type=str,
                 dest="mode", default="plot", help="Mode (or GUI tab) selected" )
-        self.OptionParser.add_option( "--nickname", action="store", type="string",
+        self.arg_parser.add_argument( "--nickname", action="store", type=str,
                 dest="nickname", default="", help="The nickname to assign" )
 
     def effect( self ):
@@ -59,8 +59,6 @@ class AxiDrawNamingClass( inkex.Effect ): # pylint: disable=too-few-public-metho
             return
 
         ad_ref = axidraw.AxiDraw()
-
-        ad_ref.getoptions([])
 
         ad_ref.called_externally = True
 

@@ -122,10 +122,10 @@ distribution.
   <effect needs-live-preview="true">
     <object-type>all</object-type>
     <effects-menu>
-      <submenu _name="AxiDraw Utilities"/>
+      <submenu name="AxiDraw Utilities"/>
     </effects-menu>
   </effect>
     <script>
-      <command reldir="extensions" interpreter="python">hershey.py</command>
+      <command location="extensions" interpreter="python">hershey.py</command>
     </script>
 </inkscape-extension>
