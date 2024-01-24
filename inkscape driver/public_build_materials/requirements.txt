@@ -1,0 +1,16 @@
+plotink @ git+https://github.com/evil-mad/plotink
+certifi==2023.7.22
+chardet==3.0.4
+charset-normalizer==3.2.0
+idna==2.8
+ink-extensions==2.0.0
+lxml==4.9.3
+mpmath==1.3.0
+packaging==21.3
+pyclipper==1.3.0.post4
+pyinstaller==5.13.0
+pyinstaller-hooks-contrib==2023.6
+pyserial==3.5
+requests==2.31.0
+tqdm==4.64.1
+urllib3==1.26.18
